@@ -46,8 +46,8 @@ def start_listener():
     try:
         srv.bind((TTS_HOST, LISTEN_PORT))
     except OSError:
-        sys.exit(f"Port {LISTEN_PORT} is busy. Is `tts_bridge.py listen` "
-                 "already running? Stop it first.")
+        sys.exit(f"Port {LISTEN_PORT} is busy. Is the web app (app/server.py) or "
+                 "`tts_bridge.py listen` already running? Stop it first.")
     srv.listen(5)
     threading.Thread(target=listener_thread, args=(srv,), daemon=True).start()
 

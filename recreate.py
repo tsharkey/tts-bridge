@@ -106,6 +106,7 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
         parsed = army.parse_list(text, mappings)
         army.resolve(parsed, catalog, mappings)
         facing = a.get("facing", 180 if ai == 0 else 0)
+        atag = f"{tag}:{'Red' if ai == 0 else 'Blue'}"  # lets board.py tell the armies apart
         used = set()
         by_spot = {}
         for entry in a["units"]:
@@ -114,13 +115,13 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
             key = tuple(entry["at"])
             for m in placed:
                 if m["pick"]:
-                    by_spot.setdefault(key, []).append(model_object(catalog, m, unit["name"], tag, facing))
+                    by_spot.setdefault(key, []).append(model_object(catalog, m, unit["name"], atag, facing))
             if rest:
-                reserves.append((ai, [model_object(catalog, m, unit["name"], tag, facing)
+                reserves.append((ai, [model_object(catalog, m, unit["name"], atag, facing)
                                       for m in rest if m["pick"]]))
         for u in parsed["units"]:
             if id(u) not in used:
-                reserves.append((ai, [model_object(catalog, m, u["name"], tag, facing)
+                reserves.append((ai, [model_object(catalog, m, u["name"], atag, facing)
                                       for m in u["models"] if m["pick"]]))
         field += [(k, facing, objs) for k, objs in by_spot.items()]
 
