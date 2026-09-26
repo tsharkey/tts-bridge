@@ -1,0 +1,280 @@
+{
+ "units": {
+  "T'au Empire|The Twin Lance": [
+   [
+    "Ri'Lantar",
+    1
+   ],
+   [
+    "Ri'Locai",
+    1
+   ]
+  ]
+ },
+ "models": {
+  "Adeptus Custodes|Trajann Valoris|Trajann Valoris|Eagle's Scream, Watcher's Axe": [
+   "eb80fa:59",
+   "eb80fa:131"
+  ],
+  "Adeptus Custodes|Custodian Guard|Custodian Guard|Guardian spear, Misericordia": [
+   "eb80fa:81"
+  ],
+  "Adeptus Custodes|Custodian Guard|Custodian Guard|Guardian spear, Sentinel blade": [
+   "eb80fa:74",
+   "eb80fa:81"
+  ],
+  "Adeptus Custodes|Custodian Guard|Custodian Guard|Guardian spear, Vexilla": [
+   "eb80fa:81"
+  ],
+  "Adeptus Custodes|Custodian Guard|Custodian Guard|Praesidium Shield": [
+   "eb80fa:58"
+  ],
+  "Adeptus Custodes|Blade Champion|Blade Champion|Vaultswords": [
+   "eb80fa:2",
+   "eb80fa:102",
+   "eb80fa:108"
+  ],
+  "Adeptus Custodes|Custodian Wardens|Custodian Warden|Guardian spear, Vexilla": [
+   "eb80fa:1",
+   "eb80fa:6"
+  ],
+  "Adeptus Custodes|Custodian Wardens|Custodian Warden|Guardian spear": [
+   "eb80fa:60"
+  ],
+  "Adeptus Custodes|Shield-Captain on Dawneagle Jetbike|Shield-Captain on Dawneagle Jetbike|Interceptor lance, Salvo launcher": [
+   "eb80fa:37"
+  ],
+  "Adeptus Custodes|Vertus Praetors|Vertus Praetor|Interceptor lance, Salvo launcher": [
+   "eb80fa:45",
+   "eb80fa:101",
+   "eb80fa:109"
+  ],
+  "Adeptus Custodes|Allarus Custodians|Allarus Custodian|Balistus grenade launcher, Castellan axe": [
+   "eb80fa:32"
+  ],
+  "Adeptus Custodes|Allarus Custodians|Allarus Custodian|Balistus grenade launcher, Guardian spear": [
+   "eb80fa:32"
+  ],
+  "Adeptus Custodes|Caladius Grav-tank|Caladius Grav-tank|Armoured hull, Twin arachnus heavy blaze cannon, Twin lastrum bolt cannon": [
+   "eb80fa:96"
+  ],
+  "Adeptus Custodes|Callidus Assassin|Callidus Assassin|Neural shredder, Phase sword and poison blades": [
+   "dfaf90:71",
+   "dfaf90:72"
+  ],
+  "T'au Empire|Commander Farsight|Commander Farsight|Dawn Blade, High-intensity plasma rifle": [
+   "e598e0:232"
+  ],
+  "T'au Empire|Crisis Fireknife Battlesuits|Crisis Fireknife Shas'vre|Battlesuit fists, Missile pod": [
+   "e598e0:92"
+  ],
+  "T'au Empire|Crisis Fireknife Battlesuits|Crisis Fireknife Shas'ui|Battlesuit fists, Missile pod": [
+   "e598e0:92"
+  ],
+  "T'au Empire|Commander in Coldstar Battlesuit|Commander in Coldstar Battlesuit|Battlesuit fists, Burst cannon, Cyclic ion blaster, High-output burst cannon": [
+   "e598e0:135"
+  ],
+  "T'au Empire|Crisis Starscythe Battlesuits|Crisis Starscythe Shas'vre|Battlesuit fists, Burst cannon": [
+   "e598e0:97"
+  ],
+  "T'au Empire|Crisis Starscythe Battlesuits|Crisis Starscythe Shas'ui|Battlesuit fists, Burst cannon": [
+   "e598e0:97"
+  ],
+  "T'au Empire|Commander in Enforcer Battlesuit|Commander in Enforcer Battlesuit|Battlesuit fists, Missile pod": [
+   "e598e0:102"
+  ],
+  "T'au Empire|Darkstrider|Darkstrider|Close combat weapon, Shade": [
+   "e598e0:304",
+   "e598e0:305"
+  ],
+  "T'au Empire|The Twin Lance|Ri'Lantar|Fusion eliminator, Shardstorm burst system, Twin pulse blaster, Twin pulse blaster, XV pulse pistol": [
+   "e598e0:132",
+   "e598e0:284"
+  ],
+  "T'au Empire|The Twin Lance|Ri'Locai|Ion scattercannon, Shardstorm burst system, Twin pulse blaster, Twin pulse blaster, XV pulse pistol": [
+   "e598e0:138",
+   "e598e0:229"
+  ],
+  "T'au Empire|Ghostkeel Battlesuit|Ghostkeel Battlesuit|Fusion collider, Ghostkeel fists, Twin fusion blaster": [
+   "e598e0:163"
+  ],
+  "T'au Empire|Hammerhead Gunship|Hammerhead Gunship|Accelerator burst cannon, Armoured hull, Railgun, Seeker missile": [
+   "e598e0:49"
+  ],
+  "T'au Empire|Pathfinder Team|Pathfinder Shas'ui|Close combat weapon, Pulse carbine, Pulse pistol, Semi-automatic grenade launcher": [
+   "e598e0:60",
+   "e598e0:189"
+  ],
+  "T'au Empire|Pathfinder Team|Pathfinders|Close combat weapon, Pulse carbine, Pulse pistol": [
+   "e598e0:104"
+  ],
+  "T'au Empire|Pathfinder Team|Pathfinders|Close combat weapon, Pulse pistol, Rail rifle": [
+   "e598e0:191"
+  ],
+  "T'au Empire|Stealth Battlesuits|Stealth Shas'vre|Battlesuit fists, Fusion blaster, Pulse pistol": [
+   "e598e0:169"
+  ],
+  "T'au Empire|Stealth Battlesuits|Stealth Shas'ui|Battlesuit fists, Burst cannon": [
+   "e598e0:91"
+  ],
+  "T'au Empire|Stealth Battlesuits|Stealth Shas'ui|Battlesuit fists, Fusion blaster": [
+   "e598e0:93"
+  ],
+  "T'au Empire|Vespid Stingwings|Vespid Strain Leader|Neutron blaster, Stingwing claws": [
+   "e598e0:319"
+  ],
+  "T'au Empire|Vespid Stingwings|Vespid Stingwings|Neutron blaster, Stingwing claws": [
+   "e598e0:150",
+   "e598e0:267",
+   "e598e0:325"
+  ],
+  "Space Marines|Librarian in Terminator Armour|Librarian in Terminator Armour|Force weapon, Smite, Storm bolter": [
+   "a4ac42:293"
+  ],
+  "Space Marines|Terminator Squad|Terminator Sergeant|Power fist, Storm bolter": [
+   "a4ac42:37"
+  ],
+  "Space Marines|Terminator Squad|Terminator|Cyclone missile launcher, Power fist, Storm bolter": [
+   "a4ac42:46"
+  ],
+  "Space Marines|Terminator Squad|Terminator|Power fist, Storm bolter": [
+   "a4ac42:192"
+  ],
+  "Space Marines|Aethon Shaan|Aethon Shaan|Claws of Severax, Heavy bolt pistol": [
+   "a4ac42:53"
+  ],
+  "Space Marines|Techmarine|Techmarine|Forge bolter, Grav-pistol, Omnissian power axe, Servo-arm": [
+   "a4ac42:297"
+  ],
+  "Space Marines|Intercessor Squad|Intercessor Sergeant|Astartes grenade launcher, Bolt pistol, Bolt rifle, Power fist": [
+   "a4ac42:123"
+  ],
+  "Space Marines|Intercessor Squad|Intercessor|Bolt pistol, Bolt rifle, Close combat weapon": [
+   "a4ac42:273",
+   "a4ac42:281"
+  ],
+  "Space Marines|Centurion Devastator Squad|Devastator Centurion Sergeant|Centurion fists, Centurion missile launcher, Grav-cannon": [
+   "a4ac42:140"
+  ],
+  "Space Marines|Centurion Devastator Squad|Devastator Centurion|Centurion fists, Centurion missile launcher, Grav-cannon": [
+   "a4ac42:140",
+   "a4ac42:147",
+   "a4ac42:160"
+  ],
+  "Space Marines|Scout Squad|Scout Sergeant|Astartes chainsword, Bolt pistol, Close combat weapon": [
+   "a4ac42:302"
+  ],
+  "Space Marines|Scout Squad|Scout|Astartes shotgun, Bolt pistol, Close combat weapon": [
+   "a4ac42:318",
+   "a4ac42:321"
+  ],
+  "Space Marines|Scout Squad|Scout|Bolt pistol, Close combat weapon, Missile launcher": [
+   "a4ac42:245"
+  ],
+  "Space Marines|Scout Squad|Scout|Bolt pistol, Close combat weapon, Scout sniper rifle": [
+   "a4ac42:219",
+   "a4ac42:253"
+  ],
+  "Space Marines|Thunderhawk Gunship|Thunderhawk Gunship|Armoured hull, Hellstrike missile battery, Lascannon, Thunderhawk heavy cannon, Twin heavy bolter": [
+   "57f25b:99"
+  ],
+  "Necrons|Technomancer|Technomancer|Staff of light": [
+   "25e7b7:0"
+  ],
+  "Necrons|Canoptek Wraiths|Canoptek Wraith|Particle caster": [
+   "25e7b7:52",
+   "25e7b7:181"
+  ],
+  "Necrons|Imotekh the Stormlord|Imotekh the Stormlord|Gauntlet of Fire": [
+   "25e7b7:151",
+   "25e7b7:193"
+  ],
+  "Necrons|Lychguard|Lychguard|Dispersion Shield": [
+   "25e7b7:67"
+  ],
+  "Necrons|C'tan Shard of the Deceiver|C'tan Shard of the Deceiver|Cosmic insanity": [
+   "25e7b7:12",
+   "25e7b7:146",
+   "25e7b7:159"
+  ],
+  "Necrons|C'tan Shard of the Nightbringer|C'tan Shard of the Nightbringer|Gaze of death": [
+   "25e7b7:7",
+   "25e7b7:28",
+   "25e7b7:150"
+  ],
+  "Necrons|C'tan Shard of the Void Dragon|C'tan Shard of the Void Dragon|Canoptek tail blades": [
+   "25e7b7:20",
+   "25e7b7:50"
+  ],
+  "Necrons|Hexmark Destroyer|Hexmark Destroyer|Close combat weapon": [
+   "25e7b7:29",
+   "25e7b7:107"
+  ],
+  "Necrons|Necron Warriors|Necron Warrior|Close combat weapon": [
+   "25e7b7:38",
+   "25e7b7:198",
+   "25e7b7:199",
+   "25e7b7:207"
+  ],
+  "Necrons|Canoptek Spyders|Canoptek Spyders|Automaton claws": [
+   "25e7b7:170"
+  ],
+  "Necrons|Flayed Ones|Flayed One|Flayer claws": [
+   "25e7b7:15",
+   "25e7b7:16",
+   "25e7b7:42",
+   "25e7b7:45"
+  ],
+  "Grey Knights|Castellan Crowe|Castellan Crowe|Black Blade of Antwyr, Purifying Flame, Storm bolter": [
+   "95589f:18"
+  ],
+  "Grey Knights|Purifier Squad|Knight of the Flame|Nemesis force weapon, Purifying Flame, Storm bolter": [
+   "03a162:155",
+   "03a162:206"
+  ],
+  "Grey Knights|Purifier Squad|Purifier|Nemesis force weapon, Purifying Flame, Storm bolter": [
+   "95589f:47"
+  ],
+  "Grey Knights|Purifier Squad|Purifier|Close combat weapon, Nemesis force weapon, Purifying Flame": [
+   "95589f:47"
+  ],
+  "Grey Knights|Purifier Squad|Purifier|Psycannon, Purifying Flame, Storm bolter": [
+   "95589f:50"
+  ],
+  "Grey Knights|Grand Master in Nemesis Dreadknight|Grand Master in Nemesis Dreadknight|Fragstorm grenade launcher, Heavy psycannon, Nemesis daemon greathammer, Sublimator": [
+   "95589f:15"
+  ],
+  "Grey Knights|Brotherhood Terminator Squad|Justicar|Nemesis force weapon, Storm bolter": [
+   "95589f:21"
+  ],
+  "Grey Knights|Brotherhood Terminator Squad|Terminator|Apothecary's Narthecium, Nemesis force weapon": [
+   "95589f:0",
+   "95589f:1",
+   "95589f:4",
+   "95589f:8"
+  ],
+  "Grey Knights|Brotherhood Terminator Squad|Terminator|Nemesis force weapon, Storm bolter": [
+   "95589f:0",
+   "95589f:1",
+   "95589f:4",
+   "95589f:8"
+  ],
+  "Grey Knights|Brotherhood Terminator Squad|Ancient|Ancient's Banner, Incinerator, Nemesis force weapon": [
+   "95589f:24"
+  ],
+  "Grey Knights|Strike Squad|Justicar|Nemesis force weapon, Storm bolter": [
+   "95589f:21"
+  ],
+  "Grey Knights|Strike Squad|Grey Knight|Nemesis force weapon, Storm bolter": [
+   "95589f:26",
+   "95589f:27",
+   "95589f:28"
+  ],
+  "Grey Knights|Interceptor Squad|Interceptor Justicar|Nemesis force weapon, Storm bolter": [
+   "95589f:17"
+  ],
+  "Grey Knights|Interceptor Squad|Interceptor|Nemesis force weapon, Storm bolter": [
+   "95589f:14"
+  ]
+ }
+}

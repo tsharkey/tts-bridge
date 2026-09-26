@@ -1,0 +1,15 @@
+# local environment
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# generated / local data
+# catalog: rebuilt by `python3 army.py index` with Force Org open
+catalog/
+# saved scenes and uploaded images
+scenes/
+# board dumps from `tts_bridge.py state`
+tts_state.json
+# turn panel event log
+events.jsonl

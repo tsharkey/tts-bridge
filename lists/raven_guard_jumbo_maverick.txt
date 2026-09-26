@@ -1,0 +1,99 @@
+Jumbo Maverick - « It’s not the plane, it’s the pilot » (2 000 Points)
+
+Space Marines
+Raven Guard
+Librarius Conclave and Shadowmark Talon (3 Detachment Points)
+Reconnaissance
+Strike Force (2 000 Points)
+
+ATTACHED UNITS
+
+Attached unit 1
+
+Librarian in Terminator Armour (110 Points)
+• Attached as: Leader (Character)
+• 1x Force weapon
+• 1x Smite
+• 1x Storm bolter
+• Enhancements: Temporal Corridor
+
+Terminator Squad (320 Points)
+• Attached as: Bodyguard
+• 1x Terminator Sergeant
+◦ 1x Power fist
+◦ 1x Storm bolter
+• 9x Terminator
+◦ 2x Cyclone missile launcher
+◦ 9x Power fist
+◦ 9x Storm bolter
+
+CHARACTERS
+
+Aethon Shaan (100 Points)
+• Warlord
+• 1x Claws of Severax
+• 1x Heavy bolt pistol
+
+Techmarine (55 Points)
+• 1x Forge bolter
+• 1x Grav-pistol
+• 1x Omnissian power axe
+• 1x Servo-arm
+
+BATTLELINE
+
+Intercessor Squad (80 Points)
+• 1x Intercessor Sergeant
+◦ 1x Astartes grenade launcher
+◦ 1x Bolt pistol
+◦ 1x Bolt rifle
+◦ 1x Power fist
+• 4x Intercessor
+◦ 4x Bolt pistol
+◦ 4x Bolt rifle
+◦ 4x Close combat weapon
+
+OTHER DATASHEETS
+
+Centurion Devastator Squad (365 Points)
+• 1x Devastator Centurion Sergeant
+◦ 1x Centurion fists
+◦ 1x Centurion missile launcher
+◦ 1x Grav-cannon
+• 5x Devastator Centurion
+◦ 5x Centurion fists
+◦ 5x Centurion missile launcher
+◦ 5x Grav-cannon
+
+Scout Squad (65 Points)
+• 1x Scout Sergeant
+◦ 1x Astartes chainsword
+◦ 1x Bolt pistol
+◦ 1x Close combat weapon
+• 4x Scout
+◦ 2x Astartes shotgun
+◦ 4x Bolt pistol
+◦ 4x Close combat weapon
+◦ 1x Missile launcher
+◦ 1x Scout sniper rifle
+
+Scout Squad (65 Points)
+• 1x Scout Sergeant
+◦ 1x Astartes chainsword
+◦ 1x Bolt pistol
+◦ 1x Close combat weapon
+• 4x Scout
+◦ 2x Astartes shotgun
+◦ 4x Bolt pistol
+◦ 4x Close combat weapon
+◦ 1x Missile launcher
+◦ 1x Scout sniper rifle
+
+Thunderhawk Gunship (840 Points)
+• 1x Armoured hull
+• 1x Hellstrike missile battery
+• 2x Lascannon
+• 1x Thunderhawk heavy cannon
+• 4x Twin heavy bolter
+
+Exported with App Version: v2.6.0 (3), Data Version: v946

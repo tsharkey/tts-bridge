@@ -1,0 +1,195 @@
++++++++++++++++++++++++++++++++++++++++++++++++
++ FACTION KEYWORD: Xenos - T'au Empire
++ DETACHMENT: Retaliation Cadre (Bonded Heroes)
++ FORCE DISPOSITION: Purge the Foe
++ TOTAL ARMY POINTS: 2000pts
++
++ WARLORD: Char1: Commander Farsight
++ ENHANCEMENT: Starflare Ignition System (on Char6: Commander in Enforcer Battlesuit)
++ NUMBER OF UNITS: 18
++ SECONDARY: - Bring It Down: (7x2) + (5x4) - Assassination: 6 Characters
++++++++++++++++++++++++++++++++++++++++++++++++
+
+Attached Units
+Attached Unit 1
+
+Commander Farsight (70 pts)
+• Attached as: Leader (Character)
+• 1x Dawn Blade
+• 1x High-intensity plasma rifle
+• Warlord
+
+Crisis Fireknife Battlesuits (130 pts)
+• Attached as: Bodyguard
+• 1x Crisis Fireknife Shas’vre
+• 2x Missile pod
+• 1x Battlesuit fists
+• Marker Drone, Shield Drone
+• 2x Crisis Fireknife Shas’ui
+• 2x Battlesuit fists
+• 4x Missile pod
+• 2x Gun Drone, 2x Shield Drone
+
+Attached Unit 2
+
+Commander in Coldstar Battlesuit (95 pts)
+• Attached as: Leader (Character)
+• 2x Burst cannon
+• 1x Cyclic ion blaster
+• 1x High-output burst cannon
+• 1x Battlesuit fists
+• Marker Drone, Shield Drone
+
+Crisis Starscythe Battlesuits (100 pts)
+• Attached as: Bodyguard
+• 1x Crisis Starscythe Shas’vre
+• 2x Burst cannon
+• 1x Battlesuit fists
+• Gun Drone, Shield Drone
+• 2x Crisis Starscythe Shas’ui
+• 4x Burst cannon
+• 2x Battlesuit fists
+• 2x Gun Drone, 2x Shield Drone
+
+Attached Unit 3
+
+Commander in Coldstar Battlesuit (95 pts)
+• Attached as: Leader (Character)
+• 2x Burst cannon
+• 1x Cyclic ion blaster
+• 1x High-output burst cannon
+• 1x Battlesuit fists
+• Marker Drone, Shield Drone
+
+Crisis Starscythe Battlesuits (100 pts)
+• Attached as: Bodyguard
+• 1x Crisis Starscythe Shas’vre
+• 2x Burst cannon
+• 1x Battlesuit fists
+• Gun Drone, Shield Drone
+• 2x Crisis Starscythe Shas’ui
+• 4x Burst cannon
+• 2x Battlesuit fists
+• 2x Gun Drone, 2x Shield Drone
+
+Attached Unit 4
+
+Commander in Enforcer Battlesuit (100 pts)
+• Attached as: Leader (Character)
+• 4x Missile pod
+• 1x Battlesuit fists
+• Marker Drone, Shield Drone
+• Starflare Ignition System (+20 pts)
+
+Crisis Fireknife Battlesuits (130 pts)
+• Attached as: Bodyguard
+• 1x Crisis Fireknife Shas’vre
+• 2x Missile pod
+• 1x Battlesuit fists
+• Gun Drone, Shield Drone
+• 2x Crisis Fireknife Shas’ui
+• 2x Battlesuit fists
+• 4x Missile pod
+• 2x Gun Drone, 2x Shield Drone
+
+CHARACTER
+
+Darkstrider (60 pts)
+• 1x Close combat weapon
+• 1x Shade
+
+The Twin Lance (230 pts)
+• 1x Ri'Lantar
+• 1x Fusion eliminator
+• 1x Twin pulse blaster
+• 1x Shardstorm burst system
+• 1x XV pulse pistol
+• MV15 Gun Drone
+• 1x Twin pulse blaster
+• 1x Ri'Locai
+• 1x Ion scattercannon
+• 1x Twin pulse blaster
+• 1x Shardstorm burst system
+• 1x XV pulse pistol
+• MV15 Gun Drone
+• 1x Twin pulse blaster
+
+OTHER DATASHEETS
+
+Ghostkeel Battlesuit (150 pts)
+• 1x Ghostkeel fists
+• 1x Fusion collider
+• 1x Twin fusion blaster
+• Battlesuit support system
+
+Hammerhead Gunship (150 pts)
+• 1x Armoured hull
+• 1x Railgun
+• 2x Seeker missile
+• 2x Accelerator burst cannon
+
+Hammerhead Gunship (150 pts)
+• 1x Armoured hull
+• 1x Railgun
+• 2x Seeker missile
+• 2x Accelerator burst cannon
+
+Pathfinder Team (85 pts)
+• 1x Pathfinder Shas'ui
+• 1x Close combat weapon
+• 1x Pulse carbine
+• 1x Pulse pistol
+• 1x Semi-automatic grenade launcher
+• 1x Drone burst cannon
+• 2x Shield Drone, Recon drone
+• 1x Drone burst cannon
+• 9x Pathfinders
+• 9x Close combat weapon
+• 6x Pulse carbine
+• 9x Pulse pistol
+• 3x Rail rifle
+
+Pathfinder Team (85 pts)
+• 1x Pathfinder Shas'ui
+• 1x Close combat weapon
+• 1x Pulse carbine
+• 1x Pulse pistol
+• 1x Semi-automatic grenade launcher
+• 2x Shield Drone, Grav-inhibitor drone
+• 9x Pathfinders
+• 9x Close combat weapon
+• 6x Pulse carbine
+• 9x Pulse pistol
+• 3x Rail rifle
+
+Stealth Battlesuits (100 pts)
+• 1x Stealth Shas'vre
+• 1x Battlesuit fists
+• 1x Pulse pistol
+• 1x Fusion blaster
+• Gun Drone, Marker Drone
+• 4x Stealth Shas'ui
+• 4x Battlesuit fists
+• 3x Burst cannon
+• 1x Fusion blaster
+• Homing beacon
+
+Stealth Battlesuits (100 pts)
+• 1x Stealth Shas'vre
+• 1x Battlesuit fists
+• 1x Pulse pistol
+• 1x Fusion blaster
+• Gun Drone, Marker Drone
+• 4x Stealth Shas'ui
+• 4x Battlesuit fists
+• 3x Burst cannon
+• 1x Fusion blaster
+• Homing beacon
+
+Vespid Stingwings (70 pts)
+• 1x Vespid Strain Leader
+• 1x Neutron blaster
+• 1x Stingwing claws
+• 4x Vespid Stingwings
+• 4x Neutron blaster
+• 4x Stingwing claws
