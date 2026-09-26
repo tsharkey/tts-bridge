@@ -111,7 +111,9 @@ this folder and ask it to plan your deployment, or to pick your next drop as uni
 with `board.py`, weighs cover and Hidden, objectives, shooting lanes, charge staging and screening against what
 the opponent has placed, checks each position for both first-turn outcomes, and can place the unit for you.
 Give it the mission (both Primary Missions and the deployment card or layout), both lists, and which units start
-in reserves or transports.
+in reserves or transports. Set the table up with the web app first, then stop the web app before asking Claude
+Code to read the board (they share the bridge's listener port). Scenes sent before `board.py` existed tag both
+armies the same way; send them again so it can tell the armies apart.
 
 ## Fixing model matches
 
