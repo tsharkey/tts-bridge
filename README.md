@@ -84,12 +84,34 @@ Objects → Saved Objects.
 python3 recreate.py scenes/<name>.json
 ```
 
+**Read the table as units and place one** (used by the deployment skill below):
+
+```bash
+python3 board.py summary                               # units, terrain and zones; writes board.json
+python3 board.py dist "Pathfinder" "Intercessor"       # closest base-to-base distance
+python3 board.py place "Pathfinder Team" 6 17 180 --cols 5 --check   # validate a spot
+python3 board.py place "Pathfinder Team" 6 17 180 --cols 5           # move the unit there
+python3 board.py undo                                  # put it back
+```
+
+Units are recognised by the `[<unit name>]` line `army.py` and `recreate.py` put in each model's description.
+`place` won't move a unit off the table, onto other models, or within 2" of an enemy unless you add `--force`.
+
 **Talk to TTS directly:**
 
 ```bash
 python3 tts_bridge.py state            # dump every object on the table to tts_state.json
 python3 tts_bridge.py run "<lua>"      # run Lua in the game and print the result
 ```
+
+## Deployment planning with Claude Code
+
+`.claude/skills/wh40k-deployment-planner/` is a Claude Code skill for the deployment phase. Open Claude Code in
+this folder and ask it to plan your deployment, or to pick your next drop as units go down. It reads the table
+with `board.py`, weighs cover and Hidden, objectives, shooting lanes, charge staging and screening against what
+the opponent has placed, checks each position for both first-turn outcomes, and can place the unit for you.
+Give it the mission (both Primary Missions and the deployment card or layout), both lists, and which units start
+in reserves or transports.
 
 ## Fixing model matches
 
