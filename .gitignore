@@ -9,7 +9,9 @@ __pycache__/
 catalog/
 # saved scenes and uploaded images
 scenes/
-# board dumps from `tts_bridge.py state`
+# board dumps from `tts_bridge.py state` and `board.py`
 tts_state.json
+board.json
+.board_undo.json
 # turn panel event log
 events.jsonl
