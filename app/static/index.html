@@ -89,6 +89,26 @@
   tr.pick:hover td { background: rgba(255,255,255,.03); }
   tr.selected td { background: rgba(232,181,62,.12); }
   button.danger { border-color: var(--bad); color: var(--bad); }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 30; display: flex;
+           align-items: center; justify-content: center; padding: 24px; }
+  .modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(1200px, 100%);
+               height: min(820px, 100%); display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { flex: 1; margin: 0; font-size: 15px; }
+  .modal-body { flex: 1; display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
+  #mmList { overflow-y: auto; padding: 8px 16px 16px; }
+  .mm-unit h4 { margin: 14px 0 6px; font-size: 13px; }
+  .mm-group { display: grid; grid-template-columns: 200px 1fr auto auto; gap: 8px; align-items: center;
+              padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .mm-group small { display: block; color: var(--muted); }
+  .mm-group select { font-size: 12px; }
+  .mm-group.active { background: rgba(232,181,62,.08); }
+  .badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+  .badge.static { background: rgba(79,196,123,.15); color: var(--ok); }
+  .badge.animated { background: rgba(232,181,62,.15); color: var(--warn); }
+  .mm-preview { border-left: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  #mmCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
+  @media (max-width: 900px) { .modal-body { grid-template-columns: 1fr; } .mm-preview { display: none; } }
   [hidden] { display: none !important; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } .results-grid { grid-template-columns: 1fr; } }
 </style>
@@ -103,6 +123,20 @@
 
 <main>
   <div>
+    <section>
+      <h2>40K VOD Index</h2>
+      <div class="row">
+        <input id="vodGame" placeholder="Paste a 40kvodindex.com game link">
+        <button id="vodImport" class="primary">Import</button>
+      </div>
+      <details style="margin-top:4px"><summary>Ingest tool address</summary>
+        <input id="vodIngest" placeholder="http://localhost:3001" style="margin-top:6px">
+        <p class="hint">Lists come from your 40k-vod-index ingest tool (<code>pnpm ingest</code>), which has to be running.</p>
+      </details>
+      <div class="msg" id="vodMsg"></div>
+      <div id="vodInfo" class="summary" hidden></div>
+    </section>
+
     <section>
       <h2>Model</h2>
       <label for="apiKey">OpenRouter API key (kept in this browser only)</label>
@@ -125,6 +159,7 @@
           <input class="saveName" placeholder="Save list as…">
           <button class="saveBtn">Save</button>
           <button class="parseBtn">Check</button>
+          <button class="modelsBtn" title="See and change which TTS model each unit uses">Choose models</button>
         </div>
         <div class="summary"></div>
       </div>
@@ -138,6 +173,7 @@
           <input class="saveName" placeholder="Save list as…">
           <button class="saveBtn">Save</button>
           <button class="parseBtn">Check</button>
+          <button class="modelsBtn" title="See and change which TTS model each unit uses">Choose models</button>
         </div>
         <div class="summary"></div>
       </div>
@@ -227,6 +263,106 @@
     </section>
   </div>
 </main>
+
+<div id="modelsModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="mmTitle">Models</h2>
+      <button id="mmStatic" title="Re-pick every model in this list, favouring static meshes">Prefer static models</button>
+      <button id="mmClose">Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="mmList"></div>
+      <div class="mm-preview">
+        <canvas id="mmCanvas"></canvas>
+        <div class="summary" id="mmPreviewInfo">Pick a static model to preview it. Drag to turn it.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+// 3D preview of a static (OBJ) model, straight from Steam's CDN.
+import * as THREE from "three";
+import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+let renderer, scene, camera, controls, current = null, token = 0;
+function init() {
+  const canvas = document.getElementById("mmCanvas");
+  renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0e10);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 2.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.position.set(3, 5, 4);
+  scene.add(sun);
+  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+  controls = new OrbitControls(camera, canvas);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 2;
+  (function loop() {
+    requestAnimationFrame(loop);
+    const w = canvas.clientWidth;
+    if (w && (canvas.width !== Math.round(w * devicePixelRatio))) {
+      renderer.setSize(w, w, false); camera.aspect = 1; camera.updateProjectionMatrix();
+    }
+    if (!document.getElementById("modelsModal").hidden) { controls.update(); renderer.render(scene, camera); }
+  })();
+}
+window.previewModel = async (info, status) => {
+  if (!renderer) init();
+  const mine = ++token;
+  if (current) { scene.remove(current); current = null; }
+  if (!info || !info.preview) return;
+  status("Loading model…");
+  try {
+    const loader = new OBJLoader(), textures = new THREE.TextureLoader();
+    // One group per TTS part: its own mesh plus its attached children, with the
+    // part's local transform (Unity Euler angles apply Z, then X, then Y).
+    async function build(part) {
+      const group = new THREE.Group();
+      group.position.set(...part.pos);
+      group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
+      group.scale.set(...part.scale);
+      if (part.mesh) {
+        const mesh = await loader.loadAsync(part.mesh);
+        let map = null;
+        if (part.diffuse) {
+          map = await textures.loadAsync(part.diffuse).catch(() => null);
+          if (map) map.colorSpace = THREE.SRGBColorSpace;
+        }
+        const c = part.color, tint = c[0] + c[1] + c[2] < 0.05 ? [0.55, 0.55, 0.58] : c;  // untinted black reads as nothing
+        const material = new THREE.MeshStandardMaterial({map, color: map ? 0xffffff : new THREE.Color(...tint),
+                                                         roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide});
+        mesh.traverse(m => { if (m.isMesh) m.material = material; });
+        group.add(mesh);
+      }
+      for (const child of await Promise.all(part.children.map(build))) group.add(child);
+      return group;
+    }
+    const model = await build(info.preview);
+    if (mine !== token) return;
+    const obj = new THREE.Group();
+    obj.add(model);
+    obj.scale.x = -1;  // Unity (TTS) meshes are mirrored relative to three.js
+    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
+    obj.position.sub(box.getCenter(new THREE.Vector3()));
+    const r = Math.max(size.x, size.y, size.z);
+    camera.position.set(r * 1.1, r * 0.8, r * 1.4);
+    camera.near = r / 100; camera.far = r * 20; camera.updateProjectionMatrix();
+    controls.target.set(0, 0, 0);
+    scene.add(obj);
+    current = obj;
+    status(null);
+  } catch (e) { if (mine === token) status("Couldn't load this model: " + e.message); }
+};
+</script>
 
 <script>
 const $ = (s, el = document) => el.querySelector(s);
@@ -342,6 +478,144 @@ for (const i of [0, 1]) {
   });
   if ($(".listText", el).value.trim()) checkArmy(i);
 }
+// ---------------------------------------------------------------- choose models
+let mm = null;   // {side, data}
+const typeBadge = o => `<span class="badge ${o.static ? "static" : "animated"}">${o.static ? "Static" : "Animated"}</span>`;
+
+async function openModels(side, opts = {}) {
+  const text = $(".listText", armyEl(side)).value.trim();
+  if (!text) return alert("Paste a list first.");
+  $("#modelsModal").hidden = false;
+  $("#mmList").innerHTML = '<p class="summary">Loading…</p>';
+  try {
+    const data = await api("/api/army_models", {text, ...opts});
+    mm = {side, data};
+    $("#mmTitle").textContent = `${side === 0 ? "Red" : "Blue"} · ${data.title}`;
+    renderModels_();
+  } catch (e) { $("#mmList").innerHTML = `<p class="msg error">${e.message}</p>`; }
+}
+function renderModels_() {
+  const units = mm.data.units;
+  $("#mmList").innerHTML = units.map((u, ui) => `
+    <div class="mm-unit"><h4>${u.name}${u.n > 1 ? " #" + u.n : ""}</h4>
+      ${u.groups.map((g, gi) => {
+        const cur = g.picks[0] || {};
+        const opts = g.options.map(o => `<option value="${o.pick}" ${o.pick === cur.pick ? "selected" : ""}>`
+          + `${o.name} · ${o.static ? "static" : "animated"} · ${o.tile}</option>`).join("");
+        return `<div class="mm-group" data-u="${ui}" data-g="${gi}">
+          <div>${g.model} ×${g.count}${g.wargear.length ? `<small>${g.wargear.join(", ")}</small>` : ""}
+            ${g.picks.length > 1 ? `<small>Currently alternates between ${g.picks.length} sculpts</small>` : ""}</div>
+          <select class="mmSel">${opts}</select>
+          ${cur.name ? typeBadge(cur) : '<span class="badge animated">No match</span>'}
+          <button class="mmPrev" ${cur.preview ? "" : "disabled"} title="${cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">Preview</button>
+        </div>`;
+      }).join("")}
+    </div>`).join("");
+}
+function preview(info, row) {
+  $$(".mm-group.active").forEach(r => r.classList.remove("active"));
+  if (row) row.classList.add("active");
+  const status = t => $("#mmPreviewInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
+  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel && window.previewModel(null, () => {}); return; }
+  window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
+}
+$("#mmList").addEventListener("change", async e => {
+  if (!e.target.classList.contains("mmSel")) return;
+  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
+  const info = g.options.find(o => o.pick === e.target.value);
+  await api("/api/pin", {key: g.key, pick: info.pick});
+  g.picks = [info];
+  renderModels_();
+  const fresh = $(`.mm-group[data-u="${row.dataset.u}"][data-g="${row.dataset.g}"]`);
+  preview(info, fresh);
+});
+$("#mmList").addEventListener("click", e => {
+  if (!e.target.classList.contains("mmPrev")) return;
+  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
+  preview(g.picks[0], row);
+});
+$("#mmStatic").addEventListener("click", () => {
+  if (!mm) return;
+  if (!confirm("Re-pick every model in this list, favouring static meshes? Models you picked by hand in this list will be re-picked too.")) return;
+  openModels(mm.side, {prefer_static: true, repick: true});
+});
+$("#mmClose").addEventListener("click", () => { $("#modelsModal").hidden = true; });
+$("#modelsModal").addEventListener("click", e => { if (e.target.id === "modelsModal") $("#modelsModal").hidden = true; });
+for (const i of [0, 1]) $(".modelsBtn", armyEl(i)).addEventListener("click", () => openModels(i));
+
+// ---------------------------------------------------------------- 40K VOD Index import
+$("#vodIngest").value = store.get("vodIngest");
+$("#vodIngest").addEventListener("input", e => store.set("vodIngest", e.target.value.trim()));
+let imported = null;
+
+// A link to the broadcast at the second the game starts.
+function vodAt(url, seconds) {
+  if (!url || seconds == null) return url;
+  const u = new URL(url);
+  if (u.hostname.includes("twitch.tv")) {
+    const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), sec = seconds % 60;
+    u.searchParams.set("t", `${h}h${m}m${sec}s`);
+  } else u.searchParams.set("t", `${seconds}s`);
+  return u.toString();
+}
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+async function fillFromImport() {
+  const g = imported;
+  for (const i of [0, 1]) {
+    const p = g.players[i], el = armyEl(i);
+    $(".listText", el).value = p.listText || "";
+    store.set(`list${i}`, p.listText || "");
+    $(".saveName", el).value = p.name ? p.name.replace(/[^A-Za-z0-9 _-]+/g, "").trim() : "";
+  }
+  state.units = [[], []];
+  selected = null; renderEditor();
+  await Promise.all([checkArmy(0), checkArmy(1)]);
+  // the index's dispositions win over whatever the list header suggests
+  if (lct) {
+    for (const [i, id] of [[0, "#dispRed"], [1, "#dispBlue"]]) {
+      const d = lct.dispositions.indexOf(g.players[i].disposition);
+      if (d >= 0) $(id).value = d + 1;
+    }
+    renderMatchup();
+  }
+  for (const i of [0, 1]) {
+    const p = g.players[i];
+    if (p.listStatus !== "ok") {
+      $(".summary", armyEl(i)).innerHTML = `<span style="color:var(--bad)">No list for ${esc(p.name || "this player")}: `
+        + `${esc(p.listNote)}</span>${p.listLink ? ` <a href="${esc(p.listLink)}" target="_blank" rel="noopener">Open it on BCP</a>` : ""}`
+        + "<br>Paste it here by hand.";
+    }
+  }
+  const [a, b] = g.players, side = (p, col) => `<b style="color:${col}">${esc(p.name || "?")}</b> · ${esc(p.army || "?")}`
+    + `${p.detachments.length ? " · " + esc(p.detachments.join(", ")) : ""}${p.disposition ? " · " + esc(p.disposition) : ""}`;
+  $("#vodInfo").innerHTML = `<b>${esc(g.tournament || "Unknown event")}</b>${g.round ? ` · round ${g.round}` : ""}<br>
+    Red: ${side(a, "var(--red)")}<br>Blue: ${side(b, "var(--blue)")}
+    <div class="row" style="margin-top:8px">
+      ${g.vodUrl ? `<a href="${esc(vodAt(g.vodUrl, g.startSeconds))}" target="_blank" rel="noopener">Open the VOD at the game's start ↗</a>` : "<span></span>"}
+      <button id="vodSwap" title="Make player 2 Red and player 1 Blue">Swap Red / Blue</button>
+    </div>`;
+  $("#vodInfo").hidden = false;
+  $("#vodSwap").onclick = () => { imported = {...imported, players: [imported.players[1], imported.players[0]]}; fillFromImport(); };
+  const slug = `${a.name || "red"} vs ${b.name || "blue"}`.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  $("#sceneName").value = slug.slice(0, 60);
+}
+
+$("#vodImport").addEventListener("click", async () => {
+  const game = $("#vodGame").value.trim(), msg = $("#vodMsg");
+  if (!game) return setMsg(msg, "Paste a game link first.", "error");
+  $("#vodImport").disabled = true;
+  setMsg(msg, "Asking the ingest tool…");
+  try {
+    imported = await api("/api/import_vod", {game, ingest: $("#vodIngest").value.trim() || null});
+    await fillFromImport();
+    const got = imported.players.filter(p => p.listStatus === "ok").length;
+    setMsg(msg, `Imported. ${got} of 2 lists found. Add the screenshot and pick the layout next.`, got === 2 ? "ok" : "error");
+  } catch (e) { setMsg(msg, e.message, "error"); }
+  $("#vodImport").disabled = false;
+});
+$("#vodGame").addEventListener("keydown", e => { if (e.key === "Enter") $("#vodImport").click(); });
+
 const armiesPayload = () => [0, 1].map(i => ({text: $(".listText", armyEl(i)).value, hint: $(".spot", armyEl(i)).value}));
 
 // ---------------------------------------------------------------- LCT matchup + layout picker

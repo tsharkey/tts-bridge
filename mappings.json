@@ -13,7 +13,6 @@
  },
  "models": {
   "Adeptus Custodes|Trajann Valoris|Trajann Valoris|Eagle's Scream, Watcher's Axe": [
-   "eb80fa:59",
    "eb80fa:131"
   ],
   "Adeptus Custodes|Custodian Guard|Custodian Guard|Guardian spear, Misericordia": [
@@ -27,19 +26,22 @@
    "eb80fa:81"
   ],
   "Adeptus Custodes|Custodian Guard|Custodian Guard|Praesidium Shield": [
-   "eb80fa:58"
+   "eb80fa:35",
+   "eb80fa:62",
+   "eb80fa:124",
+   "eb80fa:126"
   ],
   "Adeptus Custodes|Blade Champion|Blade Champion|Vaultswords": [
-   "eb80fa:2",
    "eb80fa:102",
    "eb80fa:108"
   ],
   "Adeptus Custodes|Custodian Wardens|Custodian Warden|Guardian spear, Vexilla": [
-   "eb80fa:1",
-   "eb80fa:6"
+   "eb80fa:31",
+   "eb80fa:38"
   ],
   "Adeptus Custodes|Custodian Wardens|Custodian Warden|Guardian spear": [
-   "eb80fa:60"
+   "eb80fa:31",
+   "eb80fa:38"
   ],
   "Adeptus Custodes|Shield-Captain on Dawneagle Jetbike|Shield-Captain on Dawneagle Jetbike|Interceptor lance, Salvo launcher": [
    "eb80fa:37"
@@ -129,7 +131,7 @@
    "e598e0:325"
   ],
   "Space Marines|Librarian in Terminator Armour|Librarian in Terminator Armour|Force weapon, Smite, Storm bolter": [
-   "a4ac42:293"
+   "6cf725:76"
   ],
   "Space Marines|Terminator Squad|Terminator Sergeant|Power fist, Storm bolter": [
    "a4ac42:37"
@@ -138,13 +140,13 @@
    "a4ac42:46"
   ],
   "Space Marines|Terminator Squad|Terminator|Power fist, Storm bolter": [
-   "a4ac42:192"
+   "a4ac42:78"
   ],
   "Space Marines|Aethon Shaan|Aethon Shaan|Claws of Severax, Heavy bolt pistol": [
    "a4ac42:53"
   ],
   "Space Marines|Techmarine|Techmarine|Forge bolter, Grav-pistol, Omnissian power axe, Servo-arm": [
-   "a4ac42:297"
+   "a4ac42:102"
   ],
   "Space Marines|Intercessor Squad|Intercessor Sergeant|Astartes grenade launcher, Bolt pistol, Bolt rifle, Power fist": [
    "a4ac42:123"
@@ -157,12 +159,10 @@
    "a4ac42:140"
   ],
   "Space Marines|Centurion Devastator Squad|Devastator Centurion|Centurion fists, Centurion missile launcher, Grav-cannon": [
-   "a4ac42:140",
-   "a4ac42:147",
    "a4ac42:160"
   ],
   "Space Marines|Scout Squad|Scout Sergeant|Astartes chainsword, Bolt pistol, Close combat weapon": [
-   "a4ac42:302"
+   "1e84c2:371"
   ],
   "Space Marines|Scout Squad|Scout|Astartes shotgun, Bolt pistol, Close combat weapon": [
    "a4ac42:318",
@@ -228,10 +228,6 @@
   "Grey Knights|Castellan Crowe|Castellan Crowe|Black Blade of Antwyr, Purifying Flame, Storm bolter": [
    "95589f:18"
   ],
-  "Grey Knights|Purifier Squad|Knight of the Flame|Nemesis force weapon, Purifying Flame, Storm bolter": [
-   "03a162:155",
-   "03a162:206"
-  ],
   "Grey Knights|Purifier Squad|Purifier|Nemesis force weapon, Purifying Flame, Storm bolter": [
    "95589f:47"
   ],
@@ -275,6 +271,507 @@
   ],
   "Grey Knights|Interceptor Squad|Interceptor|Nemesis force weapon, Storm bolter": [
    "95589f:14"
+  ],
+  "Aeldari|Autarch|Autarch|Dragon Fusion Gun, Star Glaive": [
+   "e5cef8:154"
+  ],
+  "Aeldari|Striking Scorpions|Striking Scorpion Exarch|Biting blade, Shuriken pistol": [
+   "e5cef8:376"
+  ],
+  "Aeldari|Striking Scorpions|Striking Scorpion|Scorpion chainsword, Shuriken pistol": [
+   "e5cef8:221",
+   "e5cef8:224",
+   "e5cef8:225",
+   "e5cef8:226"
+  ],
+  "Aeldari|Fuegan|Fuegan|Searsong, The Fire Axe": [
+   "e5cef8:179",
+   "e5cef8:258"
+  ],
+  "Aeldari|Fire Dragons|Fire Dragon Exarch|Close combat weapon, Firepike": [
+   "e5cef8:393"
+  ],
+  "Aeldari|Fire Dragons|Fire Dragon|Aspect Shrine Token, Close combat weapon, Dragon Fusion Gun": [
+   "e5cef8:178",
+   "e5cef8:186",
+   "e5cef8:391",
+   "e5cef8:394"
+  ],
+  "Aeldari|Fire Dragons|Fire Dragon|Close combat weapon, Dragon Fusion Gun": [
+   "e5cef8:178",
+   "e5cef8:186",
+   "e5cef8:391",
+   "e5cef8:394"
+  ],
+  "Aeldari|Prince Yriel|Prince Yriel|Shuriken Pistol, The Eye of Wrath, The Spear of Twilight": [
+   "e5cef8:54",
+   "e5cef8:119"
+  ],
+  "Aeldari|Corsair Voidscarred|Corsair Voidscarred|Close combat weapon, Close combat weapon, Close combat weapon, Close combat weapon, Executioner, Neuro disruptor, Paired Hekatarii blades, Power sword, Power sword, Shade Runner, Shuriken Pistol, Shuriken Pistol, Shuriken Pistol, Soul Weaver, Voidscarred Felarch, Way Seeker, Witch staff": [
+   "e5cef8:64",
+   "e5cef8:66",
+   "e5cef8:67",
+   "e5cef8:73"
+  ],
+  "Aeldari|Corsair Voidscarred|Voidscarred|Close combat weapon, Close combat weapon, Power sword, Shuriken Pistol, Shuriken Pistol, Voidscarred with Corsair blaster, Voidscarred with Faolchú": [
+   "e5cef8:64"
+  ],
+  "Aeldari|Corsair Voidscarred|Voidscarred|Close combat weapon, Close combat weapon, Corsair blaster, Power sword, Shuriken Pistol, Voidscarred with Corsair blaster": [
+   "e5cef8:64"
+  ],
+  "Aeldari|Corsair Voidscarred|Voidscarred|Close combat weapon, Close combat weapon, Corsair blaster, Power sword, Power sword, Shuriken Pistol": [
+   "e5cef8:64"
+  ],
+  "Aeldari|Avatar of Khaine|Avatar of Khaine|The Wailing Doom": [
+   "e5cef8:111"
+  ],
+  "Aeldari|Spiritseer|Spiritseer|Shuriken Pistol, Witch Staff": [
+   "e5cef8:184",
+   "e5cef8:293"
+  ],
+  "Aeldari|Shining Spears|Shining Spear Exarch|Star Lance, Twin Shuriken Catapult": [
+   "e5cef8:113",
+   "e5cef8:182",
+   "e5cef8:191",
+   "e5cef8:367"
+  ],
+  "Aeldari|Shining Spears|Shining Spear|Laser Lance, Twin Shuriken Catapult": [
+   "e5cef8:113",
+   "e5cef8:182",
+   "e5cef8:191",
+   "e5cef8:367"
+  ],
+  "Aeldari|Starfangs|Starfang|Disintegrator Cannon, Starfang Grenade Launcher, Wraithbone hull": [
+   "e5cef8:45"
+  ],
+  "Aeldari|Troupe|Troupe|Fusion Pistol, Fusion Pistol, Harlequin's Blade, Harlequin's Blade, Harlequin's Blade, Lead Player, Neuro Disruptor, Player with Fusion Pistol, Player with Harlequin's Blade, Player with Neuro Disruptor, Power sword, Shuriken Pistol": [
+   "e5cef8:3",
+   "e5cef8:7",
+   "e5cef8:8",
+   "e5cef8:13"
+  ],
+  "Aeldari|Warp Spiders|Warp Spider Exarch|Close Combat Weapon, Exarch's death spinner": [
+   "e5cef8:200"
+  ],
+  "Aeldari|Warp Spiders|Warp Spider|Close Combat Weapon, Death spinner": [
+   "e5cef8:115",
+   "e5cef8:195",
+   "e5cef8:328"
+  ],
+  "Aeldari|Wave Serpent|Wave Serpent|Shuriken Cannon, Twin Bright Lance, Wraithbone Hull": [
+   "e5cef8:60"
+  ],
+  "Aeldari|Wraithguard|Wraithguard|Close Combat Weapon, D-Scythe": [
+   "e5cef8:139",
+   "e5cef8:143",
+   "e5cef8:147",
+   "e5cef8:248"
+  ],
+  "Tyranids|Tyranid Prime with Lash Whip|Lash whip|": [
+   "5bf5d6:35",
+   "5bf5d6:170"
+  ],
+  "Tyranids|Hormagaunts|Hormagaunt|Hormagaunt talons": [
+   "5bf5d6:7",
+   "5bf5d6:17",
+   "5bf5d6:25",
+   "5bf5d6:77"
+  ],
+  "Tyranids|Hyperadapted Raveners|Ravener Prime|": [
+   "5bf5d6:272"
+  ],
+  "Tyranids|Hyperadapted Raveners|Raveners|Ravener heavy claws and talons": [
+   "5bf5d6:49",
+   "5bf5d6:57",
+   "5bf5d6:62",
+   "5bf5d6:66"
+  ],
+  "Tyranids|Old One Eye|Old One Eye|Old One Eye's claws and talons": [
+   "5bf5d6:241",
+   "5bf5d6:270"
+  ],
+  "Tyranids|The Red Terror|The Red Terror|Gaping maw": [
+   "5bf5d6:0",
+   "5bf5d6:189"
+  ],
+  "Tyranids|Trygon|Trygon|Bio-electric pulse": [
+   "5bf5d6:232",
+   "5bf5d6:250"
+  ],
+  "Tyranids|Biovores|Biovores|Chitin-barbed limbs": [
+   "5bf5d6:178",
+   "5bf5d6:227",
+   "5bf5d6:259"
+  ],
+  "Tyranids|Haruspex|Haruspex|Grasping tongue": [
+   "5bf5d6:131",
+   "5bf5d6:238"
+  ],
+  "Tyranids|Hive Guard|Hive Guard|Chitinous claws and teeth": [
+   "5bf5d6:85",
+   "5bf5d6:97",
+   "5bf5d6:245"
+  ],
+  "Tyranids|Maleceptor|Maleceptor|Massive scything talons": [
+   "5bf5d6:223",
+   "5bf5d6:257"
+  ],
+  "Tyranids|Raveners|Ravener|Ravener claws and talons": [
+   "5bf5d6:49",
+   "5bf5d6:50",
+   "5bf5d6:57",
+   "5bf5d6:59"
+  ],
+  "Tyranids|Von Ryan's Leapers|Von Ryan's Leaper|Leaper's talons": [
+   "5bf5d6:43",
+   "5bf5d6:174",
+   "5bf5d6:179",
+   "5bf5d6:221"
+  ],
+  "Tyranids|Zoanthropes|Zoanthropes|Chitinous claws and teeth, Neurothrope": [
+   "5bf5d6:41",
+   "5bf5d6:175",
+   "5bf5d6:225",
+   "5bf5d6:231"
+  ],
+  "Tyranids|Zoanthropes|Zoanthrope|Chitinous claws and teeth": [
+   "5bf5d6:41",
+   "5bf5d6:175",
+   "5bf5d6:225",
+   "5bf5d6:231"
+  ],
+  "Necrons|Canoptek Wraiths|Canoptek Wraith|Particle caster, Vicious claws": [
+   "25e7b7:52",
+   "25e7b7:181"
+  ],
+  "Necrons|Imotekh the Stormlord|Imotekh the Stormlord|Gauntlet of Fire, Staff of the Destroyer": [
+   "25e7b7:151",
+   "25e7b7:193"
+  ],
+  "Necrons|Lychguard|Lychguard|Dispersion Shield, Hyperphase sword": [
+   "25e7b7:40"
+  ],
+  "Necrons|C'tan Shard of the Deceiver|C'tan Shard of the Deceiver|Cosmic insanity, Golden fists": [
+   "25e7b7:12",
+   "25e7b7:146",
+   "25e7b7:159"
+  ],
+  "Necrons|C'tan Shard of the Nightbringer|Scythe of the Nightbringer|": [
+   "25e7b7:86",
+   "25e7b7:132"
+  ],
+  "Necrons|C'tan Shard of the Void Dragon|Spear of the Void Dragon|Voltaic storm": [
+   "25e7b7:20",
+   "25e7b7:50"
+  ],
+  "Necrons|Hexmark Destroyer|Hexmark Destroyer|Close combat weapon, Enmitic disintegrator pistols": [
+   "25e7b7:29",
+   "25e7b7:107"
+  ],
+  "Necrons|Necron Warriors|Necron Warrior|Close combat weapon, Gauss reaper": [
+   "25e7b7:48"
+  ],
+  "Necrons|Canoptek Spyders|Canoptek Spyders|Automaton claws, Fabricator Claw Array (Aura), Gloom Prism (Aura), Particle beamer": [
+   "25e7b7:170"
+  ],
+  "Tyranids|Tyranid Prime with Lash Whip|Lash whip|Rending claw, Scything talons": [
+   "5bf5d6:35",
+   "5bf5d6:170"
+  ],
+  "Tyranids|Hyperadapted Raveners|Raveners|Ravener heavy claws and talons, Venom bolt": [
+   "5bf5d6:49",
+   "5bf5d6:57",
+   "5bf5d6:62",
+   "5bf5d6:66"
+  ],
+  "Tyranids|The Red Terror|The Red Terror|Gaping maw, Scything talons": [
+   "5bf5d6:0",
+   "5bf5d6:189"
+  ],
+  "Tyranids|Trygon|Trygon|Bio-electric pulse, Trygon scything talons": [
+   "5bf5d6:232",
+   "5bf5d6:250"
+  ],
+  "Tyranids|Biovores|Biovores|Chitin-barbed limbs, Spore Mine launcher": [
+   "5bf5d6:178",
+   "5bf5d6:227",
+   "5bf5d6:259"
+  ],
+  "Tyranids|Haruspex|Haruspex|Grasping tongue, Ravenous maw, Shovelling claws": [
+   "5bf5d6:131",
+   "5bf5d6:238"
+  ],
+  "Tyranids|Hive Guard|Hive Guard|Chitinous claws and teeth, Shockcannon": [
+   "5bf5d6:85",
+   "5bf5d6:97",
+   "5bf5d6:245"
+  ],
+  "Tyranids|Maleceptor|Maleceptor|Massive scything talons, Psychic overload": [
+   "5bf5d6:223",
+   "5bf5d6:257"
+  ],
+  "Tyranids|Zoanthropes|Zoanthropes|Chitinous claws and teeth, Neurothrope, Warp Blast": [
+   "5bf5d6:41",
+   "5bf5d6:175",
+   "5bf5d6:225",
+   "5bf5d6:231"
+  ],
+  "Tyranids|Zoanthropes|Zoanthrope|Chitinous claws and teeth, Warp Blast": [
+   "5bf5d6:41",
+   "5bf5d6:175",
+   "5bf5d6:225",
+   "5bf5d6:231"
+  ],
+  "Aeldari|Fuegan|Fuegan|Fire Axe, Searsong": [
+   "e5cef8:179",
+   "e5cef8:258"
+  ],
+  "Aeldari|Fire Dragons|Fire Dragon|Close combat weapon, Dragon fusion gun": [
+   "e5cef8:178",
+   "e5cef8:186",
+   "e5cef8:391",
+   "e5cef8:394"
+  ],
+  "Aeldari|Jain Zar|Jain Zar|Blade of Destruction, Silent Death": [
+   "e5cef8:121",
+   "e5cef8:364"
+  ],
+  "Aeldari|Howling Banshees|Howling Banshee Exarch|Executioner, Shuriken pistol": [
+   "e5cef8:261"
+  ],
+  "Aeldari|Howling Banshees|Howling Banshee|Banshee blade, Shuriken pistol": [
+   "e5cef8:118",
+   "e5cef8:125",
+   "e5cef8:256",
+   "e5cef8:257"
+  ],
+  "Aeldari|Farseer|Farseer|Eldritch Storm, Shuriken pistol, Singing spear": [
+   "e5cef8:199",
+   "e5cef8:273",
+   "e5cef8:277",
+   "e5cef8:284"
+  ],
+  "Aeldari|Warlock Conclave|Warlock|Destructor, Shuriken pistol, Singing Spear": [
+   "e5cef8:120",
+   "e5cef8:123"
+  ],
+  "Aeldari|Storm Guardians|Storm Guardian|Close combat weapon, Shuriken pistol": [
+   "e5cef8:217",
+   "e5cef8:218",
+   "e5cef8:222",
+   "e5cef8:269"
+  ],
+  "Aeldari|Storm Guardians|Storm Guardian|Close combat weapon, Flamer": [
+   "e5cef8:217",
+   "e5cef8:218",
+   "e5cef8:222",
+   "e5cef8:269"
+  ],
+  "Aeldari|Storm Guardians|Storm Guardian|Close combat weapon, Fusion gun": [
+   "e5cef8:217",
+   "e5cef8:218",
+   "e5cef8:222",
+   "e5cef8:269"
+  ],
+  "Aeldari|Storm Guardians|Storm Guardian|Power sword, Shuriken pistol": [
+   "e5cef8:217",
+   "e5cef8:218",
+   "e5cef8:222",
+   "e5cef8:269"
+  ],
+  "Aeldari|Storm Guardians|Serpent's Scale Platform|Close combat weapon, Serpent shield": [
+   "e5cef8:207",
+   "e5cef8:219"
+  ],
+  "Aeldari|Farseer Skyrunner|Farseer Skyrunner|Eldritch Storm, Shuriken pistol, Twin shuriken catapult, Witchblade": [
+   "e5cef8:114"
+  ],
+  "Aeldari|Rangers|Ranger|Close combat weapon, Long rifle, Shuriken pistol": [
+   "e5cef8:132",
+   "e5cef8:209",
+   "e5cef8:215",
+   "e5cef8:275"
+  ],
+  "Aeldari|War Walkers|War Walkers|Bright lance, Scatter laser, War Walker feet": [
+   "e5cef8:133",
+   "e5cef8:145"
+  ],
+  "Aeldari|Windriders|Windrider|Close combat weapon, Shuriken cannon": [
+   "e5cef8:188",
+   "e5cef8:193",
+   "e5cef8:198",
+   "e5cef8:322"
+  ],
+  "Chaos Space Marines|Lord Discordant on Helstalker|Lord Discordant on Helstalker|Baleflamer, Bladed limbs, Bolt pistol, Impaler chainglaive, Magma cutter, Warlord": [
+   "d39dd1:208"
+  ],
+  "Chaos Space Marines|Cultist Mob|Cultist Champion|Autopistol, Brutal assault weapon": [
+   "d39dd1:234"
+  ],
+  "Chaos Space Marines|Cultist Mob|Cultist|Autopistol, Brutal assault weapon": [
+   "d39dd1:210",
+   "d39dd1:211",
+   "d39dd1:217",
+   "d39dd1:218"
+  ],
+  "Chaos Space Marines|Chaos Bikers|Biker Champion|Close combat weapon, Combi-bolter, Power fist": [
+   "d39dd1:184"
+  ],
+  "Chaos Space Marines|Chaos Rhino|Chaos Rhino|Armoured tracks, Combi-bolter, Combi-bolter, Havoc launcher": [
+   "d39dd1:311"
+  ],
+  "Chaos Space Marines|Chaos Vindicator|Chaos Vindicator|Armoured tracks, Combi-bolter, Demolisher cannon, Havoc launcher": [
+   "d39dd1:47",
+   "d39dd1:111"
+  ],
+  "Chaos Space Marines|Defiler|Defiler|Ectoplasma destructor, Excruciator cannon, Heavy reaper autocannon, Heavy reaper autocannon, Shearing claws": [
+   "d39dd1:362"
+  ],
+  "Chaos Space Marines|Mutilators|Mutilators|Fleshmetal weapons": [
+   "d39dd1:143",
+   "d39dd1:156",
+   "d39dd1:276"
+  ],
+  "Chaos Space Marines|Obliterators|Obliterators|Crushing fists, Fleshmetal guns": [
+   "d39dd1:151",
+   "d39dd1:166"
+  ],
+  "Chaos Space Marines|Chaos Bikers|Biker|Astartes chainsword, Chaos icon, Close combat weapon, Combi-bolter, Meltagun": [
+   "d39dd1:89"
+  ],
+  "Chaos Space Marines|Chaos Bikers|Biker|Astartes chainsword, Close combat weapon, Combi-bolter, Meltagun": [
+   "d39dd1:89"
+  ],
+  "Chaos Space Marines|Noise Marines|Noise Marine|Close combat weapon, Sonic blaster": [
+   "d39dd1:60",
+   "d39dd1:68"
+  ],
+  "Chaos Space Marines|Noise Marines|Noise Marine|Blastmaster, Close combat weapon": [
+   "d39dd1:50",
+   "d39dd1:53",
+   "d39dd1:462"
+  ],
+  "Chaos Space Marines|Noise Marines|Disharmonist|Close combat weapon, Sonic blaster": [
+   "d39dd1:60",
+   "d39dd1:68"
+  ],
+  "Aeldari|Eldrad Ulthran|Eldrad Ulthran|Mind War, Shuriken pistol, The Staff of Ulthamar and witchblade": [
+   "e5cef8:201"
+  ],
+  "Tyranids|Hyperadapted Raveners|Ravener Prime|Prime claws and talons": [
+   "5bf5d6:272"
+  ],
+  "Adepta Sororitas|Morvenn Vahl|Morvenn Vahl|Fidelis, Lance of Illumination, Paragon missile launcher": [
+   "430877:251"
+  ],
+  "Adepta Sororitas|Paragon Warsuits|Paragon Superior|Bolt pistol, Heavy bolter, Paragon storm bolters, Paragon war blade": [
+   "430877:124",
+   "430877:247",
+   "430877:260"
+  ],
+  "Adepta Sororitas|Paragon Warsuits|Paragon|Bolt pistol, Heavy bolter, Paragon storm bolters, Paragon war blade": [
+   "430877:124",
+   "430877:247",
+   "430877:260"
+  ],
+  "Adepta Sororitas|Intranzia Fraye|Intranzia Fraye|Heavy bolter, Mace of Saint Praxedes, Melta missile array, Ministorum heavy flamer, Throne of Blame": [
+   "430877:145"
+  ],
+  "Adepta Sororitas|Immolator|Immolator|Armoured tracks, Heavy bolter, Hunter-killer missile, Immolation flamers": [
+   "430877:120"
+  ],
+  "Adepta Sororitas|Castigator|Castigator|Armoured tracks, Castigator autocannons, Heavy bolter, Hunter-killer missile, Storm bolter": [
+   "430877:183",
+   "430877:242"
+  ],
+  "Adepta Sororitas|Castigator|Castigator|Armoured tracks, Castigator battle cannon, Heavy bolter, Hunter-killer missile, Storm bolter": [
+   "430877:183",
+   "430877:242"
+  ],
+  "Adepta Sororitas|Exorcist|Exorcist|Armoured tracks, Exorcist missile launcher, Heavy bolter, Hunter-killer missile": [
+   "430877:206"
+  ],
+  "Adepta Sororitas|Mortifiers|Mortifier|Anchorite Sarcophagus, Heavy bolter, Twin penitent buzz-blades": [
+   "430877:123",
+   "430877:129"
+  ],
+  "Adepta Sororitas|Mortifiers|Mortifier|Heavy bolter, Twin penitent buzz-blades": [
+   "430877:123",
+   "430877:129"
+  ],
+  "Adepta Sororitas|Seraphim Squad|Seraphim Superior|Close combat weapon, Plasma pistol, Power weapon": [
+   "430877:65",
+   "430877:75",
+   "430877:165"
+  ],
+  "Adepta Sororitas|Seraphim Squad|Seraphim|Bolt pistol, Close combat weapon, Ministorum hand flamer": [
+   "430877:3",
+   "430877:60",
+   "430877:62",
+   "430877:69"
+  ],
+  "Adepta Sororitas|Palatine|Palatine|Palatine blade, Plasma pistol": [
+   "430877:28",
+   "430877:88",
+   "430877:250"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Novitiate Superior|Close combat weapon, Plasma pistol, Power weapon": [
+   "430877:163",
+   "430877:204"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Sister Novitiate|Autopistol, Ministorum flamer, Novitiate melee weapons": [
+   "430877:178"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Sister Novitiate|Autopistol, Novitiate melee weapons, Sacred Banner": [
+   "430877:178"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Sister Novitiate|Autopistol, Novitiate melee weapons, Simulacrum Imperialis": [
+   "430877:178"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Sister Novitiate|Autopistol, Novitiate melee weapons": [
+   "430877:178"
+  ],
+  "Adepta Sororitas|Sisters Novitiate Squad|Sister Novitiate|Autopistol, Close combat weapon": [
+   "430877:209",
+   "430877:210",
+   "430877:220",
+   "430877:221"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion Superior|Bolt pistol, Close combat weapon, Ministorum hand flamer, Power weapon": [
+   "430877:17",
+   "430877:26",
+   "430877:36",
+   "430877:197"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion|Bolt pistol, Boltgun, Close combat weapon, Simulacrum Imperialis": [
+   "430877:150",
+   "430877:192",
+   "430877:196"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion|Bolt pistol, Boltgun, Close combat weapon": [
+   "430877:196"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion|Bolt pistol, Close combat weapon, Ministorum flamer": [
+   "430877:45"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion Superior|Bolt pistol, Close combat weapon, Plasma pistol, Power weapon": [
+   "430877:17",
+   "430877:26",
+   "430877:36",
+   "430877:197"
+  ],
+  "Adepta Sororitas|Dominion Squad|Dominion|Artificer-crafted storm bolter, Bolt pistol, Close combat weapon": [
+   "430877:148",
+   "430877:190"
+  ],
+  "Grey Knights|Purifier Squad|Knight of the Flame|Nemesis force weapon, Purifying Flame, Storm bolter": [
+   "95589f:47"
   ]
+ },
+ "aliases": {
+  "Adepta Sororitas": {
+   "Dominion": "Battle Sister",
+   "Dominion Superior": "Sister Superior"
+  }
  }
 }

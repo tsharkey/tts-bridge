@@ -100,6 +100,12 @@ Every choice the matcher makes is saved in `mappings.json`, so a list always com
 - **`units`** gives the model composition for datasheets the parser can't work out from a list, for example
   `"T'au Empire|The Twin Lance": [["Ri'Lantar", 1], ["Ri'Locai", 1]]`.
 
+- **`aliases`** renames a model the catalogue calls something else, per faction, for example
+  `"Adepta Sororitas": {"Dominion": "Battle Sister"}`.
+
+Models are only matched from the army's own tiles (a chapter can also use its parent's and sibling chapters'
+tiles); only allied units search every army.
+
 `python3 army.py plan <list>` shows each match and whether it was pinned or matched automatically.
 
 ## Notes

@@ -82,6 +82,21 @@ SUBFACTION_OF = {c: "Space Marines" for c in [
     "Space Wolves", "Deathwatch"]}
 
 SPAWNABLE = {"Custom_Model", "Custom_Assetbundle", "Figurine_Custom"}
+# Custom_Model is a plain OBJ mesh (always static); asset bundles are how TTS
+# models get animations and effects.
+STATIC = {"Custom_Model", "Figurine_Custom"}
+
+
+def is_static(o):
+    """A plain mesh with no asset-bundle parts anywhere in it."""
+    return o.get("Name") in STATIC and all(is_static(c) or c.get("Name") not in SPAWNABLE
+                                          for c in o.get("ChildObjects") or [])
+
+
+def tile_label(g):
+    """Human name for a catalogue tile, e.g. "Raven Guard"."""
+    names = [f for f, tiles in FACTIONS.items() if g in tiles]
+    return " / ".join(names[:2]) if names else g
 
 
 # --------------------------------------------------------------------------
@@ -138,7 +153,10 @@ def load_catalog():
 # --------------------------------------------------------------------------
 # List parsing.
 
-UNIT_RE = re.compile(r"^(.+?)\s*\(([\d,\s]+)\s*(?:pts|points)\)\s*$", re.I)
+# "Unit (80 Points)", and NewRecruit's compact "Char1: 10x Unit (50 pts): wargear".
+UNIT_RE = re.compile(r"^(?:Char\d+:\s*)?(?:(?P<count>\d+)x\s+)?(?P<name>.+?)\s*\([\d,\s]+\s*(?:pts|points)\)"
+                     r"\s*(?::\s*(?P<gear>.+))?$", re.I)
+LOADOUT_RE = re.compile(r"^(\d+) with (.+)$")
 COUNT_RE = re.compile(r"^(\d+)x\s+(.+)$")
 # Titles that mark a line as a model rather than wargear in the flat "+++" format.
 RANKS = {"sergeant", "sgt", "superior", "leader", "exarch", "shasui", "shasvre",
@@ -200,12 +218,13 @@ def split_wargear(n, gear):
 
 
 def parse_list(text, mappings):
-    lines = [clean(ln) for ln in text.splitlines() if clean(ln)]
+    raw = [(len(ln) - len(ln.lstrip()), clean(ln)) for ln in text.splitlines() if clean(ln)]
+    lines = [ln for _, ln in raw]
     faction, sub = detect_faction(lines)
     army = {"title": list_title(lines, faction), "faction": faction, "sub": sub, "units": []}
     allied = False
     unit = None
-    for ln in lines:
+    for indent, ln in raw:
         if ln.startswith("+"):
             continue
         if ln.upper() == "ALLIED UNITS":
@@ -213,23 +232,80 @@ def parse_list(text, mappings):
             continue
         m = UNIT_RE.match(ln)
         if m and not ln.startswith(("•", "◦")):
-            unit = {"name": m.group(1).strip(), "allied": allied, "items": []}
+            unit = {"name": m.group("name").strip(), "allied": allied, "lines": []}
             army["units"].append(unit)
+            if m.group("gear"):  # compact single-line unit: every model carries this
+                unit["lines"].append((0, MODEL, int(m.group("count") or 1), unit["name"]))
+                unit["lines"] += compact_gear(m.group("gear"))
             continue
-        if unit is None or not ln.startswith(("•", "◦")):
+        if unit is None:
             continue
-        level = 2 if ln.startswith("◦") else 1
-        body = ln[1:].strip()
+        if LOADOUT_RE.match(ln):  # compact "1 with Chaos icon, Meltagun" under a model line
+            unit["lines"] += compact_gear(ln)
+            continue
+        bullet = ln[0] if ln.startswith(("•", "◦")) else None
+        body = ln[1:].strip() if bullet else ln
         cm = COUNT_RE.match(body)
+        if cm and bullet == "•" and ": " in cm.group(2):  # compact "• 9x Cultist: 9 with Autopistol, ..."
+            name, gear = cm.group(2).split(": ", 1)
+            unit["lines"].append((indent, MODEL, int(cm.group(1)), name.strip()))
+            unit["lines"] += compact_gear(gear)
+            continue
         # drones are wargear with no model of their own in 10th edition
         if cm and not re.search(r"\bdrone\b|,", cm.group(2), re.I):
-            unit["items"].append((level, int(cm.group(1)), cm.group(2).strip()))
+            unit["lines"].append((indent, bullet, int(cm.group(1)), cm.group(2).strip()))
 
+    for u in army["units"]:
+        u["items"] = nest_lines(u.pop("lines"))
     army["units"] = [u for u in army["units"] if u["items"]]
     for u in army["units"]:
         u["models"] = unit_models(u, faction, mappings)
         del u["items"]
     return army
+
+
+MODEL = "model"   # a line already known to be a model (NewRecruit compact)
+
+
+def nest_lines(lines):
+    """(level, count, name) for a unit's "Nx ..." lines. "◦" is always wargear.
+    Newer GW app exports nest everything under "•" and show it by indentation
+    (model at one depth, its wargear deeper); the shallowest bulleted depth is
+    the model level. An indented unbulleted line continues the bullet above it,
+    so it shares that bullet's level. A list pasted without its indentation has
+    no depth to read: its unbulleted lines are wargear and are left out, as the
+    flat format always was."""
+    bulleted = [ind for ind, b, _, _ in lines if b == "•"]
+    base = min(bulleted) if bulleted else 0
+    out, level = [], 1
+    for indent, bullet, n, name in lines:
+        if bullet == MODEL:
+            level = 1
+        elif bullet == "◦":
+            level = 2
+        elif bullet == "•":
+            level = 1 if indent <= base else 2
+        elif indent <= base:
+            continue
+        out.append((level, n, name))
+    return out
+
+
+def compact_gear(text):
+    """NewRecruit compact wargear ("3 with Blastmaster, 2x Heavy bolter") as
+    ◦ lines, so it groups under its model like the GW app's wargear does."""
+    n, rest = 1, text
+    lm = LOADOUT_RE.match(text.strip())
+    if lm:
+        n, rest = int(lm.group(1)), lm.group(2)
+    out = []
+    for piece in rest.split(","):
+        piece = piece.strip()
+        if not piece or re.search(r"\bdrone\b", piece, re.I):
+            continue
+        cm = COUNT_RE.match(piece)
+        out.append((0, "◦", n * int(cm.group(1)), cm.group(2).strip()) if cm else (0, "◦", n, piece))
+    return out
 
 
 def unit_models(unit, faction, mappings):
@@ -255,8 +331,10 @@ def unit_models(unit, faction, mappings):
         for _, n, name in items:
             toks = [t for t in re.findall(r"[a-z0-9]+", clean(name).lower().replace("'", ""))]
             last = tokens_of(toks[-1]) if toks else set()
-            joined = set(re.findall(r"[a-z]+", clean(name).lower().replace("'", "")))
-            is_model = (name in known or bool(joined & RANKS)
+            # a rank titles a model when it ends the line ("Ravener Prime",
+            # "Stealth Shas'vre"), not when it starts a weapon ("Prime claws")
+            joined = re.findall(r"[a-z]+", clean(name).lower().replace("'", ""))
+            is_model = (name in known or bool(joined and joined[-1] in RANKS)
                         or bool(last & unit_tokens))
             if is_model:
                 groups.append([n, name, []])
@@ -282,9 +360,9 @@ def unit_models(unit, faction, mappings):
 # Matching list models to catalogue entries.
 
 def tok_hit(t, pool):
-    # fuzzy only for typos ("Shaan"/"Shann", "Cyclone"/"Cyclonic"), not
+    # fuzzy only for typos ("Shaan"/"Shann", "Ulthran"/"Uthran"), not
     # different words that happen to share letters ("Terminator"/"Eliminator")
-    return t in pool or any(len(t) > 4 and len(p) > 4 and t[:3] == p[:3] and
+    return t in pool or any(len(t) > 4 and len(p) > 4 and t[0] == p[0] and
                             SequenceMatcher(None, t, p).ratio() >= 0.8 for p in pool)
 
 
@@ -315,7 +393,7 @@ def score(entry_tokens, model, unit, free, weight):
 
 
 class Matcher:
-    def __init__(self, catalog, army):
+    def __init__(self, catalog, army, aliases=None):
         self.catalog = catalog
         pref = []
         for f in (army["sub"], SUBFACTION_OF.get(army["sub"]), army["faction"]):
@@ -323,6 +401,16 @@ class Matcher:
                 if g not in pref:
                     pref.append(g)
         self.pref = pref
+        # Tiles a unit of this army may take a model from: its own, its parent
+        # faction's and its sibling chapters' (a Raven Guard list can use the
+        # Raptors' Thunderhawk). Nothing from another army: a name that only
+        # matches elsewhere is a false friend ("Dominion" is also a Necron
+        # monolith), so it is left unmatched rather than spawned.
+        parent = SUBFACTION_OF.get(army["sub"]) or SUBFACTION_OF.get(army["faction"]) or army["faction"]
+        family = [f for f, p in SUBFACTION_OF.items() if p == parent] + [parent]
+        self.scope = set(pref) | {g for f in family for g in FACTIONS.get(f, [])}
+        # names the catalogue doesn't use, from mappings.json ("Dominion" -> "Battle Sister")
+        self.aliases = aliases or {}
         self.free = tokens_of(" ".join(filter(None, [army["sub"], army["faction"]])))
         self.entries = []
         for g, objs in catalog.items():
@@ -337,16 +425,34 @@ class Matcher:
         n = len(self.entries)
         self.weight = lambda t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1
 
-    def candidates(self, unit, model, allied):
+    def ranked(self, unit, model, allied, prefer_static=False):
+        """Every plausible catalogue entry, best first: (key, tile, index, nickname).
+        Key: name coverage, then army tile, then fit; with prefer_static, a
+        static mesh beats an asset bundle before tile and fit are considered."""
         scope = [] if allied else self.pref
+        if model["name"] in self.aliases:
+            model = {**model, "name": self.aliases[model["name"]]}
         scored = []
         for g, i, nick, toks in self.entries:
+            if not allied and self.scope and g not in self.scope:
+                continue
             coverage, fit = score(toks, model, unit, self.free, self.weight)
             if coverage < 0.5:
                 continue
             rank = scope.index(g) if g in scope else len(scope)
-            scored.append(((round(coverage, 2), -rank, round(fit, 2)), g, i, nick))
+            static = int(is_static(self.catalog[g][i]))
+            key = ((round(coverage, 2), static, -rank, round(fit, 2)) if prefer_static
+                   else (round(coverage, 2), -rank, round(fit, 2)))
+            scored.append((key, g, i, nick))
         scored.sort(key=lambda x: x[0], reverse=True)
+        return scored
+
+    def candidates(self, unit, model, allied, prefer_static=False):
+        scored = self.ranked(unit, model, allied, prefer_static)
+        if not scored and model["name"] != unit["name"]:
+            # a champion the catalogue doesn't name ("Disharmonist") still
+            # belongs to its unit: use one of the unit's models
+            scored = self.ranked(unit, {**model, "name": unit["name"]}, allied, prefer_static)
         if not scored:
             return [], None
         best = scored[0][0]
@@ -358,22 +464,24 @@ def model_key(faction, unit, model):
     return f"{faction}|{unit['name']}|{model['name']}|{', '.join(model['wargear'])}"
 
 
-def resolve(army, catalog, mappings):
-    """Attach catalogue picks to every model. Returns rows for reporting."""
-    matcher = Matcher(catalog, army)
+def resolve(army, catalog, mappings, prefer_static=False, repick=False):
+    """Attach catalogue picks to every model. Returns rows for reporting.
+    repick ignores (and overwrites) this list's existing pins."""
+    matcher = Matcher(catalog, army, mappings.get("aliases", {}).get(army["faction"]))
     pinned = mappings.setdefault("models", {})
     rows = []
+    redone = set()
     for u in army["units"]:
         variant = {}
         for m in u["models"]:
             key = model_key(army["faction"], u, m)
-            if key in pinned:
+            if key in pinned and not (repick and key not in redone):
                 picks, how = pinned[key], "pinned"
             else:
-                cands, best = matcher.candidates(u, m, u["allied"])
+                redone.add(key)
+                cands, best = matcher.candidates(u, m, u["allied"], prefer_static)
                 picks = [f"{g}:{i}" for _, g, i, _ in cands]
-                how = (f"auto cover={best[0]:.0%} fit={best[2]:+.1f}"
-                       + ("" if best[1] == 0 else " (other tile)")) if picks else "NO MATCH"
+                how = (f"auto cover={best[0]:.0%}" + (" static" if prefer_static else "")) if picks else "NO MATCH"
                 if picks:
                     pinned[key] = picks
             n = variant.get(key, 0)
