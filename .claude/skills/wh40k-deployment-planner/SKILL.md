@@ -51,11 +51,22 @@ Only one process can hold the bridge's listener port: if the web app (`app/serve
 `tts_bridge.py listen` is running, ask the user to stop it first.
 
 **Coordinates.** Table inches, 0,0 at the centre. x runs along the 60" edge (−30…30), z along
-the 44" edge (−22…22), y is height. In this repo Red is the first army, faces −z and has its
-reserves board on the +z side, so Red normally deploys at +z and Blue at −z — confirm it
-against the deployment zones in the summary. Facing is degrees: 0 = +z, 90 = +x, 180 = −z, 270 = −x. Ask which colour the
-user is playing, then give every position both as `(x, z)` + facing and in plain words from
-the user's side ("18" in from your left edge, 4" from your back edge, behind the L-ruin").
+the 44" edge (−22…22), y is height. Facing is degrees: 0 = +z, 90 = +x, 180 = −z, 270 = −x.
+Which side each army deploys on depends on the deployment card (`DEPLOYMENT_SIDES` in
+`app/vision.py`, matching LCT); Red's reserves board is always on the +z side:
+
+| Deployment | Red | Blue |
+|---|---|---|
+| Dawn of War, Sweeping Engagement | +z long edge, faces 180 | −z long edge, faces 0 |
+| Hammer and Anvil, Tipping Point | +x short edge, faces 270 | −x short edge, faces 90 |
+| Crucible of Battle | +x half, faces 270 | −x half, faces 90 |
+| Search and Destroy | +x/+z quarter, faces 225 | −x/−z quarter, faces 45 |
+
+Confirm against the zones in the summary, and ask which colour the user is playing. Give every
+position both as `(x, z)` + facing and in plain words from the user's side of the table ("18"
+in from your left edge, 4" from your back edge, behind the L-ruin"). Standing behind your own
+edge: Red on +z → left = 30 − x, back = 22 − z; Blue on −z → left = x + 30, back = z + 22;
+Red on +x → left = z + 22, back = 30 − x; Blue on −x → left = 22 − z, back = x + 30.
 
 **Reading the board.**
 
@@ -71,17 +82,25 @@ python3 tts_bridge.py run "<lua>"   # anything else, e.g. a specific object's bo
   model's description; the army comes from GM Notes (`army.py:<list title>`, or
   `recreate:<scene>:Red|Blue`). Models placed some other way show up as untagged terrain or
   not at all — ask the user which objects are which if the summary looks thin.
-- Two units with the same name are told apart by position (`#1` is the one nearest the +z
-  edge). Units off the table (reserves boards) are listed separately.
+- Two units with the same name are told apart by position: models more than 2" apart (edge
+  to edge) are separate units, `#1` is the one nearest the +z edge, and the numbers are
+  recomputed on every read, so re-run `summary` after moving things. Two same-named squads
+  standing within 2" of each other read as one unit. Units off the table (reserves boards)
+  are listed separately and numbered the same way.
+- A leader and its bodyguard are separate datasheets, so they're separate units here: place
+  the bodyguard, then the leader next to it with a second `place`.
+- Scenes sent before this change tag both armies the same (`recreate:<scene>`), so board.py
+  sees one army and skips enemy checks. Re-send the scene from the web app to fix it.
 - Terrain in the summary is every locked object on the table that isn't a model, with its
-  footprint and top height; flat pieces (top under ~0.5") are usually LCT's terrain-area mats,
+  footprint and height above the table surface; flat pieces (under ~0.5") are usually LCT's terrain-area mats,
   taller ones are features. LCT's scripting zones (deployment zones, objectives) are listed as
   `zone` by name, but only as bounding boxes: for diagonal or cut-out zones (Crucible of Battle,
   Search and Destroy) work from the deployment card's geometry instead.
 - `summary` gives footprints, not shapes, walls, windows or floors. For line-of-sight calls
   that hinge on a specific wall, ask the user to check in TTS or send a screenshot.
 - `deploy_demo.py` shows a hand-written plan for the Tau list checked against a Search and
-  Destroy zone and terrain boxes — a useful pattern for scripting a whole deployment.
+  Destroy zone and terrain boxes. Its GUIDs are hard-coded, so it only works as a pattern for
+  scripting a whole deployment, not as a tool.
 
 **Placing a unit** (only the user's own units, and only when the user asks you to move them —
 in a game against a person, recommend and let them place unless told otherwise):
@@ -225,12 +244,12 @@ detachment rules override the core rules.
 | FLY: **Take to the Skies** | −2" to max move, then ignores models and terrain. |
 | Engagement range 2" horizontal / 5" vertical; coherency 2" to one model and 9" to all | Units can't string out; screens cover less width than in 10th. |
 | Ingress (reserves arriving) | Must be > 8" from all enemy units. Strategic Reserves: wholly within 6" of an edge, not in the enemy DZ before round 3, not before round 2 unless a rule says so, **destroyed if not arrived by end of round 3**. Deep Strike: anywhere > 8" from enemies. Reserves cap is half the army's points, all kinds combined. A unit that ingressed can't move again until the next Charge phase. |
-| Infiltrators (check) | Set up outside your deployment zone using the 8" distance rules. Can't also make a Scout move. |
+| Infiltrators (check) | Set up anywhere more than 8" horizontally from the enemy deployment zone and all enemy units. Can't also make a Scout move. |
 | Scouts (check) | Pre-battle move made by the first-turn player first; no longer usable if deployed outside your DZ. If held in Strategic Reserves, can instead set up anywhere wholly within your DZ at the start of the battle. |
 | Heavy weapons | +1 to hit if the unit moved no more than 3" — deploy heavy shooters where they already see their lanes. |
 | Fire Overwatch | End of the enemy's Movement phase; one unit; snap shooting (hits only on 6s, within 24"). Position a cheap overwatch unit covering the lanes the enemy must cross. |
-| Heroic Intervention | Can counter-charge anything within 6" for extra CP — counter-charge units should sit about 6" behind the screens they protect. |
-| Aircraft | Never deployed on the table; they ingress within 6" of any edge each turn. |
+| Heroic Intervention (check) | End of the opponent's Charge phase: one unengaged unit within 12" of an enemy unit that charged this turn makes a charge roll against it; for +1 CP it can instead go into any enemy within 6", with the charge capped at 6". Counter-charge units work within 12" of where enemy charges will land, 6" for the any-target version. |
+| Aircraft (check) | Never deployed on the table; they ingress within 6" of any edge and more than 8" from enemies, not before battle round 2 unless a rule says so. One source says they don't count toward the reserves points cap. |
 | Night Fighting twist | Nothing visible beyond 18" — drastically shrinks turn-1 danger maps. **Nowhere to Hide** removes Solid (more LOS). |
 
 **Objectives are terrain areas.** A model is in range of a terrain objective when it is
@@ -326,9 +345,9 @@ and **S₂** (they go first).
 
 | Factor | Question |
 |---|---|
-| **Survival (Sv)** | If they go first, how much of this unit dies? Count enemy units that can see it (after Hidden, Obscuring, Gone to Ground) and reach it by charge or deep strike; 5 = untouchable, 0 = deleted. |
+| **Survival (Sv)** | How much of this unit dies to the enemy's first turn (after your turn 1 in S₁)? Count enemy units that can see it (after Hidden, Obscuring, Gone to Ground) and reach it by charge or deep strike; 5 = untouchable, 0 = deleted. |
 | **Objective (Ob)** | How much mission VP does this position enable by the start of round 2 — holding, contesting or denying? Weight by the value map. |
-| **Offense (Of)** | If you go first, how many worthwhile targets does it hit or charge? Include Plunging Fire and kill-zone overlap. |
+| **Offense (Of)** | How many worthwhile targets can it hit or charge on your first turn (before or after theirs)? Include Plunging Fire and kill-zone overlap. |
 | **Denial (De)** | Does it deny ingress, block a lane, or deny a sightline node? |
 | **Synergy (Sy)** | Aura and leader range, overlapping fire (Lanchester), support for a nearby unit. |
 | **Flexibility (Fx)** | How many distinct useful plans does it support next turn (the fork)? |
@@ -336,8 +355,9 @@ and **S₂** (they go first).
 
 Default weights (adjust by archetype, §7): Sv 3, Ob 3, Of 2, De 2, Sy 1, Fx 1, Co 1.
 
-`S₁` uses all factors normally. `S₂` doubles the weight of Survival and halves Offense (you
-will be reacting). Choose the candidate with the best **min(S₁, S₂)**; break ties with the
+Score Survival and Offense separately for each world (the same spot can be safe if you go
+first and exposed if they do), then apply the weights: `S₁` uses them as listed; `S₂` doubles
+the weight of Survival and halves Offense (you will be reacting). Choose the candidate with the best **min(S₁, S₂)**; break ties with the
 average. If you are the underdog and need variance, say so and use the average instead of
 the minimum.
 
@@ -363,14 +383,14 @@ Show the user only the winner, the runner-up, and the one-line reason the winner
 
 **Against the opponent's archetype**: versus deep strike, screen; versus a gunline, hide
 everything and don't give free lines; versus melee, keep 12" or more of dead space and a
-counter-charge unit ~6" behind the screen.
+counter-charge unit within 12" of the screen (6" for the any-target Heroic Intervention).
 
 ---
 
 ## 8. Output template (each recommendation)
 
 ```
-NEXT DROP: <Unit name>  (role: <anchor/screen/fire base/hammer/flex/scorer>)
+NEXT DROP: <Unit name>  (role: <anchor/screen/fire base/hammer/flex/scorer/reserve>)
 WHERE: (x, z) = (…, …), facing …°   → board.py place "<unit>" x z facing --cols N
        …" from your left edge, …" from your back edge — <landmark>
 FORMATION: <e.g. 3 models inside the ruin behind the north wall, 2 on the east side; nothing past the area boundary>
@@ -378,6 +398,7 @@ WHY: <1–3 short reasons tied to cover/Hidden, objectives, lanes, charge stagin
 IF THEY GO FIRST: <what can reach it and expected loss>
 IF YOU GO FIRST: <what it can do turn 1>
 WATCH FOR: <the enemy drop that would change this and how you'd respond>
+RUNNER-UP: <second-best spot, and the one reason it lost>
 CONFIRM WITH RULER: <any distance within 1" of a threshold>
 ```
 
