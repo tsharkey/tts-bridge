@@ -69,6 +69,62 @@ def entry_info(catalog, pick):
     return info
 
 
+_catalog = {"mtime": None, "data": None}
+
+
+def catalog():
+    """The Force Org catalogue, reloaded when catalog/ changes; None when it isn't built."""
+    files = list(army.CATALOG.glob("*.json")) if army.CATALOG.exists() else []
+    if not files:
+        return None
+    stamp = (str(army.CATALOG), len(files), max(p.stat().st_mtime for p in files))
+    if _catalog["mtime"] != stamp:
+        _catalog.update(mtime=stamp, data=army.load_catalog())
+    return _catalog["data"]
+
+
+def model_tiles(faction=None, sub=None):
+    """Every army tile with how many models it has; with a faction, the tiles
+    that army may take models from are marked "army" (as the matcher scopes them)."""
+    cat = catalog()
+    if cat is None:
+        raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
+    scope = army.Matcher(cat, {"faction": faction, "sub": sub or None}).scope if faction else set()
+    def label(g):
+        name = army.tile_label(g)
+        return f"Other models ({g})" if name == g else name
+    out = [{"tile": g, "label": label(g), "army": g in scope,
+            "models": sum(1 for o in objs if o.get("Name") in army.SPAWNABLE and (o.get("Nickname") or "").strip())}
+           for g, objs in cat.items()]
+    return sorted(out, key=lambda t: (not t["army"], t["label"]))
+
+
+def find_models(tiles=None, query="", static_only=False, limit=2000):
+    """Catalogue models, by name: in the given tiles (all when None), whose
+    name has every word of `query`, static meshes only if asked."""
+    cat = catalog()
+    if cat is None:
+        raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
+    words = [w for w in army.clean(query or "").casefold().split() if w]
+    out = []
+    for g, objs in cat.items():
+        if tiles and g not in tiles:
+            continue
+        for i, o in enumerate(objs):
+            name = (o.get("Nickname") or "").strip()
+            if o.get("Name") not in army.SPAWNABLE or not name:
+                continue
+            if words and not all(w in army.clean(name).casefold() for w in words):
+                continue
+            static = army.is_static(o)
+            if static_only and not static:
+                continue
+            out.append({"pick": f"{g}:{i}", "name": name, "tile": army.tile_label(g), "static": static,
+                        "credit": (o.get("Description") or "").strip().split("\n")[0][:80]})
+    out.sort(key=lambda m: (army.clean(m["name"]).casefold(), m["tile"]))
+    return {"models": out[:limit], "total": len(out)}
+
+
 def army_models(text, prefer_static=False, repick=False):
     """Every model entry in a list, grouped per unit, with the current pick and
     the closest alternatives."""

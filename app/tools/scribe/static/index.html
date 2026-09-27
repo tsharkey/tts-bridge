@@ -48,6 +48,13 @@
   #preview .box { width: min(620px, 100%); margin: 0; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
   #preview .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   #preview .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+  #browseModal { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
+                 align-items: center; justify-content: center; padding: 16px; }
+  #browseModal.on { display: flex; }
+  #browseModal .box { width: min(1100px, 100%); height: min(760px, 100%); margin: 0; display: flex; flex-direction: column; }
+  #browseModal .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  #browseModal .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+  #browseBody { flex: 1; min-height: 0; }
   #preview #pvCanvas { width: min(100%, calc(100vh - 170px)); margin: 0 auto; }  /* square, and it fits the window */
   #pvCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
   .empty { color: var(--muted); padding: 40px; text-align: center; }
@@ -103,6 +110,13 @@
   </div>
 </main>
 
+<div id="browseModal">
+  <section class="box">
+    <div class="section-head"><h2 id="browseTitle">All models</h2><button class="fit" id="browseClose">Close</button></div>
+    <div id="browseBody"></div>
+  </section>
+</div>
+
 <div id="preview">
   <section class="box">
     <div class="section-head"><h2 id="pvTitle">Model</h2><button class="fit" id="pvClose">Close</button></div>
@@ -116,78 +130,16 @@
              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
 </script>
 <script type="module">
-// 3D preview of a static (OBJ) model, straight from Steam's CDN (as on Board from image).
-import * as THREE from "three";
-import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
-import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-
-let renderer, scene, camera, controls, current = null, token = 0;
-function init() {
-  const canvas = document.getElementById("pvCanvas");
-  renderer = new THREE.WebGLRenderer({canvas, antialias: true});
-  renderer.setPixelRatio(window.devicePixelRatio);
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0d0e10);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 2.2));
-  const sun = new THREE.DirectionalLight(0xffffff, 2);
-  sun.position.set(3, 5, 4);
-  scene.add(sun);
-  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
-  controls = new OrbitControls(camera, canvas);
-  controls.autoRotate = true;
-  (function loop() {
-    requestAnimationFrame(loop);
-    const w = canvas.clientWidth;
-    if (w && canvas.width !== Math.round(w * devicePixelRatio)) {
-      renderer.setSize(w, w, false); camera.aspect = 1; camera.updateProjectionMatrix();
-    }
-    if (document.getElementById("preview").classList.contains("on")) { controls.update(); renderer.render(scene, camera); }
-  })();
-}
-window.previewModel = async (info, status) => {
-  if (!renderer) init();
-  const mine = ++token;
-  if (current) { scene.remove(current); current = null; }
-  if (!info || !info.preview) return;
-  status("Loading model…");
-  try {
-    const loader = new OBJLoader(), textures = new THREE.TextureLoader();
-    async function build(part) {
-      const group = new THREE.Group();
-      group.position.set(...part.pos);
-      group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
-      group.scale.set(...part.scale);
-      if (part.mesh) {
-        const mesh = await loader.loadAsync(part.mesh);
-        let map = null;
-        if (part.diffuse) {
-          map = await textures.loadAsync(part.diffuse).catch(() => null);
-          if (map) map.colorSpace = THREE.SRGBColorSpace;
-        }
-        const c = part.color, tint = c[0] + c[1] + c[2] < 0.05 ? [0.55, 0.55, 0.58] : c;
-        const material = new THREE.MeshStandardMaterial({map, color: map ? 0xffffff : new THREE.Color(...tint),
-                                                         roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide});
-        mesh.traverse(m => { if (m.isMesh) m.material = material; });
-        group.add(mesh);
-      }
-      for (const child of await Promise.all(part.children.map(build))) group.add(child);
-      return group;
-    }
-    const model = await build(info.preview);
-    if (mine !== token) return;
-    const obj = new THREE.Group();
-    obj.add(model);
-    obj.scale.x = -1;  // Unity (TTS) meshes are mirrored relative to three.js
-    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
-    obj.position.sub(box.getCenter(new THREE.Vector3()));
-    const r = Math.max(size.x, size.y, size.z);
-    camera.position.set(r * 1.1, r * 0.8, r * 1.4);
-    camera.near = r / 100; camera.far = r * 20; camera.updateProjectionMatrix();
-    controls.target.set(0, 0, 0);
-    scene.add(obj);
-    current = obj;
-    status(null);
-  } catch (e) { if (mine === token) status("Couldn't load this model: " + e.message); }
+import {viewer} from "/viewer3d.js";
+import {modelBrowser} from "/model-browser.js";
+const v = viewer(document.getElementById("pvCanvas"));
+window.previewModel = (info, status) => v.show(info, status);
+let browser = null;
+// "Browse all models…": every model of the army, the suggestions first
+window.browseModels = (opts) => {
+  document.getElementById("browseModal").classList.add("on");
+  if (!browser) browser = modelBrowser(document.getElementById("browseBody"), opts);
+  else browser.open(opts);
 };
 </script>
 
@@ -260,7 +212,8 @@ function groupRow(u, g, gi) {
     + `${esc(o.name)} · ${o.static ? "static" : "animated"} · ${esc(o.tile)}</option>`).join("");
   const pick = !current.cached.catalog ? `<span class="muted">No catalogue</span>`
     : `<div class="pickcell"><select class="pickSel" data-u="${u.i}" data-g="${gi}">
-         ${cur ? "" : `<option value="">No match: pick one…</option>`}${opts}</select>
+         ${cur ? "" : `<option value="">No match: pick one…</option>`}<optgroup label="Suggested">${opts}</optgroup>
+         <option value="@browse">Browse all models…</option></select>
          ${cur ? `<span class="badge ${cur.static ? "good" : ""}">${cur.static ? "Static" : "Animated"}</span>`
                : `<span class="badge bad">No match</span>`}
          <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && cur.preview ? "" : "disabled"}
@@ -348,7 +301,14 @@ $("#result").addEventListener("click", async e => {
 
 $("#result").addEventListener("change", async e => {
   if (!e.target.matches(".pickSel") || !e.target.value) return;
-  const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
+  const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
+  if (e.target.value === "@browse") {
+    e.target.value = g.picks[0]?.pick || "";
+    $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
+    window.browseModels({faction: current.army.faction, sub: current.army.sub || "", suggested: g.options,
+      onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); $("#browseModal").classList.remove("on"); read(); }});
+    return;
+  }
   await api("/api/pin", {key: g.key, pick: e.target.value});
   await read();
   const info = g.options.find(o => o.pick === e.target.value);
@@ -364,8 +324,12 @@ function showPreview(info) {
 }
 
 $("#pvClose").addEventListener("click", () => $("#preview").classList.remove("on"));
+$("#browseClose").addEventListener("click", () => $("#browseModal").classList.remove("on"));
+$("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") $("#browseModal").classList.remove("on"); });
 $("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") $("#preview").classList.remove("on"); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { $("#preview").classList.remove("on"); $("#browseModal").classList.remove("on"); }
+});
 
 // ---------------------------------------------------------------- output
 $("#saveObjBtn").addEventListener("click", async () => {

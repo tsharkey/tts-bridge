@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Models · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  body { display: flex; flex-direction: column; height: 100vh; }
+  main { flex: 1; min-height: 0; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  #choosing { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--panel); border-radius: 0 6px 6px 0; }
+  #browser { flex: 1; min-height: 0; }
+  a { color: var(--accent); }
+  @media (max-width: 800px) { body { height: auto; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Models</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+<main>
+  <div id="choosing" hidden></div>
+  <div id="browser"></div>
+</main>
+
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script src="/shared.js"></script>
+<script type="module">
+import {modelBrowser} from "/model-browser.js";
+
+// ?faction=&sub= starts on that army; with &key=<model pin key>&model=<name>&back=<page>,
+// "Use this" pins the choice for that list model and goes back.
+const p = new URLSearchParams(location.search);
+const key = p.get("key"), back = p.get("back");
+const safeBack = back && back.startsWith("/") && !back.startsWith("//") ? back : null;
+if (key) {
+  $("#choosing").hidden = false;
+  $("#choosing").innerHTML = `Choosing the TTS model for <b></b>.` + (safeBack ? ` <a>Back without choosing</a>` : "");
+  $("#choosing b").textContent = p.get("model") || "a model";
+  if (safeBack) $("#choosing a").href = safeBack;
+}
+modelBrowser($("#browser"), {
+  faction: p.get("faction") || "", sub: p.get("sub") || "", query: p.get("q") || "",
+  onPick: key ? async m => {
+    await api("/api/pin", {key, pick: m.pick});
+    if (safeBack) location.href = safeBack;
+    else $("#choosing").textContent = `Pinned ${m.name} for ${p.get("model") || "that model"}.`;
+  } : null,
+});
+</script>
+</body>
+</html>
