@@ -31,6 +31,16 @@ STATIC = Path(__file__).resolve().parent / "static"
 TOOLS = [board_replay, data]
 
 
+class Static(StaticFiles):
+    """Pages and scripts, re-checked on every load ("no-cache" still lets the
+    browser reuse an unchanged file): without it, a browser can pair a new
+    page with an old shared.css or shared.js after an update."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def slug(tool):
     return tool.__name__.rsplit(".", 1)[-1].replace("_", "-")
 
@@ -54,8 +64,8 @@ def create_app():
         path = f"/tools/{slug(t)}"
         app.include_router(t.router)
         app.add_api_route(path, redirect_to(path + "/"), include_in_schema=False)
-        app.mount(path, StaticFiles(directory=Path(t.__file__).parent / "static", html=True))
-    app.mount("/", StaticFiles(directory=STATIC, html=True))   # homepage and shared.css / shared.js
+        app.mount(path, Static(directory=Path(t.__file__).parent / "static", html=True))
+    app.mount("/", Static(directory=STATIC, html=True))   # homepage and shared.css / shared.js
     return app
 
 
