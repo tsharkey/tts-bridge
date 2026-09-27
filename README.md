@@ -48,7 +48,7 @@ catalogue exists, Force Org doesn't need to be open: armies can be spawned into 
 Open <http://localhost:8765>. The header shows whether TTS is connected, and whether LCT is loaded.
 
 1. **Model:** paste your OpenRouter key and pick any vision model. Prices are shown per model.
-2. **Armies:** paste the Red and Blue lists, or pick saved ones, and press **Check**. Add a hint for spotting
+2. **Armies:** paste the Red and Blue lists, or pick saved ones (kept in `lists/`, on your machine only), and press **Check**. Add a hint for spotting
    each army if you like ("black armour, purple trim").
 3. **Table (LCT):** dispositions are filled in from the lists. Pick one of the matchup's three layouts; each
    shows LCT's layout diagram.
@@ -71,8 +71,8 @@ These use the same catalogue. Stop the web app first: only one process can hold 
 **Spawn an army list** (GW app exports and the `+++` format both work):
 
 ```bash
-python3 army.py plan lists/necrons.txt                # show which model each list entry matched
-python3 army.py build lists/necrons.txt -30 21 11 90  # spawn it: top-left x z, row width, facing
+python3 army.py plan my_list.txt                # show which model each list entry matched
+python3 army.py build my_list.txt -30 21 11 90  # spawn it: top-left x z, row width, facing
 ```
 
 `build` also writes the army to TTS's Saved Objects folder, so it can be loaded into any game from
@@ -126,13 +126,13 @@ None are needed.
 
 ## Fixing model matches
 
-Every choice the matcher makes is saved in `mappings.json`, so a list always comes out the same way.
+Every choice the matcher makes is saved in `mappings.json`, so a list always comes out the same way. The file is
+yours: it's created on first use and isn't committed.
 
 - **`models`** maps `"<faction>|<unit>|<model>|<wargear>"` to catalogue entries (`"<tile>:<index>"`). Edit an
   entry to pick a different model, or delete it to have it matched again.
 - **`units`** gives the model composition for datasheets the parser can't work out from a list, for example
   `"T'au Empire|The Twin Lance": [["Ri'Lantar", 1], ["Ri'Locai", 1]]`.
-
 - **`aliases`** renames a model the catalogue calls something else, per faction, for example
   `"Adepta Sororitas": {"Dominion": "Battle Sister"}`.
 

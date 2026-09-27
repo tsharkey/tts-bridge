@@ -8,6 +8,10 @@ __pycache__/
 # generated / local data
 # catalog: rebuilt by `python3 army.py index` with Force Org open
 catalog/
+# your model picks, written by army.py and the web app
+mappings.json
+# saved army lists (your own; the web app saves here too)
+lists/
 # saved scenes and uploaded images
 scenes/
 # board dumps from `tts_bridge.py state` and `board.py`
