@@ -10,6 +10,9 @@
   main { flex: 1; min-height: 0; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
   #choosing { border-left: 3px solid var(--accent); padding: 8px 12px; background: var(--panel); border-radius: 0 6px 6px 0; }
   #browser { flex: 1; min-height: 0; }
+  #favFor { margin: 0; padding: 10px 14px; }
+  #favFor label { margin: 0; }
+  #favFor select { flex: 0 1 240px; }
   a { color: var(--accent); }
   @media (max-width: 800px) { body { height: auto; } }
 </style>
@@ -22,6 +25,17 @@
 </header>
 <main>
   <div id="choosing" hidden></div>
+  <section id="favFor">
+    <div class="row">
+      <label class="fit" for="favArmy">Favorites for</label>
+      <select id="favArmy"><option value="">Pick an army…</option></select>
+      <input id="favUnit" list="favUnits" placeholder="…and a unit (type its name)">
+      <datalist id="favUnits"></datalist>
+      <button class="fit" id="favClear">Clear</button>
+    </div>
+    <p class="hint" id="favHint">Pick an army and a unit, then star the models you like for it. Scribe tries a unit's
+      favourites first when it picks models, and lists them first when you choose.</p>
+  </section>
   <div id="browser"></div>
 </main>
 
@@ -44,14 +58,50 @@ if (key) {
   $("#choosing b").textContent = p.get("model") || "a model";
   if (safeBack) $("#choosing a").href = safeBack;
 }
-modelBrowser($("#browser"), {
+const onPick = key ? async m => {
+  await api("/api/pin", {key, pick: m.pick});
+  if (safeBack) location.href = safeBack;
+  else $("#choosing").textContent = `Pinned ${m.name} for ${p.get("model") || "that model"}.`;
+} : null;
+const browser = modelBrowser($("#browser"), {
   faction: p.get("faction") || "", sub: p.get("sub") || "", query: p.get("q") || "",
-  onPick: key ? async m => {
-    await api("/api/pin", {key, pick: m.pick});
-    if (safeBack) location.href = safeBack;
-    else $("#choosing").textContent = `Pinned ${m.name} for ${p.get("model") || "that model"}.`;
-  } : null,
+  favoriteKey: p.get("fav") || "", onPick,
 });
+
+// "Favorites for": the army's own (chapter) name is the key's first part, as Scribe keys it
+async function loadArmies() {
+  const armies = await api("/api/models/armies").catch(() => []);
+  $("#favArmy").innerHTML += armies.map(a => `<option>${a.replace(/[<&]/g, "")}</option>`).join("");
+  const fav = p.get("fav");
+  if (fav) {
+    const [army, unit] = fav.split("|");
+    $("#favArmy").value = army;
+    $("#favUnit").value = unit || "";
+    await loadUnits();
+    applyFavFor();
+  } else if (p.get("sub") || p.get("faction")) {
+    $("#favArmy").value = p.get("sub") || p.get("faction");
+    await loadUnits();
+  }
+}
+async function loadUnits() {
+  const army = $("#favArmy").value;
+  $("#favUnits").innerHTML = "";
+  if (!army) return;
+  const sheets = await api(`/api/scribe/datasheets?faction=${encodeURIComponent(army)}`).catch(() => []);
+  $("#favUnits").innerHTML = sheets.filter(s => s.own).map(s => `<option value="${s.name.replace(/"/g, "&quot;")}"></option>`).join("");
+}
+function applyFavFor() {
+  const army = $("#favArmy").value, unit = $("#favUnit").value.trim();
+  const favoriteKey = army && unit ? `${army}|${unit}` : "";
+  $("#favHint").textContent = favoriteKey ? `Starring models for ${unit} (${army}).`
+    : "Pick an army and a unit, then star the models you like for it. Scribe tries a unit's favourites first when it picks models, and lists them first when you choose.";
+  browser.open({faction: army, sub: "", query: $("#browser .mb-q")?.value || "", favoriteKey, onPick});
+}
+$("#favArmy").addEventListener("change", async () => { $("#favUnit").value = ""; await loadUnits(); applyFavFor(); });
+$("#favUnit").addEventListener("change", applyFavFor);
+$("#favClear").addEventListener("click", () => { $("#favArmy").value = ""; $("#favUnit").value = ""; applyFavFor(); });
+loadArmies();
 </script>
 </body>
 </html>

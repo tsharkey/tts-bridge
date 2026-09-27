@@ -61,3 +61,57 @@ def test_models_page(client):
     r = client.get("/tools/models/")
     assert r.status_code == 200 and "/model-browser.js" in r.text
     assert client.get("/model-browser.js").status_code == 200 and client.get("/viewer3d.js").status_code == 200
+
+
+# Favourites: figures liked for a unit, tried first when picking models.
+
+@pytest.fixture
+def mappings(monkeypatch, tmp_path):
+    path = tmp_path / "mappings.json"
+    monkeypatch.setattr(army, "MAPPINGS", path)
+    return path
+
+
+def test_set_and_clear_favourites(client, mappings):
+    key = "T'au Empire|Commander Farsight"
+    assert client.get("/api/favorites", params={"key": key}).json()["models"] == []
+    client.post("/api/favorites", json={"key": key, "pick": "1e84c2:1"})
+    client.post("/api/favorites", json={"key": key, "pick": "e598e0:0"})
+    got = client.get("/api/favorites", params={"key": key}).json()["models"]
+    assert [m["name"] for m in got] == ["Farsight (counts-as)", "Commander Farsight"]
+    client.post("/api/favorites", json={"key": key, "pick": "1e84c2:1", "on": False})
+    assert json.loads(mappings.read_text())["favorites"] == {key: ["e598e0:0"]}
+    client.post("/api/favorites", json={"key": key, "pick": "e598e0:0", "on": False})
+    assert "favorites" not in json.loads(mappings.read_text()) or key not in json.loads(mappings.read_text())["favorites"]
+    assert "T'au Empire" in client.get("/api/models/armies").json()
+
+
+def test_resolve_prefers_a_favourite(client):
+    catalog = army.load_catalog()
+    parsed = {"faction": "T'au Empire", "sub": None, "units": [
+        {"name": "Commander Farsight", "allied": False, "models": [{"name": "Commander Farsight", "wargear": []}]}]}
+    # no favourite: Force Org's own Farsight, from the army's tile
+    rows = army.resolve(parsed, catalog, {})
+    assert rows[0][1]["pick"] == "e598e0:0"
+    # a favourite wins, even from another army's tile and with a name that only half matches
+    fav = {"favorites": {"T'au Empire|Commander Farsight": ["1e84c2:1"]}}
+    rows = army.resolve(parsed, catalog, fav)
+    assert (rows[0][1]["pick"], rows[0][2]) == ("1e84c2:1", "auto cover=41% favourite")
+    # of several favourites, the one that fits the model best
+    both = {"favorites": {"T'au Empire|Commander Farsight": ["1e84c2:0", "1e84c2:1"]}}
+    assert army.resolve(parsed, catalog, both)[0][1]["pick"] == "1e84c2:1"
+    # a pinned model keeps its pin
+    pinned = {**both, "models": {army.model_key("T'au Empire", parsed["units"][0], parsed["units"][0]["models"][0]): ["e598e0:0"]}}
+    assert army.resolve(parsed, catalog, pinned)[0][1]["pick"] == "e598e0:0"
+
+
+def test_scribe_shows_favourites(client, mappings, monkeypatch):
+    import data
+    from pathlib import Path
+    monkeypatch.setattr(data, "CACHE", Path(__file__).resolve().parent / "fixtures" / "datacache")
+    client.post("/api/favorites", json={"key": "T'au Empire|Commander Farsight", "pick": "1e84c2:1"})
+    text = (Path(__file__).resolve().parent / "fixtures" / "tau_tournament.txt").read_text()
+    v = client.post("/api/scribe/read", json={"text": text}).json()
+    farsight = next(u for u in v["units"] if u["name"] == "Commander Farsight")
+    assert [f["name"] for f in farsight["favorites"]] == ["Farsight (counts-as)"]
+    assert farsight["groups"][0]["picks"][0]["name"] == "Farsight (counts-as)"  # picked because it's a favourite

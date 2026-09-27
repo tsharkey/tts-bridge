@@ -1,9 +1,11 @@
-// Browse Force Org models: filter by army, search by name, static only; the
-// suggested models first when choosing for a list's model; a 3D view beside
-// the list. Used by the Models page and Scribe's "Browse all models…".
+// Browse Force Org models: filter by army, search by name, static only; a
+// unit's favourites and the suggested models first; a 3D view beside the list.
+// Used by the Models page and Scribe's "Browse all models…".
 //   import {modelBrowser} from "/model-browser.js";
-//   const b = modelBrowser(el, {faction, sub, suggested: [entryInfo], onPick: info => ..., pickLabel: "Use this"});
+//   const b = modelBrowser(el, {faction, sub, suggested: [entryInfo], onPick: info => ..., pickLabel: "Use this",
+//                               favoriteKey: "<chapter or faction>|<unit>", onFavorite: () => ...});
 //   b.open({...same options}) to show another model's choices in the same browser.
+// With favoriteKey, each model gets a star that adds it to (or removes it from) that unit's favourites.
 import {viewer} from "/viewer3d.js";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -26,28 +28,60 @@ export function modelBrowser(root, options = {}) {
         <canvas class="mb-canvas"></canvas>
         <div class="mb-name"></div>
         <div class="summary mb-info">Pick a model to see it. Drag to turn it, scroll to zoom.</div>
-        <button class="primary mb-use" hidden></button>
+        <div class="row mb-actions"><button class="primary mb-use" hidden></button>
+          <button class="fit mb-fav" hidden></button></div>
         <div class="msg mb-msg"></div>
       </div>
     </div>`;
   const $ = s => root.querySelector(s);
   const view = viewer($(".mb-canvas"));
-  let opts = {}, tiles = [], selected = null, timer = null, found = [];
+  let opts = {}, tiles = [], selected = null, timer = null, found = [], favourites = [];
+  const liked = m => favourites.some(f => f.pick === m.pick);
 
-  const row = (m, i, section) => `<button class="mb-row ${selected && selected.pick === m.pick ? "on" : ""}"
-      data-section="${section}" data-i="${i}"><span>${esc(m.name)}</span>
+  const row = (m, i, section) => `<div class="mb-row ${selected && selected.pick === m.pick ? "on" : ""}"
+      data-section="${section}" data-i="${i}" role="button" tabindex="0"><span>${esc(m.name)}</span>
       <small>${esc(m.tile)}${m.credit ? " · " + esc(m.credit) : ""}</small>
-      <span class="badge ${m.static ? "static" : "animated"}">${m.static ? "Static" : "Animated"}</span></button>`;
+      <span class="mb-tags">${opts.favoriteKey ? `<button class="mb-star ${liked(m) ? "on" : ""}"
+        title="${liked(m) ? "Remove from" : "Add to"} this unit's favourites">${liked(m) ? "★" : "☆"}</button>` : ""}
+      <span class="badge ${m.static ? "static" : "animated"}">${m.static ? "Static" : "Animated"}</span></span></div>`;
 
+  // each section's models, so a row's data-section/data-i finds its model
+  let sections = {};
   function render() {
-    const suggested = (opts.suggested || []).filter(m => !$(".mb-static").checked || m.static);
-    const picks = new Set(suggested.map(m => m.pick));
-    const rest = found.filter(m => !picks.has(m.pick));
+    const keep = m => !$(".mb-static").checked || m.static;
+    const favs = favourites.filter(keep);
+    const shown = new Set(favs.map(m => m.pick));
+    const suggested = (opts.suggested || []).filter(m => keep(m) && !shown.has(m.pick));
+    suggested.forEach(m => shown.add(m.pick));
+    const rest = found.filter(m => !shown.has(m.pick));
+    sections = {v: favs, s: suggested, f: rest};
     const tileText = $(".mb-tiles").selectedOptions[0]?.textContent || "";
+    const block = (title, key, empty) => sections[key].length
+      ? `<h4>${esc(title)}</h4>${sections[key].map((m, i) => row(m, i, key)).join("")}`
+      : empty === undefined ? "" : `<h4>${esc(title)}</h4><p class="summary">${empty}</p>`;
     $(".mb-list").innerHTML =
-      (suggested.length ? `<h4>Suggested</h4>${suggested.map((m, i) => row(m, i, "s")).join("")}` : "")
-      + `<h4>${esc(tileText)}</h4>`
-      + (rest.length ? rest.map(m => row(m, found.indexOf(m), "f")).join("") : `<p class="summary">No models match.</p>`);
+      (opts.favoriteKey ? block("Favorites", "v", "None yet. Star a model to add it.") : "")
+      + block("Suggested", "s")
+      + block(tileText, "f", "No models match.");
+    showStar();
+  }
+
+  function showStar() {
+    const b = $(".mb-fav");
+    b.hidden = !(opts.favoriteKey && selected);
+    if (!b.hidden) b.textContent = liked(selected) ? "★ Favourite" : "☆ Add to favourites";
+  }
+
+  async function loadFavourites() {
+    favourites = opts.favoriteKey ? (await api(`/api/favorites?key=${encodeURIComponent(opts.favoriteKey)}`)).models : [];
+  }
+
+  async function toggleFavourite(m) {
+    const on = !liked(m);
+    await api("/api/favorites", {key: opts.favoriteKey, pick: m.pick, on});
+    await loadFavourites();
+    render();
+    opts.onFavorite?.(m, on);
   }
 
   async function search() {
@@ -66,6 +100,7 @@ export function modelBrowser(root, options = {}) {
   async function select(m) {
     selected = m;
     root.querySelectorAll(".mb-row.on").forEach(r => r.classList.remove("on"));
+    showStar();
     $(".mb-name").textContent = m.name;
     $(".mb-msg").textContent = "";
     const info = m.preview !== undefined ? m : await api(`/api/models/entry?pick=${encodeURIComponent(m.pick)}`);
@@ -80,11 +115,13 @@ export function modelBrowser(root, options = {}) {
 
   root.addEventListener("click", e => {
     const r = e.target.closest(".mb-row");
-    if (r) {
-      r.classList.add("on");
-      select(r.dataset.section === "s" ? opts.suggested[r.dataset.i] : found[r.dataset.i]);
-    }
+    if (!r) return;
+    const m = sections[r.dataset.section][r.dataset.i];
+    if (e.target.closest(".mb-star")) return toggleFavourite(m).catch(err => alert(err.message));
+    r.classList.add("on");
+    select(m);
   });
+  $(".mb-fav").addEventListener("click", () => selected && toggleFavourite(selected).catch(err => alert(err.message)));
   $(".mb-use").addEventListener("click", async () => {
     if (!selected || !opts.onPick) return;
     $(".mb-use").disabled = true;
@@ -104,6 +141,7 @@ export function modelBrowser(root, options = {}) {
     view.show(null);
     $(".mb-q").value = o.query || "";
     try {
+      await loadFavourites();
       tiles = await api(`/api/models/tiles?${new URLSearchParams({faction: o.faction || "", sub: o.sub || ""})}`);
     } catch (e) { $(".mb-list").innerHTML = `<p class="msg error">${esc(e.message)}</p>`; return; }
     const mine = tiles.filter(t => t.army);

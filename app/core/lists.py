@@ -169,6 +169,27 @@ def unit_summary(parsed):
             "units": out, "models": sum(u["count"] for u in out)}
 
 
+def favourites(key):
+    """A unit's favourite figures ("<chapter or faction>|<unit>" -> picks), as entries."""
+    cat = catalog()
+    picks = army.load_mappings().get("favorites", {}).get(key, [])
+    return [entry_info(cat, p) for p in picks if cat and p.split(":")[0] in cat
+            and int(p.split(":")[1]) < len(cat[p.split(":")[0]])]
+
+
+def set_favourite(key, pick, on=True):
+    """Add (or remove) a figure from a unit's favourites. -> the unit's favourites."""
+    mappings = army.load_mappings()
+    favs = mappings.setdefault("favorites", {})
+    picks = [p for p in favs.get(key, []) if p != pick] + ([pick] if on else [])
+    if picks:
+        favs[key] = picks
+    else:
+        favs.pop(key, None)
+    army.MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))
+    return picks
+
+
 def pin(key, pick):
     mappings = army.load_mappings()
     mappings.setdefault("models", {})[key] = [pick]

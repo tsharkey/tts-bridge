@@ -37,6 +37,8 @@
   th { color: var(--muted); font-weight: 500; }
   td select { font-size: 12px; }
   td .pickcell { display: flex; gap: 6px; align-items: center; }
+  .starBtn { border: 0; background: none; padding: 0 2px; font-size: 16px; line-height: 1; color: var(--muted); }
+  .starBtn.on, .starBtn:hover { color: var(--accent); }
   .gear { color: var(--muted); }
   .tip td { background: #101114; }
   .tip .tt { font-size: 12px; line-height: 1.5; max-width: 640px; }
@@ -208,11 +210,18 @@ function bbcode(text) {
 
 function groupRow(u, g, gi) {
   const cur = g.picks[0];
-  const opts = g.options.map(o => `<option value="${esc(o.pick)}" ${cur && o.pick === cur.pick ? "selected" : ""}>`
-    + `${esc(o.name)} · ${o.static ? "static" : "animated"} · ${esc(o.tile)}</option>`).join("");
+  const favourites = u.favorites || [];  // older servers send none
+  const liked = new Set(favourites.map(f => f.pick));
+  const option = o => `<option value="${esc(o.pick)}" ${cur && o.pick === cur.pick ? "selected" : ""}>`
+    + `${esc(o.name)} · ${o.static ? "static" : "animated"} · ${esc(o.tile)}</option>`;
+  const favs = favourites.length ? `<optgroup label="Favorites">${favourites.map(option).join("")}</optgroup>` : "";
+  const suggested = g.options.filter(o => !liked.has(o.pick));
+  const star = cur ? `<button class="starBtn ${liked.has(cur.pick) ? "on" : ""}" data-u="${u.i}" data-g="${gi}"
+      title="${liked.has(cur.pick) ? "Remove from" : "Add to"} ${esc(u.name)}'s favourites">${liked.has(cur.pick) ? "★" : "☆"}</button>` : "";
   const pick = !current.cached.catalog ? `<span class="muted">No catalogue</span>`
-    : `<div class="pickcell"><select class="pickSel" data-u="${u.i}" data-g="${gi}">
-         ${cur ? "" : `<option value="">No match: pick one…</option>`}<optgroup label="Suggested">${opts}</optgroup>
+    : `<div class="pickcell">${star}<select class="pickSel" data-u="${u.i}" data-g="${gi}">
+         ${cur ? "" : `<option value="">No match: pick one…</option>`}${favs}
+         ${suggested.length ? `<optgroup label="Suggested">${suggested.map(option).join("")}</optgroup>` : ""}
          <option value="@browse">Browse all models…</option></select>
          ${cur ? `<span class="badge ${cur.static ? "good" : ""}">${cur.static ? "Static" : "Animated"}</span>`
                : `<span class="badge bad">No match</span>`}
@@ -290,6 +299,10 @@ $("#result").addEventListener("click", async e => {
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
     row.insertAdjacentHTML("afterend", `<tr class="tip"><td colspan="4"><div class="muted">${esc(g.tooltip.name)}</div>
       <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]<br>${bbcode(g.tooltip.text)}</div></td></tr>`);
+  } else if (e.target.matches(".starBtn")) {
+    const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
+    await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
+    read();
   } else if (e.target.matches(".pvBtn")) {
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
     showPreview(g.picks[0]);
@@ -305,8 +318,10 @@ $("#result").addEventListener("change", async e => {
   if (e.target.value === "@browse") {
     e.target.value = g.picks[0]?.pick || "";
     $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
+    favouritesChanged = false;
     window.browseModels({faction: current.army.faction, sub: current.army.sub || "", suggested: g.options,
-      onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); $("#browseModal").classList.remove("on"); read(); }});
+      favoriteKey: u.pin_key, onFavorite: () => { favouritesChanged = true; },
+      onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); closeBrowse(); read(); }});
     return;
   }
   await api("/api/pin", {key: g.key, pick: e.target.value});
@@ -324,11 +339,17 @@ function showPreview(info) {
 }
 
 $("#pvClose").addEventListener("click", () => $("#preview").classList.remove("on"));
-$("#browseClose").addEventListener("click", () => $("#browseModal").classList.remove("on"));
-$("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") $("#browseModal").classList.remove("on"); });
+let favouritesChanged = false;
+function closeBrowse() {
+  if (!$("#browseModal").classList.contains("on")) return;
+  $("#browseModal").classList.remove("on");
+  if (favouritesChanged) { favouritesChanged = false; read(); }  // the dropdowns list favourites
+}
+$("#browseClose").addEventListener("click", closeBrowse);
+$("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") closeBrowse(); });
 $("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { $("#preview").classList.remove("on"); $("#browseModal").classList.remove("on"); }
+  if (e.key === "Escape") { $("#preview").classList.remove("on"); closeBrowse(); }
 });
 
 // ---------------------------------------------------------------- output
