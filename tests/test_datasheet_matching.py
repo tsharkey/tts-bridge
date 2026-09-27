@@ -145,3 +145,103 @@ def test_plan_prints_datasheets(name, capsys):
     out = capsys.readouterr().out
     assert "Commander Farsight" in out and "datasheet: Commander Farsight (exact)" in out
     assert "datasheet: NONE" in out and "no datasheet: " in out and "Breacher Team" in out
+
+
+# Compositions and names from datasheets (issue #10).
+
+def read(name, mappings=None):
+    return datasheets.parse((FIXTURES / name).read_text(), mappings if mappings is not None else {}, CACHE)
+
+
+def test_flat_list_models_from_datasheet():
+    """The old "+++" export lists The Twin Lance's two models as if they were
+    wargear; the datasheet's model names tell them apart, with no mappings.json."""
+    lance = unit(read("plus_format_tau.txt"), "The Twin Lance")
+    assert [(m["name"], m["sheet_model"]) for m in lance["models"]] == [
+        ("Ri'Lantar", "Ri’Lantar"), ("Ri'Locai", "Ri’Locai")]
+    assert "Fusion eliminator" in lance["models"][0]["wargear"]
+    assert lance.get("composition") is None  # the list said it; nothing filled in
+
+
+def test_short_export_compositions():
+    parsed = read("tau_short.txt")
+    crisis = unit(parsed, "Crisis Starscythe Battlesuits")
+    assert crisis["composition"] == "datasheet" and not crisis["complete"]
+    assert Counter(m["name"] for m in crisis["models"]) == {"Crisis Starscythe Shas'vre": 1, "Crisis Starscythe Shas'ui": 2}
+    assert crisis["models"][0]["wargear"] == ["Battlesuit fists", "Burst cannon"]
+    lance = unit(parsed, "The Twin Lance")  # "2x The Twin Lance"
+    assert Counter(m["sheet_model"] for m in lance["models"]) == {"Ri’Lantar": 1, "Ri’Locai": 1}
+    stealth = unit(parsed, "Stealth Battlesuits")  # 5x: the Shas'vre, then the rest where there's room
+    assert Counter(m["sheet_model"] for m in stealth["models"]) == {
+        "Stealth Shas’vre": 1, "Stealth Shas’ui w/ burst cannon": 4}
+    # a unit the sample has no datasheet for keeps its placeholders
+    assert Counter(m["name"] for m in unit(parsed, "Breacher Team")["models"]) == {"Breacher Team": 10}
+
+
+def test_simple_export_keeps_what_it_names():
+    stealth = unit(read("tau_simple.txt"), "Stealth Battlesuits")
+    assert Counter(m["sheet_model"] for m in stealth["models"]) == {
+        "Stealth Shas’vre": 1, "Stealth Shas’ui w/ burst cannon": 2, "Stealth Shas’ui w/ fusion blaster": 2}
+
+
+def test_composition_counts():
+    sheet = datasheets.Datasheets("T'au Empire", CACHE).get("t-starscythe")
+    assert [(m["name"], n) for m, n in datasheets.composition(sheet, 6)] == [
+        ("Crisis Starscythe Shas’vre", 1), ("Crisis Starscythe Shas’ui", 5)]
+    assert [n for _, n in datasheets.composition(sheet, 1)] == [1, 2]  # never below the datasheet's minimum
+
+
+def test_costed_wargear_or_enhancement():
+    coldstar = unit(read("tau_nr.txt"), "Commander in Coldstar Battlesuit", 1)
+    assert coldstar["enhancements"] == ["Starflare Ignition System"]
+    assert "Starflare Ignition System" not in coldstar["models"][0]["wargear"]
+    assert "priced" not in coldstar
+
+
+SOB_LIST = """Test (500 Points)
+
+Adepta Sororitas
+Army of Faith (3 Detachment Points)
+Purge the Foe
+Incursion (1,000 Points)
+
+Dominion Squad (115 Points)
+  • 1x Dominion Superior
+     ◦ 1x Bolt pistol
+     ◦ 1x Boltgun
+  • 1x Dominion w/ Special Weapon
+     ◦ 1x Bolt pistol
+     ◦ 1x Meltagun
+  • 3x Dominion
+     ◦ 3x Boltgun
+"""
+
+
+def test_stand_in_look_alike():
+    """Force Org has no Dominion figures. The datasheet with the same body and
+    the most wargear in common is Battle Sisters (Retributors have the same
+    body but other guns; Seraphim the same guns but jump packs)."""
+    sheets = datasheets.Datasheets("Adepta Sororitas", CACHE)
+    dominion = sheets.get("s-dominion")
+    assert datasheets.stand_in(sheets, dominion, "Dominion Superior") == ("Battle Sisters Squad", "Sister Superior")
+    assert datasheets.stand_in(sheets, dominion, "Dominion") == ("Battle Sisters Squad", "Battle Sister")
+    assert datasheets.stand_in(sheets, dominion, "Dominion w/ Special Weapon") == (
+        "Battle Sisters Squad", "Battle Sister w/ Special Weapon")
+    assert datasheets.stand_in(sheets, dominion, "Nobody") is None
+
+
+def test_dominion_gets_battle_sister_figures():
+    # figures named as Force Org names them
+    catalog = {"430877": [{"Name": "Custom_Model", "Nickname": n} for n in (
+        "Sister Superior", "Battle Sister", "Battle Sister - Meltagun + Bolt Pistol", "Retributor")]}
+    mappings = {}
+    parsed = datasheets.parse(SOB_LIST, mappings, CACHE)
+    rows = army.resolve(parsed, catalog, mappings, sheet_cache=CACHE)
+    got = {m["name"]: (catalog["430877"][int(m["pick"].split(":")[1])]["Nickname"], how)
+           for _, m, how in rows if how != "pinned"}
+    assert got == {
+        "Dominion Superior": ("Sister Superior", "auto cover=100% via Sister Superior"),
+        "Dominion w/ Special Weapon": ("Battle Sister - Meltagun + Bolt Pistol", "auto cover=100% via Battle Sister"),
+        "Dominion": ("Battle Sister", "auto cover=100% via Battle Sister"),
+    }
+    assert "aliases" not in mappings and "units" not in mappings

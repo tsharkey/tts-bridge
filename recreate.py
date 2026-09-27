@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 
 import army
+import datasheets
 import tts_bridge as tts
 
 HALF_X, HALF_Z = 30, 22
@@ -103,7 +104,7 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
     field, reserves = [], []  # field: (center, facing, objs); reserves: (army idx, [objs per unit])
     for ai, a in enumerate(scene["armies"]):
         text = a.get("list_text") or Path(a["list"]).read_text()
-        parsed = army.parse_list(text, mappings)
+        parsed = datasheets.parse(text, mappings)
         army.resolve(parsed, catalog, mappings)
         facing = a.get("facing", 180 if ai == 0 else 0)
         atag = f"{tag}:{'Red' if ai == 0 else 'Blue'}"  # lets board.py tell the armies apart

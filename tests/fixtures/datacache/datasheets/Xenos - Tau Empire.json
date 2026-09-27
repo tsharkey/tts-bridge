@@ -336,6 +336,160 @@
     }
    ],
    "wargear": {}
+  },
+  {
+   "id": "t-coldstar",
+   "name": "Commander in Coldstar Battlesuit",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-commander-in-coldstar-battlesuit",
+     "name": "Commander in Coldstar Battlesuit",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "High-output burst cannon",
+       "count": 1
+      }
+     ],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Cyclic ion blaster",
+        "Missile pod"
+       ]
+      }
+     ]
+    }
+   ],
+   "wargear": {
+    "Battlesuit fists": {
+     "id": "w-battlesuit-fists",
+     "weapons": [
+      {
+       "name": "Battlesuit fists"
+      }
+     ],
+     "abilities": []
+    },
+    "High-output burst cannon": {
+     "id": "w-high-output-burst-cannon",
+     "weapons": [
+      {
+       "name": "High-output burst cannon"
+      }
+     ],
+     "abilities": []
+    },
+    "Cyclic ion blaster": {
+     "id": "w-cyclic-ion-blaster",
+     "weapons": [
+      {
+       "name": "Cyclic ion blaster"
+      }
+     ],
+     "abilities": []
+    },
+    "Missile pod": {
+     "id": "w-missile-pod",
+     "weapons": [
+      {
+       "name": "Missile pod"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "t-starscythe",
+   "name": "Crisis Starscythe Battlesuits",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    3,
+    6
+   ],
+   "models": [
+    {
+     "id": "m-crisis-starscythe-shasvre",
+     "name": "Crisis Starscythe Shas’vre",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "Burst cannon",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-crisis-starscythe-shasui",
+     "name": "Crisis Starscythe Shas’ui",
+     "min": 2,
+     "max": 5,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "Burst cannon",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Battlesuit fists": {
+     "id": "w-battlesuit-fists",
+     "weapons": [
+      {
+       "name": "Battlesuit fists"
+      }
+     ],
+     "abilities": []
+    },
+    "Burst cannon": {
+     "id": "w-burst-cannon",
+     "weapons": [
+      {
+       "name": "Burst cannon"
+      }
+     ],
+     "abilities": []
+    }
+   }
   }
  ]
 }

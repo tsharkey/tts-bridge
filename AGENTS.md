@@ -21,7 +21,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `app/tools/<tool>/` | One tool: `TOOL` (its homepage card), `routes.py`, and `static/index.html`, served at `/tools/<tool-with-dashes>/`. |
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
 | `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
-| `datasheets.py` | Matches a parsed list's units, models and wargear to cached datasheets, pinning choices in `mappings.json`. |
+| `datasheets.py` | `parse()`: a list parsed with the data cache (datasheets matched and pinned, compositions filled in); look-alike figures for `army.resolve`. |
 | `mods.py` | Reads Force Org (into `catalog/`) and LCT's layouts (into `cache/lct/`) from TTS's Workshop folder, with TTS closed. |
 | `bases.py` | Official base sizes from Wahapedia's export (`data.py fetch wahapedia`), attached to a parsed list's models. |
 | `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
@@ -43,6 +43,9 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
   (−22…22), y up. Facing in degrees: 0 = +z, 90 = +x.
 - **`n` is the nth same-named unit in `parse_list` order** everywhere (vision, scenes, placement). Don't reorder.
+- **Parse lists with `datasheets.parse`**, not `army.parse_list`, so datasheets and compositions are used when
+  cached. A model's `wargear` is what pins are keyed on: add new fields, don't change it
+  ([docs/formats/parsed-list.md](docs/formats/parsed-list.md)).
 - **Never commit** army lists, `mappings.json`, `catalog/`, `cache/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
   Test data goes in `tests/fixtures/`, trimmed to what the test needs and with no player names.
 - **Datasheets are read in our format only** (`data.datasheets()`), never from BSData's files, so another source
