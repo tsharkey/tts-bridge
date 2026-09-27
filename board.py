@@ -56,9 +56,12 @@ for _, o in ipairs(getObjects()) do
     local p = o.getPosition()
     local r = o.getRotation()
     local d = o.getDescription() or ""
+    -- a plain find, not a pattern: TTS's Lua gives up on "^([^\\n]*)\\n" ("pattern
+    -- too complex") for a long description with no line break, like LCT's mission cards
+    local nl = d:find("\\n", 1, true)
     table.insert(out, {
         guid = o.guid, tag = o.tag, name = o.getName() or "",
-        head = d:match("^([^\\n]*)\\n") or "", notes = o.getGMNotes() or "",
+        head = nl and d:sub(1, nl - 1) or "", notes = o.getGMNotes() or "",
         locked = o.getLock(), rot = r.y, p = {p.x, p.y, p.z},
         c = {b.center.x, b.center.y, b.center.z}, s = {b.size.x, b.size.y, b.size.z},
     })
