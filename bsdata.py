@@ -64,6 +64,10 @@ class Catalogues:
         self.game = next((c for c in self.cats.values() if c["type"] == "gameSystem"), None)
         self.ids = {cid: self.index(c) for cid, c in self.cats.items()}
         self.skipped = Counter()
+        # the game's own rules (weapon keywords, core abilities), by name, to explain keywords
+        self.core_rules = {r["name"].casefold(): r for r in (self.game or {}).get("sharedRules") or []
+                           if r.get("description")}
+        self.glossary = {}
 
     @staticmethod
     def index(cat):
@@ -173,9 +177,31 @@ class Catalogues:
         return out
 
     def rules(self, node):
-        names = [r["name"] for r in node.get("rules") or []]
-        names += [ln["name"] for ln in node.get("infoLinks") or [] if ln.get("type") == "rule" and not ln.get("hidden")]
+        """Names of the rules a node has, noting each one's text in the glossary."""
+        names = []
+        for r in node.get("rules") or []:
+            names.append(r["name"])
+            self.explain(r["name"], r.get("description"))
+        for ln in node.get("infoLinks") or []:
+            if ln.get("type") == "rule" and not ln.get("hidden"):
+                names.append(ln["name"])
+                self.explain(ln["name"], (self.lookup(ln["targetId"]) or {}).get("description"))
         return names
+
+    def explain(self, name, text):
+        if text and text.strip() and name not in self.glossary:
+            self.glossary[name] = text.strip()
+
+    def keyword_rule(self, keyword):
+        """The game rule a weapon keyword is an instance of: "Anti-Infantry 4+" -> Anti,
+        "Sustained Hits 2" -> Sustained Hits, "LETHAL HITS: non-MONSTER" -> Lethal Hits."""
+        k = keyword.strip("[] ").casefold()
+        base = re.split(r"\s+(?=[\dd+\-\"])", k)[0].strip()
+        for guess in (k, k.split(":")[0].strip(), base, base.replace(" ", "-"),  # "Twin Linked"
+                      "anti" if k.startswith(("anti-", "anti ")) else ""):
+            if guess and guess in self.core_rules:
+                return self.core_rules[guess]
+        return None
 
     def has_models(self, node, depth=0):
         if depth > 6:
@@ -186,6 +212,7 @@ class Catalogues:
     # ------------------------------------------------------------------
 
     def unit(self, e, catalogue):
+        self.glossary = {}
         cats = [c["name"] for c in e.get("categoryLinks") or [] if not c.get("hidden")]
         u = {"id": e["id"], "name": e["name"], "catalogue": catalogue,
              "points": next((int(c["value"]) for c in e.get("costs") or [] if c.get("name") == "pts"), None),
@@ -209,6 +236,13 @@ class Catalogues:
                 m["stats"] = stats_of(line) if line else None
         if not u["equipped"] and not u["options"]:
             del u["equipped"], u["options"]
+        for w in u["wargear"].values():  # weapon keywords, explained by the game's rules
+            for p in w["weapons"]:
+                for k in p["keywords"]:
+                    rule = self.keyword_rule(k)
+                    if rule:
+                        self.explain(rule["name"], rule["description"])
+        u["glossary"] = dict(sorted(self.glossary.items()))
         return u
 
     def unit_children(self, node, u):
@@ -323,6 +357,7 @@ class Catalogues:
                         "keywords": [k.strip() for k in kw.split(",") if k.strip() and k.strip() != "-"]})
                 elif p.get("typeName") == "Abilities":
                     w["abilities"].append({"name": p["name"], "text": ch.get("Description", "")})
+            self.rules(node)  # a weapon's own rule links ("Melta"), for the glossary
             todo += [c for c in self.children(node) if c.get("type") != "model"]
         return name
 

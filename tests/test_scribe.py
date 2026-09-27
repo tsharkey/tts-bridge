@@ -89,8 +89,15 @@ def test_save_without_tts(client, paths, monkeypatch):
     assert r.status_code == 200, r.text
     path = Path(r.json()["path"])
     assert path.parent == paths / "Saved Objects" / "T'au Empire"
-    states = json.loads(path.read_text())["ObjectStates"]
+    everything = json.loads(path.read_text())["ObjectStates"]
+    states = [o for o in everything if o["Name"] != "Notecard"]
+    cards = [o for o in everything if o["Name"] == "Notecard"]
     assert len(states) == r.json()["models"] > 0
+    # one datasheet card per unit with a datasheet and a TTS model, tagged to its unit
+    # (the made-up catalogue has no Coldstar figure, so that unit has no models and no card)
+    assert [c["Nickname"] for c in cards][:2] == ["Commander Farsight datasheet", "Riptide Battlesuit datasheet"]
+    assert cards[0]["Tags"][:2] == ["tts-bridge:card", "tts-bridge:unit:1"]
+    assert "Dawn Blade" in cards[0]["Description"] and "[b]ABILITIES[/b]" in cards[0]["Description"]
     first = states[0]
     assert first["Description"].split("\n")[0] == "[Commander Farsight]"  # board.py groups units by it
     assert first["GMNotes"] == "army.py:T'au Empire Retaliation Cadre (Bonded Heroes) 2005"
@@ -184,7 +191,7 @@ def test_saved_object_path_stays_inside(monkeypatch, tmp_path, faction, title, f
 
 def test_saved_models_have_tooltips(client, paths):
     r = client.post("/api/scribe/save", json={"text": TOURNAMENT})
-    states = json.loads(Path(r.json()["path"]).read_text())["ObjectStates"]
+    states = [o for o in json.loads(Path(r.json()["path"]).read_text())["ObjectStates"] if o["Name"] != "Notecard"]
     farsight = states[0]
     assert farsight["Nickname"] == "Commander Farsight"
     head, rest = farsight["Description"].split("\n", 1)

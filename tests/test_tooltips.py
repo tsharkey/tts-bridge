@@ -72,3 +72,24 @@ def test_describe_keeps_the_unit_line_first():
     # without a datasheet: just the unit line and the catalogue's own description
     plain = tooltips.describe({"Description": "By someone"}, "Test Squad", {"name": "x", "wargear": []})
     assert plain["Description"] == "[Test Squad]\nBy someone" and "Nickname" not in plain
+
+
+def test_card_has_the_whole_datasheet():
+    sheet = dict(SHEET, glossary={"Deep Strike": "Arrives **later**.", "Assault": "Shoot after Advancing.",
+                                  "Lance": "Not carried here."})
+    unit = squad()
+    unit["role"], unit["attached_to"] = "leader", 1
+    others = [unit, {"name": "Bodyguard Squad"}]
+    text = tooltips.card_text(unit, sheet, others)
+    first, counts = text.split("\n")[:2]
+    assert "Leader of Bodyguard Squad" in first and "Warlord" in first and "Enhancement: Iron Will" in first
+    assert counts == "1× Squad Leader · 4× Trooper"
+    for section in ("[b]MODELS[/b]", "[b]RANGED WEAPONS[/b]", "[b]MELEE WEAPONS[/b]", "[b]ABILITIES[/b]",
+                    "[b]WARGEAR ABILITIES[/b]", "[b]RULES[/b]", "[b]KEYWORDS[/b]", "[b]FACTION[/b]"):
+        assert section in text, section
+    assert "Bolt rifle" in text and "Power sword - strike" in text and "Twin carbine" in text
+    assert "[b]Deep Strike:[/b] Arrives later." in text   # a unit rule, markup removed
+    assert "[b]Assault:[/b]" in text                        # the Bolt rifle is "Assault, Heavy"
+    assert "Lance" not in text                              # no weapon here has it
+    card = tooltips.card_object(unit, text)
+    assert (card["Name"], card["Nickname"], card["Tags"]) == ("Notecard", "Test Squad datasheet", ["tts-bridge:card"])

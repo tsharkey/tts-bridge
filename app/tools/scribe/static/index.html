@@ -50,6 +50,13 @@
   #preview .box { width: min(620px, 100%); margin: 0; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
   #preview .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   #preview .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+  #sheetModal { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
+                align-items: center; justify-content: center; padding: 16px; }
+  #sheetModal.on { display: flex; }
+  #sheetModal .box { width: min(760px, 100%); max-height: 100%; margin: 0; display: flex; flex-direction: column; }
+  #sheetModal .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+  #sheetModal .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+  #sheetBody { overflow-y: auto; font-size: 13px; line-height: 1.55; }
   #browseModal { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
                  align-items: center; justify-content: center; padding: 16px; }
   #browseModal.on { display: flex; }
@@ -116,6 +123,14 @@
   <section class="box">
     <div class="section-head"><h2 id="browseTitle">All models</h2><button class="fit" id="browseClose">Close</button></div>
     <div id="browseBody"></div>
+  </section>
+</div>
+
+<div id="sheetModal">
+  <section class="box">
+    <div class="section-head"><h2 id="sheetTitle">Datasheet</h2><button class="fit" id="sheetClose">Close</button></div>
+    <p class="hint" style="margin:0 0 8px">What the datasheet card beside this unit in TTS says.</p>
+    <div id="sheetBody" class="tt"></div>
   </section>
 </div>
 
@@ -245,7 +260,8 @@ function unitHtml(u) {
         <button class="fit pinSheet">Use it</button><button class="fit cancelSheet">Cancel</button></div></div>`;
   return `<div class="unit">
     <div class="unit-head"><h3>${esc(u.name)}${u.n > 1 ? ` <span class="muted">#${u.n}</span>` : ""}</h3>
-      ${u.points ? `<span class="muted">${u.points} pts</span>` : ""} ${badges(u)}</div>
+      ${u.points ? `<span class="muted">${u.points} pts</span>` : ""} ${badges(u)}
+      ${u.card ? `<a href="#" class="sheetBtn" data-u="${u.i}">Datasheet</a>` : ""}</div>
     ${sheet}
     <table><tr><th>Model</th><th>Gear</th><th>Base</th><th>TTS model</th></tr>
       ${u.groups.map((g, gi) => groupRow(u, g, gi)).join("")}</table>
@@ -292,6 +308,12 @@ $("#result").addEventListener("click", async e => {
     if (!hit) return alert("Pick a datasheet from the list.");
     await api("/api/scribe/datasheet", {key: u.pin_key, id: hit.id});
     read();
+  } else if (e.target.matches(".sheetBtn")) {
+    e.preventDefault();
+    const u = current.units[e.target.dataset.u];
+    $("#sheetTitle").textContent = `${u.name}${u.n > 1 ? " #" + u.n : ""}`;
+    $("#sheetBody").innerHTML = bbcode(u.card);
+    $("#sheetModal").classList.add("on");
   } else if (e.target.matches(".tipBtn")) {
     e.preventDefault();
     const row = e.target.closest("tr"), next = row.nextElementSibling;
@@ -346,10 +368,12 @@ function closeBrowse() {
   if (favouritesChanged) { favouritesChanged = false; read(); }  // the dropdowns list favourites
 }
 $("#browseClose").addEventListener("click", closeBrowse);
+$("#sheetClose").addEventListener("click", () => $("#sheetModal").classList.remove("on"));
+$("#sheetModal").addEventListener("click", e => { if (e.target.id === "sheetModal") $("#sheetModal").classList.remove("on"); });
 $("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") closeBrowse(); });
 $("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
 document.addEventListener("keydown", e => {
-  if (e.key === "Escape") { $("#preview").classList.remove("on"); closeBrowse(); }
+  if (e.key === "Escape") { $("#preview").classList.remove("on"); $("#sheetModal").classList.remove("on"); closeBrowse(); }
 });
 
 // ---------------------------------------------------------------- output

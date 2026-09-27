@@ -6,7 +6,23 @@
   "sharedRules": [
    {
     "id": "r-deep",
-    "name": "Deep Strike"
+    "name": "Deep Strike",
+    "description": "Set this unit up more than 9 inches from the **enemy**."
+   },
+   {
+    "id": "r-rapid",
+    "name": "Rapid Fire",
+    "description": "This ability always takes the form **[RAPID FIRE X]**."
+   },
+   {
+    "id": "r-heavy",
+    "name": "Heavy",
+    "description": "Add 1 to the Hit roll if the unit Remained Stationary."
+   },
+   {
+    "id": "r-lance",
+    "name": "Lance",
+    "description": "Not carried by anyone here."
    }
   ],
   "sharedProfiles": [
