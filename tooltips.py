@@ -9,6 +9,8 @@ hover over one.
 Every model gets its stat line, base and the weapons it carries. One model per
 unit (its leader or sergeant, or its only model) also gets the unit's
 abilities, rules, enhancements and keywords, so the others stay short. The
+unit gets its whole datasheet as "card" text (card_text), with every rule
+explained, for the datasheet card army.model_objects puts beside it. The
 text is TTS BBCode ([b], [i], [RRGGBB]...[-]). army.model_objects writes it
 after the "[<unit>]" line that board.py groups units by.
 """
@@ -22,8 +24,8 @@ ACCENT = "e8b53e"  # names, in the hub's accent
 
 
 def plain(text):
-    """BSData's markup ("**MONSTER**", "^^Markerlight^^") as plain text."""
-    return re.sub(r"\*\*|\^\^", "", text or "").strip()
+    """BSData's markup ("**MONSTER**", "^^Markerlight^^", "*Example:*") as plain text."""
+    return re.sub(r"\*+|\^\^", "", text or "").strip()
 
 
 def colour(hexcode, text):
@@ -113,8 +115,92 @@ def tooltip(unit, model, sheet, lead):
     return {"name": model["name"], "text": "\n".join(lines)}
 
 
+# --------------------------------------------------------------------------
+# The whole datasheet, for the card spawned beside each unit.
+
+def rules_for(sheet, keywords):
+    """The glossary entries a unit needs: its own rules, and the rules behind
+    the keywords of the weapons it carries ("Anti-Infantry 4+" -> Anti)."""
+    def norm(name):
+        return name.casefold().replace(" ", "-")
+    wanted = {norm(r) for r in sheet["rules"]}
+    keys = [norm(k) for k in keywords]
+    out = {}
+    for name, text in (sheet.get("glossary") or {}).items():
+        n = norm(name)
+        if n in wanted or any(k.startswith(n) for k in keys):
+            out[name] = text
+    return out
+
+
+def card_text(unit, sheet, units=()):
+    """The unit's whole datasheet as TTS BBCode: what the list chose, every
+    model's stats, the weapons it carries, abilities, rules explained, keywords."""
+    lines = []
+    chosen = []
+    if unit.get("role") in ("leader", "support") and unit.get("attached_to") is not None and units:
+        chosen.append(f"{unit['role'].title()} of {units[unit['attached_to']]['name']}")
+    elif unit.get("role") == "bodyguard":
+        chosen.append("Bodyguard")
+    if unit.get("warlord"):
+        chosen.append("Warlord")
+    chosen += [f"Enhancement: {e}" for e in unit.get("enhancements") or []]
+    if chosen:
+        lines.append(colour(ACCENT, " · ".join(chosen)))
+    counts = {}
+    for m in unit["models"]:
+        counts[m.get("sheet_model") or m["name"]] = counts.get(m.get("sheet_model") or m["name"], 0) + 1
+    lines.append(" · ".join(f"{n}× {plain(name)}" for name, n in counts.items()))
+
+    lines.append(colour(LABEL, "[b]MODELS[/b]"))
+    shown = [m for m in sheet["models"] if m["name"] in counts] or sheet["models"]
+    for sm in shown:
+        stats = stat_line(sm["stats"])
+        lines.append(f"[b]{plain(sm['name'])}[/b]  {stats}" if stats else f"[b]{plain(sm['name'])}[/b]")
+
+    carried_names = {}
+    for m in unit["models"]:
+        for name, count in carried(m, sheet):
+            carried_names[name] = max(carried_names.get(name, 0), count)
+    weapons = [(p, n) for name, n in carried_names.items() for p in sheet["wargear"][name]["weapons"]]
+    for kind, title in (("ranged", "RANGED WEAPONS"), ("melee", "MELEE WEAPONS")):
+        these = [weapon_line(p, 1) for p, _ in weapons if (p.get("type") == "melee") == (kind == "melee")]
+        if these:
+            lines += [colour(LABEL, f"[b]{title}[/b]")] + these
+
+    lines.append(colour(LABEL, "[b]ABILITIES[/b]"))
+    for a in sheet["abilities"]:
+        lines.append(f"[b]{a['name']}:[/b] {plain(a['text'])}" if a.get("text") else f"[b]{a['name']}[/b]")
+    gear = [a for name in carried_names for a in sheet["wargear"][name]["abilities"]]
+    if gear:
+        lines.append(colour(LABEL, "[b]WARGEAR ABILITIES[/b]"))
+        lines += [f"[b]{a['name']}:[/b] {plain(a['text'])}" for a in gear]
+    rules = rules_for(sheet, [k for p, _ in weapons for k in p.get("keywords") or []])
+    if rules:
+        lines.append(colour(LABEL, "[b]RULES[/b]"))
+        lines += [f"[b]{name}:[/b] {plain(text)}" for name, text in rules.items()]
+    if sheet["keywords"]:
+        lines.append(f"{colour(LABEL, '[b]KEYWORDS[/b]')} {', '.join(sheet['keywords'])}")
+    if sheet["factions"]:
+        lines.append(f"{colour(LABEL, '[b]FACTION[/b]')} {', '.join(sheet['factions'])}")
+    return "\n".join(lines)
+
+
+def card_object(unit, text):
+    """A TTS Notecard holding a unit's datasheet (no script): hover it, or pick
+    it up and read it. army.model_objects tags it and places it with the unit."""
+    return {"Name": "Notecard", "Nickname": f"{unit['name']} datasheet", "Description": text,
+            "Transform": {"posX": 0, "posY": 1, "posZ": 0, "rotX": 0, "rotY": 180, "rotZ": 0,
+                          "scaleX": 1, "scaleY": 1, "scaleZ": 1},
+            "Locked": False, "Tags": [CARD_TAG]}
+
+
+CARD_TAG = "tts-bridge:card"
+
+
 def attach(parsed, cache=None):
-    """Give every model of a datasheet-matched unit a "tooltip". -> how many."""
+    """Give every model of a datasheet-matched unit a "tooltip", and the unit
+    its whole datasheet as "card" text. -> how many models."""
     sheets = None
     count = 0
     for u in parsed["units"]:
@@ -129,6 +215,7 @@ def attach(parsed, cache=None):
         for i, m in enumerate(u["models"]):
             m["tooltip"] = tooltip(u, m, sheet, i == lead)
             count += 1
+        u["card"] = card_text(u, sheet, parsed["units"])
     return count
 
 

@@ -74,6 +74,10 @@ format; nothing downstream reads a source's own files.
     }
   ],
   "equipped": [], "options": [],   // unit-wide wargear; only present when there is some
+  "glossary": {                    // the text of its rules, and of the rules behind its weapons' keywords
+    "Deep Strike": "Each time this unit makes an **ingress move**…",
+    "Melta": "This ability always takes the form **[MELTA X]**…"   // "Melta 2" -> Melta, "Anti-Infantry 4+" -> Anti
+  },
   "wargear": {                     // everything named in equipped/choices, by name
     "Fusion blaster": {
       "id": "abfe-83b-188b-bc12",

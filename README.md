@@ -83,7 +83,9 @@ every model of the army, and ☆ makes the current one a favourite for that unit
 
 With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
 base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
-rules, enhancements and keywords. `army.py build` and **Board from image** add the same tooltips.
+rules, enhancements and keywords. Each unit also gets a **datasheet card** beside it (a plain TTS notecard):
+its whole datasheet, with every rule and weapon keyword explained. **Datasheet** on a unit in Scribe shows the
+same card. `army.py build` adds the same tooltips and cards; **Board from image** adds the tooltips.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.

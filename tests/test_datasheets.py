@@ -150,3 +150,12 @@ def test_errors(tmp_path):
 ])
 def test_github_links(url, repo):
     assert data.github_repo(url) == repo
+
+
+def test_glossary(imported):
+    """Rule text, for the datasheet card: the unit's own rules, and the rules
+    behind its weapons' keywords ("Rapid Fire 1" -> Rapid Fire)."""
+    commander = unit(imported, "Test Commander")
+    assert commander["glossary"] == {"Deep Strike": "Set this unit up more than 9 inches from the **enemy**."}
+    squad = unit(imported, "Test Squad")
+    assert set(squad["glossary"]) == {"Heavy", "Rapid Fire"}  # the Pulse rifle is "Rapid Fire 1, Heavy"; no Lance

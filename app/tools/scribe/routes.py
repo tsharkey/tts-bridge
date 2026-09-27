@@ -76,7 +76,7 @@ def view(parsed, catalog, mappings, prefer_static=False):
                       "datasheet": u.get("datasheet"), "pin_key": f"{scope}|{u['name']}",
                       "favorites": [entry_info(catalog, p) for p in liked.get(f"{scope}|{u['name']}", [])
                                     if catalog and p.split(":")[0] in catalog] if catalog else [],
-                      "allied": u["allied"], "groups": list(groups.values())})
+                      "allied": u["allied"], "card": u.get("card"), "groups": list(groups.values())})
     models = [m for u in parsed["units"] for m in u["models"]]
     missing = datasheets.unmatched(parsed)
     return {
