@@ -60,3 +60,15 @@ def test_pages_are_rechecked(client):
     """So a browser never pairs a new page with an old shared.css."""
     for path in ("/", "/shared.css", "/shared.js", "/tools/data/"):
         assert client.get(path).headers["cache-control"] == "no-cache", path
+
+
+def test_no_two_routes_share_a_path(client):
+    """Tools' routes and the shared ones live side by side; the first
+    registered would silently win (Board from image's vision /api/models once
+    lost to the catalogue's)."""
+    seen = {}
+    for r in client.app.routes:
+        for method in getattr(r, "methods", None) or []:
+            key = (method, r.path)
+            assert key not in seen, f"{method} {r.path} is defined twice"
+            seen[key] = r

@@ -102,23 +102,23 @@ def set_favourite(body: dict):
     return {"key": body["key"], "picks": picks}
 
 
-@shared.get("/api/models/armies")
+@shared.get("/api/catalog/armies")
 def model_armies():
     """Army names for choosing whose favourites to set: every faction and chapter."""
     return sorted(army.FACTIONS)
 
 
-@shared.get("/api/models/tiles")
+@shared.get("/api/catalog/tiles")
 def model_tiles(faction: str = "", sub: str = ""):
     return lists.model_tiles(faction or None, sub or None)
 
 
-@shared.get("/api/models")
+@shared.get("/api/catalog")
 def models(tiles: str = "", q: str = "", static: bool = False):
     return lists.find_models([t for t in tiles.split(",") if t] or None, q, static)
 
 
-@shared.get("/api/models/entry")
+@shared.get("/api/catalog/entry")
 def model_entry(pick: str):
     cat = lists.catalog()
     if cat is None:

@@ -1,4 +1,4 @@
-"""Browsing the Force Org catalogue (/api/models...), on a made-up catalogue."""
+"""Browsing the Force Org catalogue (/api/catalog...), on a made-up catalogue."""
 
 import json
 
@@ -28,32 +28,32 @@ def client(monkeypatch, tmp_path):
 
 
 def test_tiles(client):
-    tiles = client.get("/api/models/tiles", params={"faction": "T'au Empire"}).json()
+    tiles = client.get("/api/catalog/tiles", params={"faction": "T'au Empire"}).json()
     assert tiles[0] == {"tile": "e598e0", "label": "T'au Empire", "army": True, "models": 3}  # the army's own first
     labels = {t["tile"]: t["label"] for t in tiles}
     assert labels["999999"] == "Other models (999999)"
-    assert all(not t["army"] for t in client.get("/api/models/tiles").json())
+    assert all(not t["army"] for t in client.get("/api/catalog/tiles").json())
 
 
 def test_search(client):
-    r = client.get("/api/models", params={"q": "farsight"}).json()
+    r = client.get("/api/catalog", params={"q": "farsight"}).json()
     assert [(m["name"], m["tile"]) for m in r["models"]] == [
         ("Commander Farsight", "T'au Empire"), ("Farsight (counts-as)", "Space Marines / Ultramarines"),
         ("Farsight Breachers", "T'au Empire")]
     assert r["models"][0]["credit"] == "By someone"
-    r = client.get("/api/models", params={"q": "farsight", "static": True, "tiles": "e598e0"}).json()
+    r = client.get("/api/catalog", params={"q": "farsight", "static": True, "tiles": "e598e0"}).json()
     assert [m["name"] for m in r["models"]] == ["Commander Farsight"]
-    assert client.get("/api/models", params={"tiles": "e598e0"}).json()["total"] == 3  # the card isn't a model
+    assert client.get("/api/catalog", params={"tiles": "e598e0"}).json()["total"] == 3  # the card isn't a model
 
 
 def test_entry(client):
-    info = client.get("/api/models/entry", params={"pick": "e598e0:0"}).json()
+    info = client.get("/api/catalog/entry", params={"pick": "e598e0:0"}).json()
     assert (info["name"], info["static"], info["tile"]) == ("Commander Farsight", True, "T'au Empire")
 
 
 def test_no_catalogue(client, monkeypatch, tmp_path):
     monkeypatch.setattr(army, "CATALOG", tmp_path / "nothing")
-    r = client.get("/api/models", params={"q": "x"})
+    r = client.get("/api/catalog", params={"q": "x"})
     assert r.status_code == 400 and "Data cache page" in r.json()["error"]
 
 
@@ -83,7 +83,7 @@ def test_set_and_clear_favourites(client, mappings):
     assert json.loads(mappings.read_text())["favorites"] == {key: ["e598e0:0"]}
     client.post("/api/favorites", json={"key": key, "pick": "e598e0:0", "on": False})
     assert "favorites" not in json.loads(mappings.read_text()) or key not in json.loads(mappings.read_text())["favorites"]
-    assert "T'au Empire" in client.get("/api/models/armies").json()
+    assert "T'au Empire" in client.get("/api/catalog/armies").json()
 
 
 def test_resolve_prefers_a_favourite(client):
