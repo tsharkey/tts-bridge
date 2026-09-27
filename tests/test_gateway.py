@@ -155,6 +155,46 @@ def test_busy_port_without_the_hub(monkeypatch):
             tts_bridge.start_listener()
 
 
+def test_the_listener_asks_for_the_port_exclusively_where_it_can(monkeypatch):
+    """On Windows SO_REUSEADDR lets a second socket bind a port that's in use, so a CLI tool would
+    never find the hub's port busy and never forward. There, bind with SO_EXCLUSIVEADDRUSE (#87)."""
+    options = []
+
+    class Sock:
+        def __init__(self, *a):
+            pass
+
+        def setsockopt(self, level, option, value):
+            options.append(option)
+
+        def bind(self, address):
+            raise OSError("in use")   # the hub has it
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(tts_bridge.socket, "socket", Sock)
+    monkeypatch.setattr(tts_bridge, "hub_answers", lambda url: True)
+    monkeypatch.setattr(tts_bridge.socket, "SO_EXCLUSIVEADDRUSE", -5, raising=False)   # as on Windows
+    tts_bridge.start_listener()
+    assert options == [-5] and tts_bridge.hub is not None
+    monkeypatch.delattr(tts_bridge.socket, "SO_EXCLUSIVEADDRUSE")   # macOS and Linux
+    options.clear()
+    tts_bridge.start_listener()
+    assert options == [tts_bridge.socket.SO_REUSEADDR]
+    monkeypatch.setattr(tts_bridge, "hub", None)
+
+
+def test_a_second_listener_on_this_system_finds_the_port_busy(monkeypatch):
+    """Whatever socket option start_listener uses here, a second bind of a held port fails,
+    which is what sends a CLI tool to the hub."""
+    monkeypatch.setattr(tts_bridge, "LISTEN_PORT", free_port())
+    monkeypatch.setattr(tts_bridge, "HUB_PORT", free_port())   # nothing answering there
+    tts_bridge.start_listener()   # this process holds the port, like the hub
+    with pytest.raises(SystemExit, match="busy"):
+        tts_bridge.start_listener()
+
+
 def test_only_local_host_names():
     """A page on another site can't reach the gateway by DNS rebinding."""
     app = server.create_app(server.HOSTS)
