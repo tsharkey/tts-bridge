@@ -283,13 +283,17 @@ def closest(a, b):
 # --------------------------------------------------------------------------
 # Commands
 
-def cmd_summary(_args):
-    objs = read_objects()
+def board_state(objs):
+    """The table as units and terrain: what board.json holds (docs/formats/board-state.md)."""
     terrain = collect_terrain(objs)
-    units = collect_units(objs)
-    rows = [unit_row(u, terrain) for u in units]
-    surface = table_surface(objs)
-    BOARD_JSON.write_text(json.dumps({"surface_y": round(surface, 2), "units": rows, "terrain": terrain}, indent=2))
+    return {"surface_y": round(table_surface(objs), 2),
+            "units": [unit_row(u, terrain) for u in collect_units(objs)], "terrain": terrain}
+
+
+def cmd_summary(_args):
+    state = board_state(read_objects())
+    rows, terrain, surface = state["units"], state["terrain"], state["surface_y"]
+    BOARD_JSON.write_text(json.dumps(state, indent=2))
 
     for army in sorted({r["army"] for r in rows}):
         print(f"\n== {army}")
