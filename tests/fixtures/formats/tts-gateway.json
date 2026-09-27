@@ -1,0 +1,53 @@
+{
+  "gateway": {
+    "gateway": true
+  },
+  "lua_request": {
+    "script": "return 1 + 1",
+    "timeout": 10
+  },
+  "lua_replies": [
+    {
+      "ok": true,
+      "result": 2
+    },
+    {
+      "ok": true,
+      "result": "{\"guid\":\"dc9993\"}"
+    },
+    {
+      "ok": false,
+      "error": "Lua error: chunk_4:(3,4-9): attempt to index a nil value"
+    },
+    {
+      "ok": false,
+      "error": "No response from TTS. Is it running with a game loaded, and is the External Editor API enabled?"
+    }
+  ],
+  "events": [
+    {
+      "messageID": 2,
+      "message": "Red scored 5 VP"
+    },
+    {
+      "messageID": 3,
+      "error": "chunk_4:(3,4-9): attempt to index a nil value",
+      "guid": "-1",
+      "errorMessagePrefix": "Error in Global Script: "
+    },
+    {
+      "messageID": 4,
+      "customMessage": {
+        "lct": "deployment",
+        "card": "Dawn of War"
+      }
+    },
+    {
+      "messageID": 6
+    },
+    {
+      "messageID": 7,
+      "guid": "a1b2c3"
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "id": "0c4960",
+  "name": "TnH vs TnH 2 - Dawn of War - BTTF",
+  "map": "TnH vs TnH 2",
+  "deployment": "Dawn of War",
+  "pack": "BTTF",
+  "source": {
+    "from": "lct",
+    "lct_updated": "2026-09-17T16:29:16+00:00"
+  },
+  "areas": [
+    {
+      "id": "A1",
+      "polygon": [
+        [-5.83, -0.1],
+        [2.83, -5.1],
+        [5.83, 0.1],
+        [-2.83, 5.1]
+      ],
+      "features": [
+        {
+          "id": "A1a",
+          "name": "Ruin (large)",
+          "category": "dense",
+          "polygon": [
+            [-3.28, 0.95],
+            [2.78, -2.55],
+            [4.28, 0.05],
+            [-1.78, 3.55]
+          ],
+          "height": 5.5,
+          "floors": [3.2]
+        }
+      ]
+    },
+    {
+      "id": "A2",
+      "polygon": [
+        [-24.0, 9.0],
+        [-12.0, 9.0],
+        [-12.0, 15.0],
+        [-24.0, 15.0]
+      ],
+      "features": [
+        {
+          "id": "A2a",
+          "name": "Barricade",
+          "category": "light",
+          "polygon": [
+            [-21.0, 10.5],
+            [-15.0, 10.5],
+            [-15.0, 11.5],
+            [-21.0, 11.5]
+          ],
+          "height": 1.5,
+          "floors": []
+        }
+      ]
+    },
+    {
+      "id": "A3",
+      "polygon": [
+        [15.0, -14.0],
+        [21.0, -14.0],
+        [21.0, -10.0],
+        [15.0, -10.0]
+      ],
+      "features": [
+        {
+          "id": "A3a",
+          "name": "Crater",
+          "category": "exposed",
+          "polygon": [
+            [15.5, -13.5],
+            [20.5, -13.5],
+            [20.5, -10.5],
+            [15.5, -10.5]
+          ],
+          "height": 0.2,
+          "floors": []
+        }
+      ]
+    }
+  ],
+  "objectives": [
+    {
+      "id": "home-red",
+      "kind": "home",
+      "side": "red",
+      "x": 0,
+      "z": 18,
+      "area": null
+    },
+    {
+      "id": "home-blue",
+      "kind": "home",
+      "side": "blue",
+      "x": 0,
+      "z": -18,
+      "area": null
+    },
+    {
+      "id": "expansion-red",
+      "kind": "expansion",
+      "side": "red",
+      "x": -18,
+      "z": 12,
+      "area": "A2"
+    },
+    {
+      "id": "expansion-blue",
+      "kind": "expansion",
+      "side": "blue",
+      "x": 18,
+      "z": -12,
+      "area": "A3"
+    },
+    {
+      "id": "central",
+      "kind": "central",
+      "side": null,
+      "x": 0,
+      "z": 0,
+      "area": "A1"
+    }
+  ],
+  "zones": [
+    {
+      "side": "red",
+      "polygon": [
+        [-30, 10],
+        [30, 10],
+        [30, 22],
+        [-30, 22]
+      ]
+    },
+    {
+      "side": "blue",
+      "polygon": [
+        [-30, -22],
+        [30, -22],
+        [30, -10],
+        [-30, -10]
+      ]
+    }
+  ]
+}

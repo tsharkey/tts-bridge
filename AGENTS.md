@@ -34,6 +34,10 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 
 ## Rules
 
+- **The shapes tools pass each other are written down in [docs/formats/](docs/formats/)**: parsed list,
+  datasheet, layout terrain (draft), board state and the TTS gateway, each with a sample in
+  `tests/fixtures/formats/` or `tests/fixtures/` that a test loads. Build against those. Changing a format other
+  tracks use needs its own small PR or a Discussion first (CONTRIBUTING.md); add fields rather than rename them.
 - **Don't clear or rearrange the user's table** (loading a layout, destroying objects, Clear Table) unless the
   task is exactly that or the user said so. Only move or remove objects this project spawned.
 - **One listener, and the hub forwards.** Only one process can bind port 39998. The hub holds it and serves

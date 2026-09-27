@@ -1,0 +1,95 @@
+{
+  "surface_y": 1.0,
+  "units": [
+    {
+      "army": "army.py:Ret Cadre",
+      "unit": "Pathfinder Team",
+      "nth": 1,
+      "models": 3,
+      "on_table": true,
+      "unit_id": 2,
+      "datasheet": "c8b1-9d6c-4a53-b0e2",
+      "coherency": [],
+      "x": 5.5,
+      "z": 17.0,
+      "box": [4.0, 7.0, 17, 17],
+      "facing": 180,
+      "touching": [
+        "Ruin (large)"
+      ],
+      "zones": [
+        "Red deployment zone"
+      ],
+      "guids": [
+        "a1b2c0",
+        "a1b2c1",
+        "a1b2c2"
+      ]
+    },
+    {
+      "army": "army.py:Ret Cadre",
+      "unit": "Stealth Battlesuits",
+      "nth": 1,
+      "models": 3,
+      "on_table": false,
+      "unit_id": 5,
+      "datasheet": "f00d-1234-5678-9abc",
+      "coherency": [],
+      "x": -38.5,
+      "z": 30.0,
+      "box": [-40.0, -37.0, 30, 30],
+      "facing": 180,
+      "touching": [],
+      "zones": [],
+      "guids": [
+        "d4e5f0",
+        "d4e5f1",
+        "d4e5f2"
+      ]
+    },
+    {
+      "army": "army.py:Blue list",
+      "unit": "Intercessor Squad",
+      "nth": 1,
+      "models": 2,
+      "on_table": true,
+      "unit_id": null,
+      "datasheet": null,
+      "coherency": [],
+      "x": -5.2,
+      "z": -18.0,
+      "box": [-6.0, -4.5, -18, -18],
+      "facing": 0,
+      "touching": [],
+      "zones": [],
+      "guids": [
+        "0f0f01",
+        "0f0f00"
+      ]
+    }
+  ],
+  "terrain": [
+    {
+      "name": "Ruin (large)",
+      "guid": "dc9993",
+      "kind": "terrain",
+      "x": 5,
+      "z": 17,
+      "w": 9.2,
+      "d": 8.1,
+      "height": 5.0,
+      "box": [0.4, 9.6, 12.95, 21.05]
+    },
+    {
+      "name": "Red deployment zone",
+      "guid": "5e5e5e",
+      "kind": "zone",
+      "x": 0,
+      "z": 16,
+      "w": 60,
+      "d": 12,
+      "height": 1.0,
+      "box": [-30.0, 30.0, 10.0, 22.0]
+    }
+  ]
+}
