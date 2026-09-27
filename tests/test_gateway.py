@@ -92,6 +92,34 @@ def test_lua_error_and_timeout(game, capsys):
     assert not tts_bridge.waiting
 
 
+def test_a_duplicate_reply_doesnt_block_the_listener(game):
+    """The first reply is delivered; a second with the same id is dropped, not queued behind it (#85)."""
+    import queue
+    q = queue.Queue(1)
+    with tts_bridge.waiting_lock:
+        tts_bridge.waiting["dup"] = q
+    for _ in range(2):
+        send(tts_bridge.LISTEN_PORT, {"messageID": 4, "customMessage": {"reply": "dup", "ok": True, "result": 1}})
+    assert q.get(timeout=2) == {"reply": "dup", "ok": True, "result": 1}
+    assert tts_bridge.run_lua("return still") == "still"
+    assert "dup" not in tts_bridge.waiting
+
+
+def test_a_reply_that_lands_as_the_call_times_out_is_kept(game, monkeypatch):
+    """If the reply arrives between the wait timing out and the waiter being removed, use it (#85)."""
+    import queue
+    real_get = queue.Queue.get
+
+    def get(self, block=True, timeout=None):
+        if block and timeout:   # the timed wait: time out, but the reply is already on its way
+            self.put_nowait({"reply": "x", "ok": True, "result": "late"})
+            raise queue.Empty
+        return real_get(self, block, timeout)
+    monkeypatch.setattr(queue.Queue, "get", get)
+    assert tts_bridge.execute("return x -- silent", timeout=0.1) == {"ok": True, "result": "late"}
+    assert not tts_bridge.waiting
+
+
 def test_concurrent_calls_each_get_their_own_reply(game):
     client = TestClient(server.create_app())
     results = {}
