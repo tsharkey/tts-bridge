@@ -900,9 +900,9 @@ def model_objects(army, catalog):
     """Each picked model's catalogue object, ready to spawn: its unit's name on
     the first description line (board.py groups by it), then its datasheet
     tooltip when datasheets are cached (tooltips.py), the army tag in GM
-    Notes. A unit with a datasheet also gets its datasheet card (a Notecard) at
-    the front of its models; its entry in `models` is None.
+    Notes, its unit tags, and the datasheet viewer script (sheetviewer.py).
     -> (objects, models, units) with units as [(name, [object index])]."""
+    import sheetviewer
     import tooltips
 
     if not any("tooltip" in m for u in army["units"] for m in u["models"]):
@@ -910,12 +910,6 @@ def model_objects(army, catalog):
     objs, models, units = [], [], []
     for index, u in enumerate(army["units"], 1):
         members = []
-        if u.get("card") and any(m["pick"] for m in u["models"]):
-            card = tag(tooltips.card_object(u, u["card"]), [tooltips.CARD_TAG] + unit_tags(index, u))
-            card["GMNotes"] = f"army.py:{army['title']}"
-            members.append(len(objs))
-            objs.append(card)
-            models.append(None)
         for m in u["models"]:
             if not m["pick"]:
                 continue
@@ -924,6 +918,8 @@ def model_objects(army, catalog):
             o.pop("GUID", None)
             tooltips.describe(o, u["name"], m)
             tag(o, unit_tags(index, u))
+            if u.get("card"):
+                sheetviewer.attach(o, u["name"], u["card"])
             o["GMNotes"] = f"army.py:{army['title']}"
             members.append(len(objs))
             objs.append(o)
@@ -1042,15 +1038,9 @@ def save_object(army, guids):
     return write_saved_object(army, [json.loads(s) for s in json.loads(raw)])
 
 
-CARD_SIZE = [2.3, 3.2]  # a TTS Notecard's footprint, roughly
-
-
 def footprint(model):
     """A model's [width, depth] in inches from its base, for laying out
-    without TTS: a 32mm round base when the base isn't known. None is a
-    datasheet card."""
-    if model is None:
-        return CARD_SIZE
+    without TTS: a 32mm round base when the base isn't known."""
     b = model.get("base")
     if b and b.get("inches"):
         return [b["inches"][0], b["inches"][-1]]

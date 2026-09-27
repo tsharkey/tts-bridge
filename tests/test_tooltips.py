@@ -91,5 +91,3 @@ def test_card_has_the_whole_datasheet():
     assert "[b]Deep Strike:[/b] Arrives later." in text   # a unit rule, markup removed
     assert "[b]Assault:[/b]" in text                        # the Bolt rifle is "Assault, Heavy"
     assert "Lance" not in text                              # no weapon here has it
-    card = tooltips.card_object(unit, text)
-    assert (card["Name"], card["Nickname"], card["Tags"]) == ("Notecard", "Test Squad datasheet", ["tts-bridge:card"])

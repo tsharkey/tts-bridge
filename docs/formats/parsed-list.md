@@ -31,7 +31,7 @@ What every tool starts from: an army list export, parsed.
       "composition": "datasheet",  // only when the models were filled in from the datasheet
       "priced": [],                // New Recruit: costed options not yet told apart (datasheets.parse empties it)
       "datasheet": {"id": "…", "name": "…", "catalogue": "…", "how": "exact"},   // see datasheet.md
-      "card": "…",                 // the whole datasheet as TTS BBCode, for its datasheet card (tooltips.attach)
+      "card": "…",                 // the whole datasheet as TTS BBCode, for the viewer on its models (tooltips.attach)
       "models": [
         {
           "name": "Terminator",

@@ -10,7 +10,7 @@ Every model gets its stat line, base and the weapons it carries. One model per
 unit (its leader or sergeant, or its only model) also gets the unit's
 abilities, rules, enhancements and keywords, so the others stay short. The
 unit gets its whole datasheet as "card" text (card_text), with every rule
-explained, for the datasheet card army.model_objects puts beside it. The
+explained, for the datasheet viewer on each of its models (sheetviewer.py). The
 text is TTS BBCode ([b], [i], [RRGGBB]...[-]). army.model_objects writes it
 after the "[<unit>]" line that board.py groups units by.
 """
@@ -116,7 +116,7 @@ def tooltip(unit, model, sheet, lead):
 
 
 # --------------------------------------------------------------------------
-# The whole datasheet, for the card spawned beside each unit.
+# The whole datasheet, for the viewer on each model (sheetviewer.py) and Scribe.
 
 def rules_for(sheet, keywords):
     """The glossary entries a unit needs: its own rules, and the rules behind
@@ -184,18 +184,6 @@ def card_text(unit, sheet, units=()):
     if sheet["factions"]:
         lines.append(f"{colour(LABEL, '[b]FACTION[/b]')} {', '.join(sheet['factions'])}")
     return "\n".join(lines)
-
-
-def card_object(unit, text):
-    """A TTS Notecard holding a unit's datasheet (no script): hover it, or pick
-    it up and read it. army.model_objects tags it and places it with the unit."""
-    return {"Name": "Notecard", "Nickname": f"{unit['name']} datasheet", "Description": text,
-            "Transform": {"posX": 0, "posY": 1, "posZ": 0, "rotX": 0, "rotY": 180, "rotZ": 0,
-                          "scaleX": 1, "scaleY": 1, "scaleZ": 1},
-            "Locked": False, "Tags": [CARD_TAG]}
-
-
-CARD_TAG = "tts-bridge:card"
 
 
 def attach(parsed, cache=None):
