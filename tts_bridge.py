@@ -91,10 +91,10 @@ def dispatch(msg):
     custom = msg.get("customMessage")
     reply_id = custom.get("reply") if msg.get("messageID") == 4 and isinstance(custom, dict) else None
     if reply_id is not None:
-        with waiting_lock:
-            q = waiting.get(reply_id)
+        with waiting_lock:   # taken off, so a second reply with this id can't block the listener
+            q = waiting.pop(reply_id, None)
         if q:
-            q.put(custom)
+            q.put_nowait(custom)
         return  # a reply nobody waits for any more (it timed out)
     for listener in list(listeners) or [handle_passive]:
         listener(msg)
@@ -172,9 +172,15 @@ def execute(script: str, timeout=10):
     try:
         send_message({"messageID": 3, "guid": "-1",
                       "script": LUA_WRAPPER.format(script=script, reply_id=reply_id)})
-        payload = q.get(timeout=timeout)
-    except queue.Empty:
-        return {"ok": False, "error": NO_RESPONSE}
+        try:
+            payload = q.get(timeout=timeout)
+        except queue.Empty:
+            with waiting_lock:
+                waiting.pop(reply_id, None)
+            try:   # the reply may have landed between the timeout and the pop
+                payload = q.get_nowait()
+            except queue.Empty:
+                return {"ok": False, "error": NO_RESPONSE}
     finally:
         with waiting_lock:
             waiting.pop(reply_id, None)
