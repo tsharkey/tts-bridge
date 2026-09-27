@@ -71,6 +71,21 @@ python3 data.py fetch wahapedia
 Open <http://localhost:8765>. The homepage lists the tools; every page's header shows whether TTS is
 connected, and whether LCT is loaded.
 
+### Scribe
+
+Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (full, simple or short export) or a
+"+++" tournament list, or pick a saved one, and press **Read list**. It shows what the list became: each unit's
+datasheet, leaders and what they're attached to, the warlord, enhancements, and every model with its gear, base
+size and the TTS model it will use. Anything that didn't match is listed at the top; pick a datasheet or a TTS
+model on the unit to fix it (**View** previews static models in 3D).
+
+- **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
+  from **Objects → Saved Objects**.
+- **Spawn on the table** places it in the running game, top-left corner at x, z (table inches), rows up to the
+  width given, facing the way given.
+
+Both remember your choices in `mappings.json`, so the list comes out the same next time.
+
 ### Board from image
 
 1. **Model:** paste your OpenRouter key and pick any vision model. Prices are shown per model.
@@ -103,7 +118,7 @@ loaded, and **Refresh from TTS** rebuilds the catalogue the same way as `python3
 
 These use the same catalogue. Stop the web app first: only one process can hold the bridge's listener port.
 
-**Spawn an army list** (GW app, `+++` tournament, and New Recruit full, simple and short exports all work; simple and short ones leave out models, so check what `plan` shows):
+**Spawn an army list** (GW app, `+++` tournament, and New Recruit full, simple and short exports all work; simple and short ones leave out models, so check what `plan` shows). **Scribe** in the web app does the same without a terminal:
 
 ```bash
 python3 army.py plan my_list.txt                # show which model each list entry matched

@@ -24,11 +24,11 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 import tts_bridge as tts  # noqa: E402
 from app.core.api import shared  # noqa: E402
-from app.tools import board_replay, data  # noqa: E402
+from app.tools import board_replay, data, scribe  # noqa: E402
 
 PORT = 8765
 STATIC = Path(__file__).resolve().parent / "static"
-TOOLS = [board_replay, data]
+TOOLS = [scribe, board_replay, data]
 
 
 class Static(StaticFiles):
