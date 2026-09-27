@@ -29,6 +29,7 @@ import copy
 import hashlib
 import json
 import math
+import os
 import re
 import sys
 import time
@@ -36,12 +37,24 @@ import unicodedata
 from difflib import SequenceMatcher
 from pathlib import Path
 
+import config  # noqa: F401  (loads .env)
 import tts_bridge as tts
 
 ROOT = Path(__file__).parent
 CATALOG = ROOT / "catalog"
 MAPPINGS = ROOT / "mappings.json"
-SAVED_OBJECTS = Path.home() / "Library/Tabletop Simulator/Saves/Saved Objects"
+
+
+def saved_objects_dir():
+    """TTS's Saved Objects folder: TTS_SAVED_OBJECTS, else the macOS, Windows
+    or Linux default (the first that exists, else the macOS one)."""
+    if os.environ.get("TTS_SAVED_OBJECTS"):
+        return Path(os.environ["TTS_SAVED_OBJECTS"]).expanduser()
+    home = Path.home()
+    options = [home / "Library/Tabletop Simulator/Saves/Saved Objects",
+               home / "Documents/My Games/Tabletop Simulator/Saves/Saved Objects",
+               home / ".local/share/Tabletop Simulator/Saves/Saved Objects"]
+    return next((p for p in options if p.parent.is_dir()), options[0])
 
 # Force Org tile GUIDs per faction. A sub-faction's tile is searched first,
 # then its parent faction's, then every tile.
@@ -838,8 +851,11 @@ def lua_list(xs):
     return "{" + ",".join(f'"{x}"' for x in xs) + "}"
 
 
-def spawn(army, catalog, x0, z0, width=110, facing=180):
-    objs, units = [], []
+def model_objects(army, catalog):
+    """Each picked model's catalogue object, ready to spawn: its unit's name on
+    the first description line (board.py groups by it), the army tag in GM
+    Notes. -> (objects, models, units) with units as [(name, [object index])]."""
+    objs, models, units = [], [], []
     for u in army["units"]:
         members = []
         for m in u["models"]:
@@ -852,7 +868,49 @@ def spawn(army, catalog, x0, z0, width=110, facing=180):
             o["GMNotes"] = f"army.py:{army['title']}"
             members.append(len(objs))
             objs.append(o)
+            models.append(m)
         units.append((u["name"], members))
+    return objs, models, units
+
+
+def pack(units, dims, x0, z0, width, gap=0.4, pad=3.0):
+    """Lay units out left to right in rows from (x0, z0), top-left, wrapping at
+    `width` inches. dims[k] is object k's [width, depth]. -> [(k, x, z)] centres."""
+    moves = []
+    cx, cz, row_h = x0, z0, 0
+    for _, members in units:
+        if not members:
+            continue
+        sizes = [dims[k] for k in members]
+        # as many models per line as fit the area (max 10), so narrow
+        # deployment zones wrap a unit instead of spilling off the table
+        per_row, run = 0, 0.0
+        for d in sizes[:10]:
+            if per_row and run + d[0] + gap > width:
+                break
+            run += d[0] + gap
+            per_row += 1
+        uw = sum(d[0] + gap for d in sizes[:per_row])
+        if cx + uw > x0 + width and cx > x0:
+            cx, cz, row_h = x0, cz - row_h - pad, 0
+        ux, uz, line_h = cx, cz, 0
+        for n, (k, d) in enumerate(zip(members, sizes)):
+            if n and n % per_row == 0:
+                ux, uz, line_h = cx, uz - line_h - gap, 0
+            moves.append((k, ux + d[0] / 2, uz - d[1] / 2))
+            ux += d[0] + gap
+            line_h = max(line_h, d[1])
+        row_h = max(row_h, cz - uz + line_h)
+        cx += uw + pad
+    return moves
+
+
+def spawn(army, catalog, x0, z0, width=110, facing=180, run_lua=None, log=print):
+    """Spawn the army's picked models in TTS and lay them out. -> their GUIDs."""
+    run_lua = run_lua or tts.run_lua
+    objs, _, units = model_objects(army, catalog)
+    if not objs:
+        raise SystemExit("No models to spawn: nothing in this list matched a Force Org model.")
 
     # stage everything locked and floating over its own target area (mods put
     # scripted zones around the table that eat stray objects), then pack once
@@ -865,72 +923,79 @@ def spawn(army, catalog, x0, z0, width=110, facing=180):
     for o in objs:
         lines.append(f"table.insert(g, spawnObjectJSON({{json = {tts.lua_str(json.dumps(o))}}}).guid)")
     lines.append("return g")
-    guids = json.loads(tts.run_lua("\n".join(lines), timeout=60))
+    reply = run_lua("\n".join(lines), timeout=60)
+    if reply is None:
+        raise SystemExit("TTS didn't answer. Is a game loaded, and is the External Editor API on?")
+    guids = json.loads(reply)
 
     sizes = None
     for _ in range(60):
-        r = tts.run_lua(SPAWN_LUA_WAIT.format(ids=lua_list(guids)))
+        r = run_lua(SPAWN_LUA_WAIT.format(ids=lua_list(guids)))
         if r and r != "wait":
             sizes = json.loads(r)
             break
         time.sleep(1)
     if sizes is None:
-        print("Models still loading after 60s; laying out with guessed sizes.")
+        log("Models still loading after 60s; laying out with guessed sizes.")
         sizes = {}
 
-    gap, pad = 0.4, 3.0
-    moves = []
-    cx, cz, row_h = x0, z0, 0
-    for _, members in units:
-        if not members:
-            continue
-        dims = [sizes.get(guids[k], [2, 2]) for k in members]
-        # as many models per line as fit the area (max 10), so narrow
-        # deployment zones wrap a unit instead of spilling off the table
-        per_row, run = 0, 0.0
-        for d in dims[:10]:
-            if per_row and run + d[0] + gap > width:
-                break
-            run += d[0] + gap
-            per_row += 1
-        uw = sum(d[0] + gap for d in dims[:per_row])
-        if cx + uw > x0 + width and cx > x0:
-            cx, cz, row_h = x0, cz - row_h - pad, 0
-        ux, uz, line_h = cx, cz, 0
-        for n, (k, d) in enumerate(zip(members, dims)):
-            if n and n % per_row == 0:
-                ux, uz, line_h = cx, uz - line_h - gap, 0
-            moves.append((guids[k], ux + d[0] / 2, uz - d[1] / 2))
-            ux += d[0] + gap
-            line_h = max(line_h, d[1])
-        row_h = max(row_h, cz - uz + line_h)
-        cx += uw + pad
-
-    lua = [f'do local o = getObjectFromGUID("{g}") if o then '
+    dims = [sizes.get(g, [2, 2]) for g in guids]
+    lua = [f'do local o = getObjectFromGUID("{guids[k]}") if o then '
            f'o.setPosition({{{x:.2f}, 3, {z:.2f}}}) o.setRotation({{0, {facing}, 0}}) '
            f'o.setLock(false) end end'
-           for g, x, z in moves]
-    tts.run_lua("\n".join(lua), timeout=30)
+           for k, x, z in pack(units, dims, x0, z0, width)]
+    run_lua("\n".join(lua), timeout=30)
     return guids
 
 
-def save_object(army, guids):
-    time.sleep(2)
-    raw = tts.run_lua(f"local out = {{}} for _, id in ipairs({lua_list(guids)}) do "
-                      f"local o = getObjectFromGUID(id) if o then table.insert(out, o.getJSON(false)) end "
-                      f"end return out",
-                      timeout=30)
-    states = [json.loads(s) for s in json.loads(raw)]
-    folder = SAVED_OBJECTS / (army["sub"] or army["faction"])
-    folder.mkdir(parents=True, exist_ok=True)
-    name = re.sub(r'[\\/:*?"<>|]', "", army["title"]).strip()
-    path = folder / f"{name}.json"
+def saved_object_path(army):
+    folder = saved_objects_dir() / (army["sub"] or army["faction"])
+    name = re.sub(r'[\\/:*?"<>|]', "", army["title"]).strip() or "Army"
+    return folder / f"{name}.json"
+
+
+def write_saved_object(army, states):
+    """Write objects as a TTS Saved Object (Objects -> Saved Objects in TTS). -> its path."""
+    path = saved_object_path(army)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({
         "SaveName": "", "GameMode": "", "Gravity": 0.5, "PlayArea": 0.5, "Date": "",
         "Table": "", "Sky": "", "Note": "", "Rules": "", "XmlUI": "", "LuaScript": "",
         "LuaScriptState": "", "ObjectStates": states, "TabStates": {}, "VersionNumber": "",
     }, indent=2))
     return path
+
+
+def save_object(army, guids):
+    """The spawned models, read back from TTS, as a Saved Object."""
+    time.sleep(2)
+    raw = tts.run_lua(f"local out = {{}} for _, id in ipairs({lua_list(guids)}) do "
+                      f"local o = getObjectFromGUID(id) if o then table.insert(out, o.getJSON(false)) end "
+                      f"end return out",
+                      timeout=30)
+    return write_saved_object(army, [json.loads(s) for s in json.loads(raw)])
+
+
+def footprint(model):
+    """A model's [width, depth] in inches from its base, for laying out
+    without TTS: a 32mm round base when the base isn't known."""
+    b = model.get("base")
+    if b and b.get("inches"):
+        return [b["inches"][0], b["inches"][-1]]
+    return [1.26, 1.26]
+
+
+def build_saved_object(army, catalog, width=40, facing=180):
+    """A Saved Object built from the catalogue alone, so TTS needn't be
+    running: models laid out by their base sizes, facing `facing`. -> its path."""
+    objs, models, units = model_objects(army, catalog)
+    if not objs:
+        raise SystemExit("No models to save: nothing in this list matched a Force Org model.")
+    dims = [footprint(m) for m in models]
+    for k, x, z in pack(units, dims, 0, 0, width):
+        objs[k]["Transform"].update(posX=round(x, 2), posY=1.5, posZ=round(z, 2), rotX=0, rotY=facing, rotZ=0)
+        objs[k]["Locked"] = False
+    return write_saved_object(army, objs)
 
 
 # --------------------------------------------------------------------------

@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scribe · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px 20px; }
+  main > div { min-width: 0; }
+  a { color: var(--accent); }
+  #listText { min-height: 260px; }
+  .row.tight { gap: 6px; margin-top: 8px; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .grid4 label { margin-top: 4px; }
+  .army-head h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 4px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+  .facts b { color: var(--text); font-weight: 500; }
+  .problems { border-left: 3px solid var(--warn); padding: 8px 12px; background: var(--panel2); border-radius: 0 6px 6px 0;
+              font-size: 13px; margin-top: 12px; }
+  .problems.ok { border-color: var(--ok); }
+  .problems ul { margin: 4px 0 0; padding-left: 18px; }
+  .unit { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel); }
+  .unit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+  .unit-head h3 { margin: 0; font-size: 15px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; background: var(--panel2);
+           border: 1px solid var(--line); color: var(--muted); }
+  .badge.good { color: var(--ok); border-color: rgba(79,196,123,.4); }
+  .badge.warn { color: var(--warn); border-color: rgba(232,181,62,.5); }
+  .badge.bad { color: var(--bad); border-color: rgba(255,93,93,.5); }
+  .sheet { font-size: 12px; margin: 4px 0 6px; color: var(--muted); }
+  .sheet .fix { display: none; gap: 6px; margin-top: 6px; }
+  .sheet.editing .fix { display: flex; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  td select { font-size: 12px; }
+  td .pickcell { display: flex; gap: 6px; align-items: center; }
+  .gear { color: var(--muted); }
+  #preview { display: none; }
+  #preview.on { display: block; }
+  #pvCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .grid4 { grid-template-columns: 1fr 1fr; } td:nth-child(2) { display: none; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Scribe</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>List</h2>
+      <select id="savedLists"><option value="">Pick a saved list…</option></select>
+      <label for="listText">Paste a list from the GW app, New Recruit (any export) or a "+++" tournament list</label>
+      <textarea id="listText" spellcheck="false"></textarea>
+      <div class="row tight">
+        <button class="primary fit" id="readBtn">Read list</button>
+        <input id="saveName" placeholder="Name, to save it">
+        <button class="fit" id="saveListBtn">Save list</button>
+      </div>
+      <div class="msg" id="listMsg"></div>
+    </section>
+
+    <section id="output">
+      <h2>To TTS</h2>
+      <button class="primary" id="saveObjBtn" disabled>Save as Saved Object</button>
+      <p class="hint" id="savePath">Read a list first. Works with TTS closed: load it in any game from
+        Objects → Saved Objects.</p>
+      <div class="msg" id="saveMsg"></div>
+      <label>Or spawn it on the table now (TTS must be running)</label>
+      <div class="grid4">
+        <div><label for="spX">x</label><input id="spX" type="number" value="-55" step="1"></div>
+        <div><label for="spZ">z</label><input id="spZ" type="number" value="55" step="1"></div>
+        <div><label for="spW">Width</label><input id="spW" type="number" value="110" step="1"></div>
+        <div><label for="spF">Facing</label><input id="spF" type="number" value="180" step="90"></div>
+      </div>
+      <p class="hint">Top-left corner in table inches (0,0 is the centre; the table runs −30…30 by −22…22), rows up to
+        this wide, models turned to face this way (180 = towards −z). The defaults put it off the table's top-left.</p>
+      <button id="spawnBtn" disabled>Spawn on the table</button>
+      <div class="msg" id="spawnMsg"></div>
+    </section>
+
+    <section id="preview">
+      <h2>Model</h2>
+      <canvas id="pvCanvas"></canvas>
+      <div class="summary" id="pvInfo"></div>
+    </section>
+  </div>
+
+  <div>
+    <div id="result"><div class="empty">Paste a list and press <b>Read list</b> to see what TTS will get.</div></div>
+  </div>
+</main>
+
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+// 3D preview of a static (OBJ) model, straight from Steam's CDN (as on Board from image).
+import * as THREE from "three";
+import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+let renderer, scene, camera, controls, current = null, token = 0;
+function init() {
+  const canvas = document.getElementById("pvCanvas");
+  renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0e10);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 2.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.position.set(3, 5, 4);
+  scene.add(sun);
+  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+  controls = new OrbitControls(camera, canvas);
+  controls.autoRotate = true;
+  (function loop() {
+    requestAnimationFrame(loop);
+    const w = canvas.clientWidth;
+    if (w && canvas.width !== Math.round(w * devicePixelRatio)) {
+      renderer.setSize(w, w, false); camera.aspect = 1; camera.updateProjectionMatrix();
+    }
+    if (document.getElementById("preview").classList.contains("on")) { controls.update(); renderer.render(scene, camera); }
+  })();
+}
+window.previewModel = async (info, status) => {
+  if (!renderer) init();
+  const mine = ++token;
+  if (current) { scene.remove(current); current = null; }
+  if (!info || !info.preview) return;
+  status("Loading model…");
+  try {
+    const loader = new OBJLoader(), textures = new THREE.TextureLoader();
+    async function build(part) {
+      const group = new THREE.Group();
+      group.position.set(...part.pos);
+      group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
+      group.scale.set(...part.scale);
+      if (part.mesh) {
+        const mesh = await loader.loadAsync(part.mesh);
+        let map = null;
+        if (part.diffuse) {
+          map = await textures.loadAsync(part.diffuse).catch(() => null);
+          if (map) map.colorSpace = THREE.SRGBColorSpace;
+        }
+        const c = part.color, tint = c[0] + c[1] + c[2] < 0.05 ? [0.55, 0.55, 0.58] : c;
+        const material = new THREE.MeshStandardMaterial({map, color: map ? 0xffffff : new THREE.Color(...tint),
+                                                         roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide});
+        mesh.traverse(m => { if (m.isMesh) m.material = material; });
+        group.add(mesh);
+      }
+      for (const child of await Promise.all(part.children.map(build))) group.add(child);
+      return group;
+    }
+    const model = await build(info.preview);
+    if (mine !== token) return;
+    const obj = new THREE.Group();
+    obj.add(model);
+    obj.scale.x = -1;  // Unity (TTS) meshes are mirrored relative to three.js
+    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
+    obj.position.sub(box.getCenter(new THREE.Vector3()));
+    const r = Math.max(size.x, size.y, size.z);
+    camera.position.set(r * 1.1, r * 0.8, r * 1.4);
+    camera.near = r / 100; camera.far = r * 20; camera.updateProjectionMatrix();
+    controls.target.set(0, 0, 0);
+    scene.add(obj);
+    current = obj;
+    status(null);
+  } catch (e) { if (mine === token) status("Couldn't load this model: " + e.message); }
+};
+</script>
+
+<script src="/shared.js"></script>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+let current = null;       // the last read: {army, units, problems, ...}
+let sheetChoices = null;  // datasheets for the picker, per army
+
+// ---------------------------------------------------------------- reading
+async function read(opts = {}) {
+  const text = $("#listText").value;
+  setMsg($("#listMsg"), "Reading…");
+  try {
+    current = await api("/api/scribe/read", {text, ...opts});
+    store.set("scribe.text", text);
+    setMsg($("#listMsg"), "");
+    render();
+  } catch (e) {
+    current = null;
+    setMsg($("#listMsg"), e.message, "error");
+    $("#result").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+  const can = !!(current && current.cached.catalog && current.totals.picked);
+  $("#saveObjBtn").disabled = !can;
+  $("#spawnBtn").disabled = !can;
+  $("#savePath").textContent = current ? (current.cached.catalog
+    ? `Saves to ${current.saved_object}. Works with TTS closed: load it in any game from Objects → Saved Objects.`
+    : "Build the Force Org model catalogue on the Data cache page first.") : $("#savePath").textContent;
+}
+
+function problemsHtml(c) {
+  const p = c.problems, items = [];
+  if (!c.cached.datasheets) items.push(`No datasheets cached, so units aren't checked against them. <a href="/tools/data/">Fetch them</a>.`);
+  if (!c.cached.catalog) items.push(`No Force Org models cached, so nothing can be spawned yet. <a href="/tools/data/">Build the catalogue</a>.`);
+  if (p.datasheets.length) items.push(`No datasheet for: ${p.datasheets.map(esc).join("; ")}. Pick one on the unit below.`);
+  if (p.figures.length) items.push(`No TTS model for: ${p.figures.map(esc).join("; ")}. Pick one below, or they're left out.`);
+  if (p.guessed.length) items.push(`The list doesn't say which models are in ${p.guessed.map(esc).join(", ")}; they were filled in from the datasheet. Check them.`);
+  if (p.models.length) items.push(`Not on their datasheet: ${p.models.map(esc).join("; ")}.`);
+  if (c.cached.bases && p.bases.length) items.push(`Base size: ${p.bases.map(esc).join("; ")}.`);
+  const summary = `${c.totals.picked} of ${c.totals.models} models have a TTS model.`;
+  return items.length
+    ? `<div class="problems">${summary} Check these:<ul>${items.map(i => `<li>${i}</li>`).join("")}</ul></div>`
+    : `<div class="problems ok">${summary} Everything matched.</div>`;
+}
+
+function badges(u) {
+  const out = [];
+  if (u.warlord) out.push(`<span class="badge good">Warlord</span>`);
+  if (u.role === "leader" || u.role === "support") {
+    const to = u.attached_to != null ? current.units[u.attached_to] : null;
+    out.push(`<span class="badge">${esc(u.role[0].toUpperCase() + u.role.slice(1))}${to ? " → " + esc(to.name) : ""}</span>`);
+  } else if (u.role === "bodyguard") out.push(`<span class="badge">Bodyguard</span>`);
+  if (u.allied) out.push(`<span class="badge">Allied</span>`);
+  for (const e of u.enhancements) out.push(`<span class="badge good" title="Enhancement">✦ ${esc(e)}</span>`);
+  if (u.composition === "datasheet") out.push(`<span class="badge warn" title="The list didn't say which models; filled in from the datasheet">Models from datasheet</span>`);
+  return out.join(" ");
+}
+
+function groupRow(u, g, gi) {
+  const cur = g.picks[0];
+  const opts = g.options.map(o => `<option value="${esc(o.pick)}" ${cur && o.pick === cur.pick ? "selected" : ""}>`
+    + `${esc(o.name)} · ${o.static ? "static" : "animated"} · ${esc(o.tile)}</option>`).join("");
+  const pick = !current.cached.catalog ? `<span class="muted">No catalogue</span>`
+    : `<div class="pickcell"><select class="pickSel" data-u="${u.i}" data-g="${gi}">
+         ${cur ? "" : `<option value="">No match: pick one…</option>`}${opts}</select>
+         ${cur ? `<span class="badge ${cur.static ? "good" : ""}">${cur.static ? "Static" : "Animated"}</span>`
+               : `<span class="badge bad">No match</span>`}
+         <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && cur.preview ? "" : "disabled"}
+           title="${cur && cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">View</button></div>`;
+  return `<tr>
+    <td>${esc(g.model)} ×${g.count}${g.sheet_model && g.sheet_model.replace(/’/g, "'") !== g.model
+      ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}</td>
+    <td class="gear">${g.gear.map(esc).join(", ") || "—"}</td>
+    <td>${g.base ? esc(g.base) : `<span class="muted">${current.cached.bases ? "unknown" : "—"}</span>`}</td>
+    <td>${pick}</td></tr>`;
+}
+
+function unitHtml(u) {
+  const d = u.datasheet;
+  const sheet = !current.cached.datasheets ? ""
+    : `<div class="sheet" data-u="${u.i}">Datasheet: ${d ? `<b>${esc(d.name)}</b> <span class="muted">(${esc(d.how)})</span>`
+        : `<span class="badge bad">None</span>`} · <a href="#" class="changeSheet">${d ? "change" : "pick one"}</a>
+      <div class="fix"><input class="sheetInput" list="sheetList" placeholder="Type a datasheet name">
+        <button class="fit pinSheet">Use it</button><button class="fit cancelSheet">Cancel</button></div></div>`;
+  return `<div class="unit">
+    <div class="unit-head"><h3>${esc(u.name)}${u.n > 1 ? ` <span class="muted">#${u.n}</span>` : ""}</h3>
+      ${u.points ? `<span class="muted">${u.points} pts</span>` : ""} ${badges(u)}</div>
+    ${sheet}
+    <table><tr><th>Model</th><th>Gear</th><th>Base</th><th>TTS model</th></tr>
+      ${u.groups.map((g, gi) => groupRow(u, g, gi)).join("")}</table>
+  </div>`;
+}
+
+function render() {
+  const c = current, a = c.army;
+  const facts = [["Faction", a.sub ? `${a.faction} · ${a.sub}` : a.faction], ["Detachment", a.detachment],
+                 ["Disposition", a.disposition], ["Size", a.battle_size], ["Points", a.points], ["Format", a.format]]
+    .filter(([, v]) => v).map(([k, v]) => `<span>${k} <b>${esc(v)}</b></span>`).join("");
+  $("#result").innerHTML = `
+    <section class="army-head"><h2>${esc(a.title)}</h2><div class="facts">${facts}</div>${problemsHtml(c)}
+      <div class="row tight"><button class="fit" id="staticBtn"
+        title="Re-pick every model, favouring static meshes (they preview here and load faster)">Prefer static models</button></div>
+    </section>
+    <datalist id="sheetList"></datalist>
+    ${c.units.map(unitHtml).join("")}`;
+}
+
+// ---------------------------------------------------------------- fixing
+async function loadSheetChoices() {
+  const a = current.army, key = `${a.faction}|${a.sub || ""}`;
+  if (!sheetChoices || sheetChoices.key !== key) {
+    const list = await api(`/api/scribe/datasheets?faction=${encodeURIComponent(a.faction)}&sub=${encodeURIComponent(a.sub || "")}`);
+    sheetChoices = {key, list};
+  }
+  $("#sheetList").innerHTML = sheetChoices.list.map(s =>
+    `<option value="${esc(s.name)}${s.own ? "" : " — " + esc(s.catalogue)}"></option>`).join("");
+}
+
+$("#result").addEventListener("click", async e => {
+  const sheet = e.target.closest(".sheet");
+  if (e.target.matches(".changeSheet")) {
+    e.preventDefault();
+    sheet.classList.add("editing");
+    await loadSheetChoices();
+    $(".sheetInput", sheet).focus();
+  } else if (e.target.matches(".cancelSheet")) {
+    sheet.classList.remove("editing");
+  } else if (e.target.matches(".pinSheet")) {
+    const u = current.units[sheet.dataset.u], typed = $(".sheetInput", sheet).value.trim();
+    const hit = sheetChoices.list.find(s => typed === s.name || typed === `${s.name} — ${s.catalogue}`);
+    if (!hit) return alert("Pick a datasheet from the list.");
+    await api("/api/scribe/datasheet", {key: u.pin_key, id: hit.id});
+    read();
+  } else if (e.target.matches(".pvBtn")) {
+    const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
+    showPreview(g.picks[0]);
+  } else if (e.target.id === "staticBtn") {
+    if (confirm("Re-pick every model in this list, favouring static meshes? Models you picked by hand in this list will be re-picked too."))
+      read({prefer_static: true, repick: true});
+  }
+});
+
+$("#result").addEventListener("change", async e => {
+  if (!e.target.matches(".pickSel") || !e.target.value) return;
+  const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
+  await api("/api/pin", {key: g.key, pick: e.target.value});
+  await read();
+  const info = g.options.find(o => o.pick === e.target.value);
+  if (info) showPreview(info);
+});
+
+function showPreview(info) {
+  $("#preview").classList.add("on");
+  const status = t => $("#pvInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
+  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel?.(null, () => {}); return; }
+  window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
+}
+
+// ---------------------------------------------------------------- output
+$("#saveObjBtn").addEventListener("click", async () => {
+  setMsg($("#saveMsg"), "Saving…");
+  try {
+    const r = await api("/api/scribe/save", {text: $("#listText").value, facing: +$("#spF").value});
+    setMsg($("#saveMsg"), `Saved ${r.models} models to ${r.path}`, "ok");
+  } catch (e) { setMsg($("#saveMsg"), e.message, "error"); }
+});
+
+$("#spawnBtn").addEventListener("click", async () => {
+  setMsg($("#spawnMsg"), "Spawning… models can take a while to load in TTS.");
+  $("#spawnBtn").disabled = true;
+  try {
+    const r = await api("/api/scribe/spawn", {text: $("#listText").value, x: +$("#spX").value, z: +$("#spZ").value,
+                                              width: +$("#spW").value, facing: +$("#spF").value});
+    setMsg($("#spawnMsg"), [`Spawned ${r.spawned} models.`, ...r.notes].join(" "), "ok");
+  } catch (e) { setMsg($("#spawnMsg"), e.message, "error"); }
+  $("#spawnBtn").disabled = false;
+});
+
+// ---------------------------------------------------------------- saved lists
+async function loadSaved() {
+  try {
+    const names = await api("/api/lists");
+    $("#savedLists").innerHTML = `<option value="">Pick a saved list…</option>` +
+      names.map(n => `<option>${esc(n)}</option>`).join("");
+  } catch {}
+}
+$("#savedLists").addEventListener("change", async e => {
+  if (!e.target.value) return;
+  $("#listText").value = (await api(`/api/list?name=${encodeURIComponent(e.target.value)}`)).text;
+  $("#saveName").value = e.target.value;
+  read();
+});
+$("#saveListBtn").addEventListener("click", async () => {
+  try {
+    const r = await api("/api/lists", {name: $("#saveName").value || current?.army.title || "", text: $("#listText").value});
+    setMsg($("#listMsg"), `Saved as ${r.saved}`, "ok");
+    loadSaved();
+  } catch (e) { setMsg($("#listMsg"), e.message, "error"); }
+});
+$("#readBtn").addEventListener("click", () => read());
+
+$("#listText").value = store.get("scribe.text");
+loadSaved();
+if ($("#listText").value.trim()) read();
+</script>
+</body>
+</html>
