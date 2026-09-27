@@ -105,7 +105,9 @@ first when you choose a model in Scribe.
 
 1. **Model:** paste your OpenRouter key and pick any vision model. Prices are shown per model.
 2. **Armies:** paste the Red and Blue lists, or pick saved ones (kept in `lists/`, on your machine only), and press **Check**. Add a hint for spotting
-   each army if you like ("black armour, purple trim").
+   each army if you like ("black armour, purple trim"). Check says which units have no datasheet and which had
+   their models filled in from one; **Open in Scribe** shows the whole list there. **Choose models** works like
+   Scribe's: each unit's favourites and the suggested models, **Browse all models…**, and ☆ for favourites.
 3. **Table (LCT):** dispositions are filled in from the lists. Pick one of the matchup's three layouts; each
    shows LCT's layout diagram.
 4. **1 · Image:** drop in a top-down image and fit the yellow 60"×44" frame to the table edges. Drag to move,
@@ -114,8 +116,9 @@ first when you choose a model in Scribe.
 5. **2 · Board:** **Analyse image** asks the model where each unit is. Units show as circles on the straightened
    board. Click one to change what it is, how many models it has, or remove it; drag to move it.
 6. **3 · Units:** **Send to TTS** clears the table, loads the chosen LCT layout, then places both armies. Units
-   that aren't on the board go to each army's reserves board. Untick "Load the chosen LCT layout first" to
-   place models on whatever table is already there.
+   that aren't on the board go to each army's reserves board, with each unit's datasheet card. Models carry
+   the same tooltips and unit tags as Scribe's. Untick "Load the chosen LCT layout first" to place models on
+   whatever table is already there.
 
 Each send is saved to `scenes/` (the lists, positions, frame and image) and can be reloaded from the
 **Load a saved scene** menu.

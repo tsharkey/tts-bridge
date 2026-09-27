@@ -99,6 +99,14 @@ def model_object(catalog, m, unit_name, tag, facing, tags=()):
     return o
 
 
+def datasheet_card(unit, tag, tags):
+    """The unit's datasheet card (tooltips.card_object), tagged like its models."""
+    card = tooltips.card_object(unit, unit["card"])
+    card["GMNotes"] = tag
+    card["Locked"] = True  # placed and unlocked with everything else
+    return army.tag(card, [tooltips.CARD_TAG] + list(tags))
+
+
 def place_scene(scene, tag="recreate:scene", keep=False, log=print):
     """Spawn a scene into the running TTS game. Returns a summary dict."""
     catalog = army.load_catalog()
@@ -132,6 +140,11 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
             if id(u) not in used:
                 reserves.append((ai, [model_object(catalog, m, u["name"], atag, facing, tags[id(u)])
                                       for m in u["models"] if m["pick"]]))
+        # each unit's datasheet card, together with the army's reserves: off the battlefield
+        cards = [datasheet_card(u, atag, tags[id(u)]) for u in parsed["units"]
+                 if u.get("card") and any(m["pick"] for m in u["models"])]
+        if cards:
+            reserves.append((ai, cards))
         field += [(k, facing, objs) for k, objs in by_spot.items()]
 
     tts.run_lua('for _, o in ipairs(getObjects()) do local g = o.getGMNotes() or "" '
@@ -189,9 +202,11 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
         f'o.setRotation({{0, {f}, 0}}) o.setLock(false) end end' for g, x, y, z, f in moves), timeout=30)
 
     placed = sum(len(objs) for _, _, objs in field)
-    summary = {"spawned": len(guids), "on_table": placed, "in_reserves": len(guids) - placed,
-               "reserve_boards": bool(boards)}
-    log(f"Placed {placed} models on the table and {len(guids) - placed} in reserves"
+    cards = sum(1 for _, objs in reserves for o in objs if o.get("Name") == "Notecard")
+    summary = {"spawned": len(guids) - cards, "on_table": placed, "in_reserves": len(guids) - placed - cards,
+               "datasheet_cards": cards, "reserve_boards": bool(boards)}
+    log(f"Placed {placed} models on the table and {len(guids) - placed - cards} in reserves"
+        + (f", with {cards} datasheet cards beside the reserves" if cards else "")
         + ("" if boards else " (no reserves boards found, used a strip beside the table)"))
     return summary
 
