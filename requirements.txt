@@ -1,5 +1,6 @@
 # for the web app (app/server.py); the CLI scripts only need the standard library
 fastapi
 uvicorn
+mcp          # the MCP server for Claude (app/mcp_server/)
 numpy
 opencv-python-headless

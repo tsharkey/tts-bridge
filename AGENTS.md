@@ -17,6 +17,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `recreate.py` | Rebuilds a board state from a scene (unit positions per army). |
 | `app/server.py` | The hub: mounts the shared routes and each tool (`TOOLS`), serves the homepage. |
 | `app/core/` | Shared by every tool: TTS access, its lock and the event stream (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
+| `app/mcp_server/` | The MCP server for Claude: one module per tool, listed in `MODULES`; served at `/mcp` and over stdio (`python -m app.mcp_server`). |
 | `app/static/` | The homepage, and `shared.css` / `shared.js` (header, `api()`, `store`, theme) that every page loads. |
 | `app/tools/<tool>/` | One tool: `TOOL` (its homepage card), `routes.py`, and `static/index.html`, served at `/tools/<tool-with-dashes>/`. |
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
@@ -65,6 +66,9 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 - **Datasheets are read in our format only** (`data.datasheets()`), never from BSData's files, so another source
   is just another importer. BSData test data is made up in its schema (`tests/fixtures/bsdata/`), not copied.
 - **Tests run without TTS.** Put new logic where it can be tested offline, and add tests for it.
+- **New MCP tools go in `app/mcp_server/`**: a module with its functions in `TOOLS`, added to `MODULES`. The
+  docstring is what Claude reads; give it typed parameters and a TypedDict return. Keep the logic in a module
+  that tests can call without TTS (e.g. `board.py`), and the tool a thin wrapper over it. A test lists the tools.
 - **New tools go in `app/tools/<name>/`**, added to `TOOLS` in `app/server.py`. Make routers with
   `app.core.api.router()` so errors reach the page the same way, and hold `app.core.tts.lock` around a run of TTS calls that must not interleave with another request's (spawning, LCT setup).
 - Match the surrounding code: module docstrings with usage at the top, sparse comments that say why.
