@@ -1,0 +1,38 @@
+{
+ "catalogue": "Imperium - Adeptus Astartes - Raven Guard",
+ "id": "Imperium - Adeptus Astartes - Raven Guard",
+ "revision": 1,
+ "library": false,
+ "faction": "Raven Guard",
+ "imports": [
+  "Imperium - Adeptus Astartes - Space Marines"
+ ],
+ "units": [
+  {
+   "id": "rg-shrike",
+   "name": "Kayvaan Shrike",
+   "catalogue": "Imperium - Adeptus Astartes - Raven Guard",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-kayvaan-shrike",
+     "name": "Kayvaan Shrike",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    }
+   ],
+   "wargear": {}
+  }
+ ]
+}

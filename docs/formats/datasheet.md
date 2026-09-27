@@ -86,6 +86,22 @@ format; nothing downstream reads a source's own files.
 }
 ```
 
+## On a parsed list
+
+`datasheets.attach(parsed, mappings)` adds to what `army.parse_list` returns (only when datasheets are cached):
+
+```jsonc
+// each unit
+"datasheet": {"id": "e88f-…", "name": "Crisis Sunforge Battlesuits",
+              "catalogue": "Xenos - T'au Empire", "how": "exact"},   // null when nothing matched
+// each model
+"sheet_model": "Crisis Sunforge Shas’ui",            // null when the list can't say which
+"sheet_wargear": ["Battlesuit fists", "Fusion blaster"]   // one per `wargear` entry, null where unmatched
+```
+
+`how` is `pinned`, `exact`, `fuzzy NN%`, or `…, pin had gone` when a pinned id no longer exists. Pins live
+in `mappings.json` under `datasheets`, keyed `"<sub-faction or faction>|<unit>"`.
+
 ## Invariants
 
 - Stat and weapon values are the source's text (`"10\""`, `"D6"`, `"Melee"`), not numbers. A blank value is `null`.
