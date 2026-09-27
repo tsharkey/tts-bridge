@@ -55,6 +55,13 @@ skips the download when nothing has changed. `--from <link or folder>` uses a fo
 `--ref <branch or commit>` pins a version; both are remembered for the next fetch. `python3 data.py status`
 shows what's cached.
 
+Official base sizes come from [Wahapedia](https://wahapedia.ru)'s data export. They're used to measure from
+the edge of a model's base:
+
+```bash
+python3 data.py fetch wahapedia
+```
+
 ## The web app
 
 ```bash
@@ -86,7 +93,7 @@ Each send is saved to `scenes/` (the lists, positions, frame and image) and can 
 ### Data cache
 
 Shows what's in the local data cache: where the datasheets came from, which version, when they were fetched, and
-how many there are per faction. **Fetch** / **Refresh** downloads BSData and imports it, showing its progress
+how many there are per faction, and the same for base sizes. **Fetch** / **Refresh** downloads each one and imports it, showing its progress
 and any error. Change the link or the branch/commit first to use a fork or pin a version. It doesn't need TTS.
 The Force Org models and LCT layouts are shown too. **Refresh from mod files** reads them from TTS's Workshop
 folder, with TTS closed. Force Org can also be read from TTS: a light turns green when Force Org is the game
@@ -164,6 +171,8 @@ yours: it's created on first use and isn't committed.
 - **`datasheets`** maps `"<chapter or faction>|<unit>"` to the unit's datasheet (`{"id", "name", "catalogue"}`),
   once datasheets are cached (`python3 data.py fetch bsdata`). `plan` shows each unit's datasheet and flags
   anything that didn't match. Change the `id` to pick another datasheet, or delete the entry to match it again.
+- **`bases`** fixes a model's base size when Wahapedia's is missing or wrong:
+  `"<chapter or faction>|<unit>|<model>": "32mm"` (any size Wahapedia would write, like `"60 x 35mm"`).
 - **`aliases`** renames a model the catalogue calls something else, per faction, for example
   `"Adepta Sororitas": {"Dominion": "Battle Sister"}`.
 

@@ -99,6 +99,19 @@ format; nothing downstream reads a source's own files.
 "sheet_wargear": ["Battlesuit fists", "Fusion blaster"]   // one per `wargear` entry, null where unmatched
 ```
 
+`bases.attach(parsed, mappings)` then gives each model its official base (from Wahapedia's export,
+`python3 data.py fetch wahapedia`; stored in `cache/bases/index.json`):
+
+```jsonc
+"base": {"shape": "oval",           // round | oval | model ("Use model": measure the hull) | none (no official size)
+         "mm": [120, 92],           // [diameter] or [length, width]; [] for model / none
+         "inches": [4.72, 3.62],
+         "flying": true,
+         "text": "120 x 92mm flying base",   // Wahapedia's own words
+         "note": ""}                // e.g. "32mm if equipped with Heavy Mining Weapon"
+// null when the model isn't in the export; "fixed": true when it came from mappings.json "bases"
+```
+
 `how` is `pinned`, `exact`, `fuzzy NN%`, or `…, pin had gone` when a pinned id no longer exists. Pins live
 in `mappings.json` under `datasheets`, keyed `"<sub-faction or faction>|<unit>"`.
 

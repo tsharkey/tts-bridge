@@ -7,6 +7,7 @@ data.py — the local data cache: community data fetched once, kept in cache/
     python3 data.py fetch bsdata --ref <commit>     # a branch, tag or commit
     python3 data.py fetch bsdata --from <folder>    # a local checkout, read in place
     python3 data.py fetch bsdata --from <git url>   # any other git remote (needs git)
+    python3 data.py fetch wahapedia                 # Wahapedia's data export: base sizes (see bases.py)
     python3 data.py import bsdata                   # re-import what's cached, no network
     python3 data.py status                          # what's cached, from where, and when
     python3 data.py mods [forceorg|lct]             # read Force Org and LCT from TTS's mod files (see mods.py)
@@ -33,7 +34,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent
 CACHE = ROOT / "cache"
-SOURCES = {"bsdata": {"url": "https://github.com/BSData/wh40k-11e", "ref": None}}
+SOURCES = {"bsdata": {"url": "https://github.com/BSData/wh40k-11e", "ref": None},
+           "wahapedia": {"url": "https://wahapedia.ru/wh40k11ed", "ref": None}}
 # army.FACTIONS names that BSData spells differently
 FACTION_ALIASES = {"Imperial Agents": "Agents of the Imperium"}
 
@@ -113,6 +115,8 @@ def fetch(name, url=None, ref=None, cache=None, log=print):
     if folder.is_dir():
         info = {"kind": "folder", "path": str(folder.resolve()), "ref": None, "commit": git_commit(folder)}
         log(f"{name}: reading {info['path']} in place")
+    elif name == "wahapedia" and re.match(r"^https?://", url):
+        info = fetch_export(name, url, last, cache, log)
     elif github_repo(url):
         info = fetch_github(name, url, ref, last, cache, log)
     elif re.match(r"^(https?|ssh|git|file)://|^[\w.-]+@[\w.-]+:", url):
@@ -159,6 +163,34 @@ def fetch_github(name, url, ref, last, cache, log):
     new.rename(raw)
     log(f"{name}: {count} files, commit {commit[:10] if commit else 'unknown'}")
     return {"kind": "github", "url": url, "ref": ref, "commit": commit}
+
+
+def fetch_export(name, url, last, cache, log):
+    """Wahapedia's CSV export: a few files at one address. Last_update.csv says
+    when it last changed, so an unchanged export isn't downloaded again."""
+    from bases import FILES
+
+    url = url.rstrip("/")
+    raw = source_dir(name, cache) / "raw"
+    stamp = get(f"{url}/Last_update.csv", timeout=30).decode("utf-8-sig", "replace")
+    updated = next((ln.strip(" |\r") for ln in stamp.splitlines()[1:] if ln.strip(" |\r")), None)
+    if updated and updated == last.get("commit") and last.get("url") == url and raw.is_dir():
+        log(f"{name}: unchanged since {updated}")
+        return {k: last[k] for k in ("kind", "url", "ref", "commit")}
+    new = raw.with_name("raw.new")
+    shutil.rmtree(new, ignore_errors=True)
+    new.mkdir(parents=True)
+    for f in FILES:
+        log(f"{name}: downloading {f}...")
+        body = get(f"{url}/{f}", timeout=120)
+        if body.lstrip()[:15].lower().startswith((b"<!doctype", b"<html")):
+            shutil.rmtree(new)
+            raise DataError(f"{url}/{f} is a web page, not a CSV. Is {url} a Wahapedia export?")
+        (new / f).write_bytes(body)
+    shutil.rmtree(raw, ignore_errors=True)
+    new.rename(raw)
+    log(f"{name}: export of {updated or 'unknown date'}")
+    return {"kind": "export", "url": url, "ref": None, "commit": updated}
 
 
 def fetch_git(name, url, ref, cache, log):
@@ -230,7 +262,12 @@ def import_bsdata(cache=None, log=print):
     return index
 
 
-IMPORTERS = {"bsdata": import_bsdata}
+def import_wahapedia(cache=None, log=print):
+    import bases
+    return bases.import_wahapedia(cache, log)
+
+
+IMPORTERS = {"bsdata": import_bsdata, "wahapedia": import_wahapedia}
 
 
 # --------------------------------------------------------------------------
@@ -286,11 +323,18 @@ def status(cache=None):
             out[name] = None
             continue
         out[name] = dict(info)
-        index = datasheet_index(cache) if name == "bsdata" else None
-        if index:
+        if name == "bsdata" and datasheet_index(cache):
+            index = datasheet_index(cache)
             out[name]["imported"] = index["imported"]
             out[name]["catalogues"] = len(index["catalogues"])
             out[name]["datasheets"] = sum(c["units"] for c in index["catalogues"].values())
+        if name == "wahapedia":
+            import bases
+            index = bases.load(cache)
+            if index:
+                out[name]["imported"] = index["imported"]
+                out[name]["datasheets"] = sum(len(f) for f in index["factions"].values())
+                out[name]["models"] = sum(len(s["lines"]) for f in index["factions"].values() for s in f.values())
     return out
 
 
@@ -321,10 +365,13 @@ def main(args):
                     print(f"{src}: not fetched (python3 data.py fetch {src})")
                     continue
                 where = info.get("url") or info.get("path")
-                at = info.get("ref") or "default branch"
-                commit = (info.get("commit") or "")[:10]
-                print(f"{src}: {where} @ {at} {commit}, fetched {info['fetched']}")
-                if "datasheets" in info:
+                at = f"export of {info['commit']}" if info.get("kind") == "export" else info.get("ref") or "default branch"
+                commit = "" if info.get("kind") == "export" else (info.get("commit") or "")[:10]
+                print(f"{src}: {where} @ {' '.join(filter(None, [at, commit]))}, fetched {info['fetched']}")
+                if "models" in info:
+                    print(f"  base sizes for {info['models']} models in {info['datasheets']} datasheets, "
+                          f"imported {info['imported']}")
+                elif "datasheets" in info:
                     print(f"  {info['datasheets']} datasheets in {info['catalogues']} catalogues, imported {info['imported']}")
         else:
             sys.exit(__doc__)

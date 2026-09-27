@@ -23,6 +23,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
 | `datasheets.py` | Matches a parsed list's units, models and wargear to cached datasheets, pinning choices in `mappings.json`. |
 | `mods.py` | Reads Force Org (into `catalog/`) and LCT's layouts (into `cache/lct/`) from TTS's Workshop folder, with TTS closed. |
+| `bases.py` | Official base sizes from Wahapedia's export (`data.py fetch wahapedia`), attached to a parsed list's models. |
 | `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | The user's pinned model matches (git-ignored; created on first use). |

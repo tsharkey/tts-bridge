@@ -18,9 +18,12 @@ from app.core.tts import lock as tts_lock
 
 router = api_router()
 
-SOURCES = {"bsdata": {"name": "Datasheets (BSData)",
+SOURCES = {"bsdata": {"name": "Datasheets (BSData)", "refs": True,
                       "about": "Stats, weapons, abilities and keywords for every unit, from the community's "
-                               "BattleScribe data. Downloaded once, then used offline."}}
+                               "BattleScribe data. Downloaded once, then used offline."},
+           "wahapedia": {"name": "Base sizes (Wahapedia)", "refs": False,
+                         "about": "Every model's official base size, from Wahapedia's data export. Used to "
+                                  "measure ranges from the edge of the base."}}
 
 job_lock = threading.Lock()
 job = {"source": None, "running": False, "log": [], "error": None, "started": None, "finished": None}

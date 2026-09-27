@@ -4,6 +4,7 @@ import json
 import re
 
 import army
+import bases
 import datasheets
 from app import ROOT
 
@@ -26,6 +27,7 @@ def parse(text):
     except SystemExit as e:
         raise ValueError(str(e))
     datasheets.attach(parsed, mappings)
+    bases.attach(parsed, mappings)
     army.resolve(parsed, catalog, mappings)
     return parsed
 
