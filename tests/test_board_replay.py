@@ -41,7 +41,7 @@ def test_armies_summary(caches):
     assert "Crisis Starscythe Battlesuits" in short["guessed"]   # filled in from its datasheet
 
 
-def test_send_to_tts_tags_models_and_brings_cards(caches, monkeypatch):
+def test_send_to_tts_tags_models_with_their_datasheets(caches, monkeypatch):
     sent = []
 
     def fake_lua(code, **kw):
@@ -61,12 +61,9 @@ def test_send_to_tts_tags_models_and_brings_cards(caches, monkeypatch):
 
     spawned = [json.loads(json.loads(line.split("json = ", 1)[1].rsplit("}).guid", 1)[0]))
                for code in sent if "spawnObjectJSON" in code for line in code.split("\n") if "spawnObjectJSON" in line]
-    cards = [o for o in spawned if o["Name"] == "Notecard"]
-    models = [o for o in spawned if o["Name"] != "Notecard"]
-    assert summary["datasheet_cards"] == len(cards) > 0
-    assert summary["spawned"] == len(models)
-    farsight = next(o for o in models if o["Description"].startswith("[Commander Farsight]"))
+    assert not any(o["Name"] == "Notecard" for o in spawned)   # no datasheet cards on the table
+    assert summary["spawned"] == len(spawned)
+    farsight = next(o for o in spawned if o["Description"].startswith("[Commander Farsight]"))
     assert "tts-bridge:unit:1" in farsight["Tags"] and farsight["GMNotes"] == "recreate:test:Red"
-    card = next(c for c in cards if c["Nickname"] == "Commander Farsight datasheet")
-    assert card["Tags"][:2] == ["tts-bridge:card", "tts-bridge:unit:1"] and card["GMNotes"] == "recreate:test:Red"
-    assert {c["GMNotes"] for c in cards} == {"recreate:test:Red", "recreate:test:Blue"}
+    assert "tts-bridge datasheet viewer" in farsight["LuaScript"] and "Dawn Blade" in farsight["LuaScript"]
+    assert {o["GMNotes"] for o in spawned if o.get("LuaScript")} == {"recreate:test:Red", "recreate:test:Blue"}

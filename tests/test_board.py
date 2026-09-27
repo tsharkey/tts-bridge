@@ -81,13 +81,11 @@ def test_spawned_objects_carry_the_tags():
                       "Transform": {}}]}
     parsed["units"][0]["card"] = "the datasheet"   # tooltips.attach sets it when the datasheet is cached
     objs, models, units = army.model_objects(parsed, catalog)
-    card, a, b = objs
-    assert (card["Name"], card["Description"], models[0]) == ("Notecard", "the datasheet", None)
-    assert card["Tags"] == ["tts-bridge:card", "tts-bridge:unit:1", "tts-bridge:sheet:s-a"]
-    assert units == [("A", [0, 1]), ("B", [2])]   # the card leads its unit
+    a, b = objs
+    assert units == [("A", [0]), ("B", [1])] and not any(o["Name"] == "Notecard" for o in objs)
     assert a["Tags"] == ["Old", "tts-bridge:unit:1", "tts-bridge:sheet:s-a"]   # ours replaced, theirs kept
     assert b["Tags"] == ["Old", "tts-bridge:unit:2"]
     assert board.unit_index({"tags": b["Tags"]}) == 2
-    # board.py doesn't count the card as a model
-    table = [dict(model(0, 0, unit="A", tags=card["Tags"]), tag="Notecard", head="Test Squad datasheet")]
-    assert board.collect_units(table) == []
+    # the datasheet rides on the model, in its viewer script; B has no datasheet, so no script
+    assert "the datasheet" in a["LuaScript"] and "addContextMenuItem" in a["LuaScript"]
+    assert not b.get("LuaScript")

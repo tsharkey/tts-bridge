@@ -83,9 +83,11 @@ every model of the army, and ☆ makes the current one a favourite for that unit
 
 With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
 base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
-rules, enhancements and keywords. Each unit also gets a **datasheet card** beside it (a plain TTS notecard):
-its whole datasheet, with every rule and weapon keyword explained. **Datasheet** on a unit in Scribe shows the
-same card. `army.py build` adds the same tooltips and cards; **Board from image** adds the tooltips.
+rules, enhancements and keywords. For the whole datasheet, with every rule and weapon keyword explained,
+right-click a model and choose **Datasheet**: a scrollable window opens (drag it by its edges; only you see
+it). You can also bind a key to **Show datasheet** in TTS's Options → Game Keys and press it while hovering a
+model. The datasheet travels with the model, in a small script on it. **Datasheet** on a unit in Scribe shows
+the same text. `army.py build` and **Board from image** give models the same tooltips and datasheets.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.
@@ -116,9 +118,9 @@ first when you choose a model in Scribe.
 5. **2 · Board:** **Analyse image** asks the model where each unit is. Units show as circles on the straightened
    board. Click one to change what it is, how many models it has, or remove it; drag to move it.
 6. **3 · Units:** **Send to TTS** clears the table, loads the chosen LCT layout, then places both armies. Units
-   that aren't on the board go to each army's reserves board, with each unit's datasheet card. Models carry
-   the same tooltips and unit tags as Scribe's. Untick "Load the chosen LCT layout first" to place models on
-   whatever table is already there.
+   that aren't on the board go to each army's reserves board. Models carry the same tooltips, datasheets and
+   unit tags as Scribe's. Untick "Load the chosen LCT layout first" to place models on whatever table is
+   already there.
 
 Each send is saved to `scenes/` (the lists, positions, frame and image) and can be reloaded from the
 **Load a saved scene** menu.
