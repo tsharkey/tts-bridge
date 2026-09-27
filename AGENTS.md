@@ -23,6 +23,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
 | `datasheets.py` | `parse()`: a list parsed with the data cache (datasheets matched and pinned, compositions filled in); look-alike figures for `army.resolve`. |
 | `mods.py` | Reads Force Org (into `catalog/`) and LCT's layouts (into `cache/lct/`) from TTS's Workshop folder, with TTS closed. |
+| `tooltips.py` | Datasheet tooltips (TTS BBCode) for spawned models, written after the `[<unit>]` line. |
 | `bases.py` | Official base sizes from Wahapedia's export (`data.py fetch wahapedia`), attached to a parsed list's models. |
 | `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
@@ -39,7 +40,8 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 - **The first line of a spawned model's description is exactly `[<unit name>]`.** `board.py` groups models into
   units by it (`UNIT_RE`). Put anything else (datasheets, tooltips) after that line.
 - **Army tags live in GM Notes:** `army.py:<list title>` or `recreate:<scene>:Red|Blue`. Keep them there.
-- **Write tooltip names to `Nickname`, never `Name`**, which is the TTS object type.
+- **Write tooltip names to `Nickname`, never `Name`**, which is the TTS object type. Build spawned objects with
+  `army.model_objects` (or `tooltips.describe`) so the `[<unit>]` line and tooltip stay consistent.
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
   (−22…22), y up. Facing in degrees: 0 = +z, 90 = +x.
 - **`n` is the nth same-named unit in `parse_list` order** everywhere (vision, scenes, placement). Don't reorder.

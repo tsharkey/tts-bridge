@@ -77,7 +77,12 @@ Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (f
 "+++" tournament list, or pick a saved one, and press **Read list**. It shows what the list became: each unit's
 datasheet, leaders and what they're attached to, the warlord, enhancements, and every model with its gear, base
 size and the TTS model it will use. Anything that didn't match is listed at the top; pick a datasheet or a TTS
-model on the unit to fix it (**View** previews static models in 3D).
+model on the unit to fix it (**View** previews static models in 3D, **Tooltip** shows what hovering it in TTS
+will show).
+
+With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
+base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
+rules, enhancements and keywords. `army.py build` and **Board from image** add the same tooltips.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.
