@@ -45,6 +45,7 @@ def base_text(m):
 def view(parsed, catalog, mappings, prefer_static=False):
     """Everything the page shows about a parsed list."""
     scope = parsed["sub"] or parsed["faction"]
+    liked = mappings.get("favorites", {})
     matcher = army.Matcher(catalog, parsed, mappings.get("aliases", {}).get(parsed["faction"])) if catalog else None
     seen, units = {}, []
     for i, u in enumerate(parsed["units"]):
@@ -73,6 +74,8 @@ def view(parsed, catalog, mappings, prefer_static=False):
                       "warlord": u.get("warlord", False), "enhancements": u.get("enhancements", []),
                       "complete": u.get("complete", True), "composition": u.get("composition"),
                       "datasheet": u.get("datasheet"), "pin_key": f"{scope}|{u['name']}",
+                      "favorites": [entry_info(catalog, p) for p in liked.get(f"{scope}|{u['name']}", [])
+                                    if catalog and p.split(":")[0] in catalog] if catalog else [],
                       "allied": u["allied"], "groups": list(groups.values())})
     models = [m for u in parsed["units"] for m in u["models"]]
     missing = datasheets.unmatched(parsed)

@@ -38,3 +38,29 @@ button:disabled { opacity: .5; cursor: default; }
 .msg.error { color: var(--bad); }
 .msg.ok { color: var(--ok); }
 [hidden] { display: none !important; }
+
+/* Model browser (model-browser.js): a filtered list beside a 3D view. */
+.mb { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: 14px; min-height: 0; height: 100%; }
+.mb-side { display: flex; flex-direction: column; min-height: 0; }
+.mb-filters .row { margin-top: 6px; }
+.mb-check { display: inline-flex; align-items: center; gap: 6px; margin: 0; white-space: nowrap; }
+.mb-count { margin: 6px 0; }
+.mb-list { overflow-y: auto; flex: 1; min-height: 200px; border-top: 1px solid var(--line); }
+.mb-list h4 { margin: 10px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.mb-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; width: 100%; text-align: left; border: 0;
+          border-bottom: 1px solid var(--line); border-radius: 0; background: none; padding: 6px 4px; }
+.mb-row small { grid-column: 1; color: var(--muted); font-size: 11px; }
+.mb-row:hover, .mb-row.on { background: rgba(232,181,62,.1); }
+.mb-view { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mb-canvas { width: 100%; flex: 1; min-height: 280px; background: #0d0e10; border-radius: 6px; display: block; }
+.mb-name { font-weight: 600; }
+.badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+.badge.static { background: rgba(79,196,123,.15); color: var(--ok); }
+.badge.animated { background: rgba(232,181,62,.15); color: var(--warn); }
+@media (max-width: 800px) { .mb { grid-template-columns: 1fr; } .mb-list { max-height: 45vh; } }
+.mb-row { cursor: pointer; }
+.mb-tags { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 6px; }
+.mb-row .mb-tags .badge { grid-column: auto; grid-row: auto; }
+.mb-star { border: 0; background: none; padding: 0 2px; font-size: 16px; line-height: 1; color: var(--muted); }
+.mb-star.on, .mb-star:hover { color: var(--accent); }
+.mb-actions { gap: 8px; }

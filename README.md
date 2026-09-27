@@ -78,7 +78,8 @@ Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (f
 datasheet, leaders and what they're attached to, the warlord, enhancements, and every model with its gear, base
 size and the TTS model it will use. Anything that didn't match is listed at the top; pick a datasheet or a TTS
 model on the unit to fix it (**View** previews static models in 3D, **Tooltip** shows what hovering it in TTS
-will show).
+will show). A model's dropdown lists the unit's favourites and the suggested models; **Browse all models…** opens
+every model of the army, and ☆ makes the current one a favourite for that unit.
 
 With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
 base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
@@ -90,6 +91,13 @@ rules, enhancements and keywords. `army.py build` and **Board from image** add t
   width given, facing the way given.
 
 Both remember your choices in `mappings.json`, so the list comes out the same next time.
+
+### Models
+
+Every Force Org model, by army (or all of them), searchable by name, with a 3D view of static models. To set a
+unit's **favourites**, pick an army and a unit under **Favorites for** and star the models you like for it. When a
+list is read, a unit's favourites are used first (whatever they're called, and from any army), and they're listed
+first when you choose a model in Scribe.
 
 ### Board from image
 
@@ -194,6 +202,8 @@ yours: it's created on first use and isn't committed.
   anything that didn't match. Change the `id` to pick another datasheet, or delete the entry to match it again.
 - **`bases`** fixes a model's base size when Wahapedia's is missing or wrong:
   `"<chapter or faction>|<unit>|<model>": "32mm"` (any size Wahapedia would write, like `"60 x 35mm"`).
+- **`favorites`** lists the figures you like for a unit, `"<chapter or faction>|<unit>": ["<tile>:<index>", ...]`.
+  They're tried first for that unit's models. Set them with the stars in **Models** or **Scribe**.
 - **`aliases`** renames a model the catalogue calls something else, per faction, for example
   `"Adepta Sororitas": {"Dominion": "Battle Sister"}`. With datasheets cached, a model the catalogue has no
   figure for is matched to a look-alike's (same stats, most wargear in common) without one.

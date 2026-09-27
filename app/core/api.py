@@ -1,6 +1,6 @@
 """
 API plumbing shared by every tool, and the routes every tool can use (TTS
-status, LCT setup, saved lists and model picks).
+status, LCT setup, saved lists, model picks, and browsing the model catalogue).
 
 Each tool's routes.py makes its own `router()` so it gets the same error
 handling: TTS unreachable → 503, anything else → 400, both as {"error": ...}
@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 
+import army
 from app.core import lct, lists, tts
 
 
@@ -87,3 +88,39 @@ def army_models(body: dict):
 def pin(body: dict):
     lists.pin(body["key"], body["pick"])
     return {"pinned": body["key"]}
+
+
+@shared.get("/api/favorites")
+def favourites(key: str):
+    """A unit's favourite figures; key is "<chapter or faction>|<unit>"."""
+    return {"key": key, "models": lists.favourites(key)}
+
+
+@shared.post("/api/favorites")
+def set_favourite(body: dict):
+    picks = lists.set_favourite(body["key"], body["pick"], bool(body.get("on", True)))
+    return {"key": body["key"], "picks": picks}
+
+
+@shared.get("/api/models/armies")
+def model_armies():
+    """Army names for choosing whose favourites to set: every faction and chapter."""
+    return sorted(army.FACTIONS)
+
+
+@shared.get("/api/models/tiles")
+def model_tiles(faction: str = "", sub: str = ""):
+    return lists.model_tiles(faction or None, sub or None)
+
+
+@shared.get("/api/models")
+def models(tiles: str = "", q: str = "", static: bool = False):
+    return lists.find_models([t for t in tiles.split(",") if t] or None, q, static)
+
+
+@shared.get("/api/models/entry")
+def model_entry(pick: str):
+    cat = lists.catalog()
+    if cat is None:
+        raise ValueError("The Force Org model catalogue isn't built yet.")
+    return lists.entry_info(cat, pick)
