@@ -82,11 +82,15 @@ python3 tts_bridge.py run "<lua>"   # anything else, e.g. a specific object's bo
   model's description; the army comes from GM Notes (`army.py:<list title>`, or
   `recreate:<scene>:Red|Blue`). Models placed some other way show up as untagged terrain or
   not at all — ask the user which objects are which if the summary looks thin.
-- Two units with the same name are told apart by position: models more than 2" apart (edge
-  to edge) are separate units, `#1` is the one nearest the +z edge, and the numbers are
-  recomputed on every read, so re-run `summary` after moving things. Two same-named squads
-  standing within 2" of each other read as one unit. Units off the table (reserves boards)
-  are listed separately and numbered the same way.
+- Models spawned by the tools carry a unit tag, so each unit is read as one unit wherever its
+  models stand, and same-named units are numbered in list order (`#2` is the list's second
+  one). A unit whose models break coherency (2" to another model, 9" to all) is flagged
+  "out of coherency" in `summary`; fix it before recommending anything else for that unit.
+- Models without the tag (placed some other way, or older saves) are told apart by position:
+  models more than 2" apart (edge to edge) are separate units, `#1` is the one nearest the +z
+  edge, and the numbers are recomputed on every read, so re-run `summary` after moving things;
+  two such same-named squads within 2" of each other read as one unit. Units off the table
+  (reserves boards) are listed separately and numbered the same way.
 - A leader and its bodyguard are separate datasheets, so they're separate units here: place
   the bodyguard, then the leader next to it with a second `place`.
 - Terrain in the summary is every locked object on the table that isn't a model, with its

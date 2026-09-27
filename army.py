@@ -875,6 +875,27 @@ def lua_list(xs):
     return "{" + ",".join(f'"{x}"' for x in xs) + "}"
 
 
+# Tags every spawned model carries (TTS object tags, beside the army tag in GM Notes):
+# which unit of its list it's in, and that unit's datasheet. board.py groups models
+# into units by the first; the second finds the unit's datasheet in the data cache.
+UNIT_TAG = "tts-bridge:unit:"     # + the unit's place in the list, from 1
+SHEET_TAG = "tts-bridge:sheet:"   # + the datasheet's id
+
+
+def unit_tags(index, unit):
+    """The tags for a model of the unit at `index` (from 1) in its list."""
+    tags = [f"{UNIT_TAG}{index}"]
+    if unit.get("datasheet"):
+        tags.append(f"{SHEET_TAG}{unit['datasheet']['id']}")
+    return tags
+
+
+def tag(obj, tags):
+    """Put our tags on a catalogue object, replacing any of ours it already has."""
+    obj["Tags"] = [t for t in obj.get("Tags") or [] if not t.startswith("tts-bridge:")] + tags
+    return obj
+
+
 def model_objects(army, catalog):
     """Each picked model's catalogue object, ready to spawn: its unit's name on
     the first description line (board.py groups by it), then its datasheet
@@ -885,7 +906,7 @@ def model_objects(army, catalog):
     if not any("tooltip" in m for u in army["units"] for m in u["models"]):
         tooltips.attach(army)
     objs, models, units = [], [], []
-    for u in army["units"]:
+    for index, u in enumerate(army["units"], 1):
         members = []
         for m in u["models"]:
             if not m["pick"]:
@@ -894,6 +915,7 @@ def model_objects(army, catalog):
             o = copy.deepcopy(catalog[g][int(i)])
             o.pop("GUID", None)
             tooltips.describe(o, u["name"], m)
+            tag(o, unit_tags(index, u))
             o["GMNotes"] = f"army.py:{army['title']}"
             members.append(len(objs))
             objs.append(o)

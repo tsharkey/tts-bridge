@@ -16,10 +16,13 @@ app/vision.py). Facing is degrees: 0 = +z, 90 = +x, 180 = -z, 270 = -x.
 
 A unit is every model whose description starts with a "[<unit name>]" line
 (which is how army.py and recreate.py spawn them) and that shares an army tag
-in GM Notes. Two units with the same name are told apart by where they stand
-(models more than 2" from each other are separate units); use --nth to pick
-one ("1" is the one nearest the +z edge). A leader and its bodyguard are
-separate datasheets, so they are separate units here.
+in GM Notes. Models they spawn also carry a "tts-bridge:unit:<n>" tag saying
+which unit of the list they belong to, so a unit stays one unit wherever its
+models stand, and --nth counts same-named units in list order. Models without
+that tag (other people's armies, older saves) are grouped by where they stand:
+models more than 2" from each other are separate units, and "1" is the one
+nearest the +z edge. A leader and its bodyguard are separate datasheets, so
+they are separate units here. Units out of coherency are flagged.
 
 Like the other command-line tools, this needs the bridge's listener port, so
 stop the web app first.
@@ -61,7 +64,7 @@ for _, o in ipairs(getObjects()) do
     local nl = d:find("\\n", 1, true)
     table.insert(out, {
         guid = o.guid, tag = o.tag, name = o.getName() or "",
-        head = nl and d:sub(1, nl - 1) or "", notes = o.getGMNotes() or "",
+        head = nl and d:sub(1, nl - 1) or "", notes = o.getGMNotes() or "", tags = o.getTags(),
         locked = o.getLock(), rot = r.y, p = {p.x, p.y, p.z},
         c = {b.center.x, b.center.y, b.center.z}, s = {b.size.x, b.size.y, b.size.z},
     })
@@ -129,6 +132,41 @@ def on_table(o):
     return abs(x) <= HALF_X and abs(z) <= HALF_Z
 
 
+UNIT_TAG = "tts-bridge:unit:"     # army.UNIT_TAG: which unit of its list a model is in
+SHEET_TAG = "tts-bridge:sheet:"   # army.SHEET_TAG: that unit's datasheet id
+
+
+def tags_of(o):
+    tags = o.get("tags") or []
+    return list(tags.values()) if isinstance(tags, dict) else list(tags)  # Lua's empty table is {}
+
+
+def tagged(o, prefix):
+    """The value after `prefix` in one of the object's tags, or None."""
+    return next((t[len(prefix):] for t in tags_of(o) if t.startswith(prefix)), None)
+
+
+def unit_index(o):
+    value = tagged(o, UNIT_TAG)
+    return int(value) if value and value.isdigit() else None
+
+
+def coherency(models):
+    """What breaks 11th edition coherency, edge to edge: each model within 2"
+    of another model of its unit, and all of them within 9" of each other."""
+    if len(models) < 2:
+        return []
+    out = []
+    for m in models:
+        nearest = min(model_gap(m, o) for o in models if o is not m)
+        if nearest > LINK + 0.05:
+            out.append(f"a model is {nearest:.1f}\" from the rest of its unit (coherency is 2\")")
+    span = max(model_gap(a, b) for a in models for b in models if a is not b)
+    if span > COHERENCY_MAX + 0.05:
+        out.append(f"models are {span:.1f}\" apart (coherency is within 9\" of each other)")
+    return out
+
+
 def split_by_distance(models):
     """Group same-named models into units by chaining models within LINK inches."""
     groups, left = [], list(models)
@@ -150,6 +188,9 @@ def split_by_distance(models):
 
 
 def collect_units(objs):
+    """Units per army and name: by unit tag (in list order) when the models
+    have one, else by where they stand. A unit's models on and off the table
+    are listed apart, with the same nth."""
     by_key = {}
     for o in objs:
         name = unit_name(o)
@@ -157,10 +198,23 @@ def collect_units(objs):
             by_key.setdefault((army_of(o), name), []).append(o)
     units = []
     for (army, name), models in by_key.items():
+        tagged_units, loose = {}, []
+        for o in models:
+            i = unit_index(o)
+            (tagged_units.setdefault(i, []) if i is not None else loose).append(o)
+        count = 0
+        for count, i in enumerate(sorted(tagged_units), 1):
+            sheet = next((tagged(o, SHEET_TAG) for o in tagged_units[i] if tagged(o, SHEET_TAG)), None)
+            for placed in (True, False):
+                group = [o for o in tagged_units[i] if on_table(o) == placed]
+                if group:
+                    units.append({"army": army, "name": name, "nth": count, "models": group, "on_table": placed,
+                                  "unit_id": i, "datasheet": sheet})
         for placed in (True, False):
-            group = [o for o in models if on_table(o) == placed]
-            for i, g in enumerate(split_by_distance(group), 1):
-                units.append({"army": army, "name": name, "nth": i, "models": g, "on_table": placed})
+            group = [o for o in loose if on_table(o) == placed]
+            for i, g in enumerate(split_by_distance(group), count + 1):
+                units.append({"army": army, "name": name, "nth": i, "models": g, "on_table": placed,
+                              "unit_id": None, "datasheet": None})
     return units
 
 
@@ -213,7 +267,8 @@ def unit_row(u, terrain):
     zones = sorted({t["name"] for t in terrain if t["kind"] == "zone"
                     for o in ms if box_hit(o["c"][0], o["c"][2], 0.01, t["box"])})
     return {"army": u["army"], "unit": u["name"], "nth": u["nth"], "models": len(ms),
-            "on_table": u["on_table"],
+            "on_table": u["on_table"], "unit_id": u.get("unit_id"), "datasheet": u.get("datasheet"),
+            "coherency": coherency(ms) if u["on_table"] else [],
             "x": round(sum(xs) / len(xs), 1), "z": round(sum(zs) / len(zs), 1),
             "box": [round(min(xs), 1), round(max(xs), 1), round(min(zs), 1), round(max(zs), 1)],
             "facing": round(ms[0]["rot"]) % 360, "touching": inside, "zones": zones,
@@ -246,6 +301,8 @@ def cmd_summary(_args):
             where = f"({r['x']:6.1f}, {r['z']:6.1f})  facing {r['facing']:>3}"
             extra = ", ".join(r["touching"] + r["zones"])
             print(f"  {label:38} {r['models']:>2} models  {where}" + (f"  in: {extra}" if extra else ""))
+            for problem in r["coherency"]:
+                print(f"  {'':38} out of coherency: {problem}")
     print(f"\n== terrain and zones ({len(terrain)}); heights are above the table surface (y={surface:.1f})")
     for t in sorted(terrain, key=lambda t: (t["kind"], -t["z"], t["x"])):
         print(f"  {t['kind']:7} {t['name'][:36]:36} centre ({t['x']:6.1f}, {t['z']:6.1f})  "
