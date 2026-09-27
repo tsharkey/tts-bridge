@@ -128,7 +128,7 @@ def test_refetch_remembers_the_source(cache):
 def test_status(cache, tmp_path_factory):
     s = data.status(cache)["bsdata"]
     assert (s["kind"], s["catalogues"], s["datasheets"]) == ("folder", 2, 3)
-    assert data.status(tmp_path_factory.mktemp("empty")) == {"bsdata": None}
+    assert data.status(tmp_path_factory.mktemp("empty")) == {"bsdata": None, "wahapedia": None}
 
 
 def test_errors(tmp_path):

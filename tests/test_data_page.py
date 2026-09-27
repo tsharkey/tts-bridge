@@ -32,8 +32,9 @@ def wait(client):
 
 def test_empty_cache_shows_missing(client):
     s = client.get("/api/data/status").json()
-    [bsdata] = s["sources"]
-    assert (bsdata["key"], bsdata["cached"]) == ("bsdata", None)
+    bsdata, wahapedia = s["sources"]
+    assert (bsdata["key"], bsdata["cached"], bsdata["refs"]) == ("bsdata", None, True)
+    assert (wahapedia["key"], wahapedia["cached"], wahapedia["refs"]) == ("wahapedia", None, False)
     assert bsdata["default_url"] == "https://github.com/BSData/wh40k-11e"
     assert (s["force_org"]["tiles"], s["force_org"]["built"], s["force_org"]["source"]) == (0, None, None)
     assert s["lct"]["layouts"] == 0 and s["lct"]["mod"]["file"] is None
@@ -45,7 +46,7 @@ def test_fetch_fills_the_cache(client):
     job = wait(client)
     assert job["error"] is None, job
     assert any("3 datasheets" in line for line in job["log"])
-    [bsdata] = client.get("/api/data/status").json()["sources"]
+    bsdata = client.get("/api/data/status").json()["sources"][0]
     assert (bsdata["cached"]["kind"], bsdata["cached"]["datasheets"]) == ("folder", 3)
     assert bsdata["factions"] == [{"faction": "Test Empire", "catalogue": "Xenos - Test Empire", "units": 3}]
     assert bsdata["skipped"]["hidden unit"] == 1

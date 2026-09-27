@@ -19,6 +19,7 @@
   code { font-size: 12px; }
   a { color: var(--accent); }
   .fields { display: grid; grid-template-columns: 1fr 180px auto; gap: 8px; align-items: end; }
+  .fields.no-ref { grid-template-columns: 1fr auto; }
   .fields label { margin-top: 0; }
   pre.log { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 8px;
             font-size: 12px; max-height: 200px; overflow: auto; margin: 10px 0 0; white-space: pre-wrap; }
@@ -62,9 +63,12 @@ function sourceHtml(s) {
   const facts = c ? `
     <dl>
       <dt>From</dt><dd>${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.url)}</a>` : esc(c.path)}</dd>
-      <dt>Version</dt><dd>${esc(c.ref || "default branch")}${c.commit ? ` · <code>${esc(c.commit.slice(0, 10))}</code>` : ""}</dd>
+      <dt>Version</dt><dd>${c.kind === "export" ? `export of ${esc(c.commit)}`
+        : `${esc(c.ref || "default branch")}${c.commit ? ` · <code>${esc(c.commit.slice(0, 10))}</code>` : ""}`}</dd>
       <dt>Fetched</dt><dd>${esc(when(c.fetched))}</dd>
-      ${c.datasheets !== undefined ? `<dt>Holds</dt><dd>${c.datasheets} datasheets in ${c.catalogues} catalogues,
+      ${c.models !== undefined ? `<dt>Holds</dt><dd>Base sizes for ${c.models} models in ${c.datasheets} datasheets
+        (imported ${esc(when(c.imported))})</dd>`
+      : c.datasheets !== undefined ? `<dt>Holds</dt><dd>${c.datasheets} datasheets in ${c.catalogues} catalogues,
         ${(s.factions || []).length} factions (imported ${esc(when(c.imported))})</dd>` : ""}
     </dl>` : `<p class="msg error" style="margin:0 0 10px">Not fetched yet. Fetch it below; it only takes a few seconds.</p>`;
   const factions = (s.factions || []).length ? `
@@ -82,13 +86,13 @@ function sourceHtml(s) {
       <span class="state ${c ? "ok" : "missing"}">${c ? "Cached" : "Missing"}</span></div>
     <p class="about">${esc(s.about)}</p>
     ${facts}
-    <div class="fields">
-      <div><label>Link (GitHub repo, git remote or local folder)</label>
+    <div class="fields ${s.refs ? "" : "no-ref"}">
+      <div><label>${s.refs ? "Link (GitHub repo, git remote or local folder)" : "Link (the export's address, or a local folder)"}</label>
         <input class="url" value="${esc(c ? (c.url || c.path) : s.default_url)}" placeholder="${esc(s.default_url)}"></div>
-      <div><label>Branch, tag or commit</label><input class="ref" value="${esc(c?.ref || "")}" placeholder="default branch"></div>
+      <div ${s.refs ? "" : "hidden"}><label>Branch, tag or commit</label><input class="ref" value="${esc(c?.ref || "")}" placeholder="default branch"></div>
       <button class="primary run" data-post="/api/data/fetch">${c ? "Refresh" : "Fetch"}</button>
     </div>
-    <p class="hint">Leave the version blank for the latest. <a href="#" class="reset">Use the default link</a></p>
+    <p class="hint">${s.refs ? "Leave the version blank for the latest. " : ""}<a href="#" class="reset">Use the default link</a></p>
     <pre class="log" hidden></pre>
     <div class="msg"></div>
     ${factions}${skipped}

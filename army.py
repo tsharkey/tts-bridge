@@ -642,6 +642,19 @@ def sheet_label(unit):
     return f"datasheet: {d['name']} ({d['how']})" if d else "datasheet: NONE"
 
 
+def print_bases(army):
+    import bases
+
+    models = [m for u in army["units"] for m in u["models"]]
+    if not any("base" in m for m in models):
+        return
+    known = sum(1 for m in models if m.get("base") and m["base"]["shape"] in ("round", "oval"))
+    print(f"{known} of {len(models)} models have a base size")
+    gaps = bases.missing(army)
+    if gaps:
+        print("  base size: " + "; ".join(f"{u}: {m} ({why})" for u, m, why in gaps))
+
+
 def print_plan(army, catalog, rows):
     """Each unit's datasheet and each model's pick. With no catalogue (rows
     None), just the datasheets."""
@@ -662,6 +675,7 @@ def print_plan(army, catalog, rows):
             print(f"    {m['name'][:34]:34} -> {got[:48]:48} {how}{gear[:60]}")
         missing = sum(1 for _, m, _ in rows if not m["pick"])
         print(f"\n{len(rows)} models, {missing} unmatched")
+    print_bases(army)
     if not any(u.get("datasheet") for u in army["units"]):
         return  # nothing cached, or nothing matched: sheet_label already says so
     miss = datasheets.unmatched(army)
@@ -807,12 +821,14 @@ def main():
         cmd_index()
         return
 
+    import bases
     import datasheets
 
     mappings = load_mappings()
     army = parse_list(Path(args[1]).read_text(), mappings)
     if not datasheets.attach(army, mappings):
         print("(No datasheets cached. Run `python3 data.py fetch bsdata` to match units to them.)\n")
+    bases.attach(army, mappings)
     if args[0] == "plan" and not CATALOG.exists():  # datasheets only
         print_plan(army, None, None)
         MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))
