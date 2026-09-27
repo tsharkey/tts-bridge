@@ -1,0 +1,37 @@
+name: Bug
+description: Something that worked, or should work, doesn't.
+labels: ["type: bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. Include the error text.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: The command or web app steps, and the list or scene if it matters (attach it).
+      placeholder: |
+        1. python3 army.py plan lists/necrons.txt
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: tts
+    attributes:
+      label: Needs TTS running?
+      options:
+        - "No, it happens offline"
+        - "Yes, with Force Org loaded"
+        - "Yes, with LCT loaded"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit
+      description: Output of `git rev-parse --short HEAD`

@@ -1,0 +1,3 @@
+# CI and local checks: pyflakes-level lint only, so it stays quiet on style.
+[lint]
+select = ["E9", "F"]

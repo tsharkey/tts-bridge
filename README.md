@@ -150,3 +150,14 @@ tiles); only allied units search every army.
   `SAVED_OBJECTS` to `Documents/My Games/Tabletop Simulator/Saves/Saved Objects`.
 - TTS's API can't load a mod or save, so load Force Org or LCT yourself; everything after that can be driven
   from here.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how work is organised (issues, the project board, branches and PRs),
+and [AGENTS.md](AGENTS.md) for what the code assumes. Run the checks with:
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest
+.venv/bin/ruff check .
+```
