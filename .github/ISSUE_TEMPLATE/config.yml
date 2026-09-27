@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Design question or idea
+    url: https://github.com/tsharkey/tts-bridge/discussions
+    about: Not sure what to build yet? Start a discussion; decisions get linked from the issue.

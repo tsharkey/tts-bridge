@@ -1,0 +1,49 @@
+name: Task
+description: A piece of work someone (or an agent) can pick up and finish in one PR.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write this so someone who has never seen the conversation behind it can start work.
+        Add it to the project board and set a Track, Size and milestone after filing.
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem, or what this unlocks. One short paragraph.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What to build. Name files, endpoints and data shapes where you know them.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: Checkboxes a reviewer can tick without asking you.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: depends
+    attributes:
+      label: Depends on
+      description: Issues this needs first. Also link them as "blocked by" in the sidebar, so the board shows it.
+      placeholder: "None, or #12 (datasheet index)"
+  - type: textarea
+    id: context
+    attributes:
+      label: Code context
+      description: |
+        Where this lives today, data you'll work with, what to reuse, gotchas, open questions.
+        Permalinks to lines beat descriptions. This can also go in the first comment.
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Related things this issue deliberately doesn't do (and where they're tracked).
