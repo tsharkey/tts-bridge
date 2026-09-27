@@ -108,6 +108,26 @@ def test_concurrent_calls_each_get_their_own_reply(game):
     assert results["first"] == {"ok": True, "result": "first"}
 
 
+def test_bad_messages_dont_stop_the_listener(game):
+    """Every call depends on the listener thread, so nothing one message holds may end it (#84)."""
+    for junk in (b"\xff\xfe", b"[1, 2]", b"42", b"not json"):
+        with socket.create_connection(("127.0.0.1", tts_bridge.LISTEN_PORT)) as s:
+            s.sendall(junk)
+    assert tts_bridge.run_lua("return still") == "still"
+
+
+def test_a_failing_listener_doesnt_stop_the_others(game, monkeypatch):
+    got = []
+
+    def broken(msg):
+        raise UnicodeEncodeError("charmap", "x", 0, 1, "can't encode")
+    monkeypatch.setattr(tts_bridge, "listeners", [broken, got.append])
+    send(tts_bridge.LISTEN_PORT, {"messageID": 2, "message": "one"})
+    send(tts_bridge.LISTEN_PORT, {"messageID": 2, "message": "two"})
+    assert tts_bridge.run_lua("return still") == "still"   # replies still get through, after both prints
+    assert [m["message"] for m in got] == ["one", "two"]
+
+
 def test_events_stream_what_tts_prints(game):
     async def read():
         stream = tts.events(disconnected=lambda: asyncio.sleep(0, False))
