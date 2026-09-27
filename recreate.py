@@ -19,7 +19,9 @@ import time
 from pathlib import Path
 
 import army
+import bases
 import datasheets
+import tooltips
 import tts_bridge as tts
 
 HALF_X, HALF_Z = 30, 22
@@ -90,7 +92,7 @@ def model_object(catalog, m, unit_name, tag, facing):
     o = json.loads(json.dumps(catalog[g][int(i)]))
     o.pop("GUID", None)
     o["GMNotes"] = tag
-    o["Description"] = f"[{unit_name}]\n" + (o.get("Description") or "")
+    tooltips.describe(o, unit_name, m)
     o["Locked"] = True
     o["Transform"].update(rotX=0, rotY=facing, rotZ=0)
     return o
@@ -105,6 +107,8 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
     for ai, a in enumerate(scene["armies"]):
         text = a.get("list_text") or Path(a["list"]).read_text()
         parsed = datasheets.parse(text, mappings)
+        bases.attach(parsed, mappings)
+        tooltips.attach(parsed)
         army.resolve(parsed, catalog, mappings)
         facing = a.get("facing", 180 if ai == 0 else 0)
         atag = f"{tag}:{'Red' if ai == 0 else 'Blue'}"  # lets board.py tell the armies apart

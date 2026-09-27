@@ -40,7 +40,8 @@ What every tool starts from: an army list export, parsed.
           "sheet_model": "Terminator w/ Power Fist",        // from datasheets (see datasheet.md)
           "sheet_wargear": ["Power fist", "Storm bolter"],
           "base": {"shape": "round", "mm": [40], "inches": [1.57], "…": "…"},   // from bases.attach
-          "pick": "1e84c2:12"                               // from army.resolve
+          "pick": "1e84c2:12",                              // from army.resolve
+          "tooltip": {"name": "Terminator", "text": "[b]M[/b] 5\"  …"}   // from tooltips.attach (TTS BBCode)
         }
       ]
     }
@@ -53,5 +54,5 @@ What every tool starts from: an army list export, parsed.
 - Units keep the list's order. `n`, the nth unit of the same name, is counted in this order everywhere.
 - `wargear` is what `army.model_key` (and so every pin in `mappings.json`) is built from. New information goes in
   new fields; `wargear` doesn't change.
-- Fields from the data cache (`datasheet`, `sheet_model`, `sheet_wargear`, `composition`, `base`) are only there
+- Fields from the data cache (`datasheet`, `sheet_model`, `sheet_wargear`, `composition`, `base`, `tooltip`) are only there
   when the cache is. Tools must work without them.

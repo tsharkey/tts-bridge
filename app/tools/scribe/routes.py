@@ -11,6 +11,7 @@ import army
 import bases
 import data
 import datasheets
+import tooltips
 import tts_bridge as tts
 from app.core.api import router as api_router
 from app.core.lists import entry_info
@@ -29,6 +30,7 @@ def parse(text, mappings, prefer_static=False, repick=False):
     except SystemExit as e:
         raise ValueError(str(e)) from e
     bases.attach(parsed, mappings)
+    tooltips.attach(parsed)
     catalog = army.load_catalog() if army.CATALOG.exists() and any(army.CATALOG.glob("*.json")) else None
     if catalog:
         army.resolve(parsed, catalog, mappings, prefer_static=prefer_static, repick=repick)
@@ -54,7 +56,7 @@ def view(parsed, catalog, mappings, prefer_static=False):
                                         "gear": [f"{x['count']}x {x['name']}" if x["count"] > 1 else x["name"]
                                                  for x in m.get("gear", [])],
                                         "sheet_model": m.get("sheet_model"), "base": base_text(m),
-                                        "pick": m.get("pick"), "_m": m})
+                                        "pick": m.get("pick"), "tooltip": m.get("tooltip"), "_m": m})
             g["count"] += 1
         for g in groups.values():
             m = g.pop("_m")

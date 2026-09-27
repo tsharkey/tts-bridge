@@ -38,6 +38,9 @@
   td select { font-size: 12px; }
   td .pickcell { display: flex; gap: 6px; align-items: center; }
   .gear { color: var(--muted); }
+  .tip td { background: #101114; }
+  .tip .tt { font-size: 12px; line-height: 1.5; max-width: 640px; }
+  .tip .tt b { color: var(--text); }
   /* the 3D view: a modal over the page */
   #preview { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
              align-items: center; justify-content: center; padding: 16px; }
@@ -244,6 +247,13 @@ function badges(u) {
   return out.join(" ");
 }
 
+// TTS BBCode ([b], [i], [RRGGBB]...[-]) as HTML, for the tooltip preview
+function bbcode(text) {
+  return esc(text).replace(/\[(\/?)(b|i|u|s)\]/g, "<$1$2>")
+    .replace(/\[([0-9a-fA-F]{6})\]/g, '<span style="color:#$1">').replace(/\[-\]/g, "</span>")
+    .replace(/\n/g, "<br>");
+}
+
 function groupRow(u, g, gi) {
   const cur = g.picks[0];
   const opts = g.options.map(o => `<option value="${esc(o.pick)}" ${cur && o.pick === cur.pick ? "selected" : ""}>`
@@ -257,7 +267,8 @@ function groupRow(u, g, gi) {
            title="${cur && cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">View</button></div>`;
   return `<tr>
     <td>${esc(g.model)} ×${g.count}${g.sheet_model && g.sheet_model.replace(/’/g, "'") !== g.model
-      ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}</td>
+      ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}
+      ${g.tooltip ? `<div><a href="#" class="tipBtn" data-u="${u.i}" data-g="${gi}">Tooltip</a></div>` : ""}</td>
     <td class="gear">${g.gear.map(esc).join(", ") || "—"}</td>
     <td>${g.base ? esc(g.base) : `<span class="muted">${current.cached.bases ? "unknown" : "—"}</span>`}</td>
     <td>${pick}</td></tr>`;
@@ -319,6 +330,13 @@ $("#result").addEventListener("click", async e => {
     if (!hit) return alert("Pick a datasheet from the list.");
     await api("/api/scribe/datasheet", {key: u.pin_key, id: hit.id});
     read();
+  } else if (e.target.matches(".tipBtn")) {
+    e.preventDefault();
+    const row = e.target.closest("tr"), next = row.nextElementSibling;
+    if (next && next.classList.contains("tip")) return next.remove();
+    const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
+    row.insertAdjacentHTML("afterend", `<tr class="tip"><td colspan="4"><div class="muted">${esc(g.tooltip.name)}</div>
+      <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]<br>${bbcode(g.tooltip.text)}</div></td></tr>`);
   } else if (e.target.matches(".pvBtn")) {
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
     showPreview(g.picks[0]);
