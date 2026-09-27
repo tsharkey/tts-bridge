@@ -167,3 +167,15 @@ def test_pack_wraps_rows():
     zs = {k: z for k, _, z in moves}
     assert xs[0] < xs[1] and zs[2] < zs[0]  # a third model wraps to the next line
     assert zs[3] < zs[2]                   # the next unit wraps to the next row
+
+
+def test_saved_models_have_tooltips(client, paths):
+    r = client.post("/api/scribe/save", json={"text": TOURNAMENT})
+    states = json.loads(Path(r.json()["path"]).read_text())["ObjectStates"]
+    farsight = states[0]
+    assert farsight["Nickname"] == "Commander Farsight"
+    head, rest = farsight["Description"].split("\n", 1)
+    assert head == "[Commander Farsight]"
+    assert "Dawn Blade" in rest and rest.endswith("[i]A test figure[/i]")
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT}).json()
+    assert "Dawn Blade" in unit(v, "Commander Farsight")["groups"][0]["tooltip"]["text"]

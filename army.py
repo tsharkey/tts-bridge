@@ -853,8 +853,13 @@ def lua_list(xs):
 
 def model_objects(army, catalog):
     """Each picked model's catalogue object, ready to spawn: its unit's name on
-    the first description line (board.py groups by it), the army tag in GM
+    the first description line (board.py groups by it), then its datasheet
+    tooltip when datasheets are cached (tooltips.py), the army tag in GM
     Notes. -> (objects, models, units) with units as [(name, [object index])]."""
+    import tooltips
+
+    if not any("tooltip" in m for u in army["units"] for m in u["models"]):
+        tooltips.attach(army)
     objs, models, units = [], [], []
     for u in army["units"]:
         members = []
@@ -864,7 +869,7 @@ def model_objects(army, catalog):
             g, i = m["pick"].split(":")
             o = copy.deepcopy(catalog[g][int(i)])
             o.pop("GUID", None)
-            o["Description"] = f"[{u['name']}]\n" + (o.get("Description") or "")
+            tooltips.describe(o, u["name"], m)
             o["GMNotes"] = f"army.py:{army['title']}"
             members.append(len(objs))
             objs.append(o)
