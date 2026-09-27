@@ -124,20 +124,6 @@
 <main>
   <div>
     <section>
-      <h2>40K VOD Index</h2>
-      <div class="row">
-        <input id="vodGame" placeholder="Paste a 40kvodindex.com game link">
-        <button id="vodImport" class="primary">Import</button>
-      </div>
-      <details style="margin-top:4px"><summary>Ingest tool address</summary>
-        <input id="vodIngest" placeholder="http://localhost:3001" style="margin-top:6px">
-        <p class="hint">Lists come from your 40k-vod-index ingest tool (<code>pnpm ingest</code>), which has to be running.</p>
-      </details>
-      <div class="msg" id="vodMsg"></div>
-      <div id="vodInfo" class="summary" hidden></div>
-    </section>
-
-    <section>
       <h2>Model</h2>
       <label for="apiKey">OpenRouter API key (kept in this browser only)</label>
       <input id="apiKey" type="password" placeholder="sk-or-…" autocomplete="off">
@@ -149,6 +135,16 @@
 
     <section>
       <h2>Armies</h2>
+      <!-- Only shown when VOD_INGEST_URL is set (a personal integration, see .env.example). -->
+      <details id="vodBox" hidden style="margin-bottom:10px">
+        <summary>Import both lists from a 40K VOD Index game</summary>
+        <div class="row" style="margin-top:6px">
+          <input id="vodGame" placeholder="Paste a 40kvodindex.com game link">
+          <button id="vodImport" class="primary">Import</button>
+        </div>
+        <div class="msg" id="vodMsg"></div>
+        <div id="vodInfo" class="summary" hidden></div>
+      </details>
       <div class="army" data-side="0">
         <h3 style="color:var(--red)">Red army</h3>
         <select class="savedList"><option value="">Saved lists…</option></select>
@@ -544,8 +540,8 @@ $("#modelsModal").addEventListener("click", e => { if (e.target.id === "modelsMo
 for (const i of [0, 1]) $(".modelsBtn", armyEl(i)).addEventListener("click", () => openModels(i));
 
 // ---------------------------------------------------------------- 40K VOD Index import
-$("#vodIngest").value = store.get("vodIngest");
-$("#vodIngest").addEventListener("input", e => store.set("vodIngest", e.target.value.trim()));
+// Optional: only offered when the server has VOD_INGEST_URL set.
+api("/api/config").then(c => { $("#vodBox").hidden = !c.vod_import; }).catch(() => {});
 let imported = null;
 
 // A link to the broadcast at the second the game starts.
@@ -607,7 +603,7 @@ $("#vodImport").addEventListener("click", async () => {
   $("#vodImport").disabled = true;
   setMsg(msg, "Asking the ingest tool…");
   try {
-    imported = await api("/api/import_vod", {game, ingest: $("#vodIngest").value.trim() || null});
+    imported = await api("/api/import_vod", {game});
     await fillFromImport();
     const got = imported.players.filter(p => p.listStatus === "ok").length;
     setMsg(msg, `Imported. ${got} of 2 lists found. Add the screenshot and pick the layout next.`, got === 2 ? "ok" : "error");

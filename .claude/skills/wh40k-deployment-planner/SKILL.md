@@ -47,8 +47,8 @@ gives the units and terrain; the mission, lists and battle formations still come
 
 This repo talks to the running TTS game through the External Editor API, so read the
 board and move models with its tools instead of asking the user to describe positions.
-Only one process can hold the bridge's listener port: if the web app (`app/server.py`) or
-`tts_bridge.py listen` is running, ask the user to stop it first.
+Only one process can hold the bridge's listener port: if the web app (`app/server.py`) is
+running, ask the user to stop it first.
 
 **Coordinates.** Table inches, 0,0 at the centre. x runs along the 60" edge (−30…30), z along
 the 44" edge (−22…22), y is height. Facing is degrees: 0 = +z, 90 = +x, 180 = −z, 270 = −x.
@@ -89,8 +89,6 @@ python3 tts_bridge.py run "<lua>"   # anything else, e.g. a specific object's bo
   are listed separately and numbered the same way.
 - A leader and its bodyguard are separate datasheets, so they're separate units here: place
   the bodyguard, then the leader next to it with a second `place`.
-- Scenes sent before this change tag both armies the same (`recreate:<scene>`), so board.py
-  sees one army and skips enemy checks. Re-send the scene from the web app to fix it.
 - Terrain in the summary is every locked object on the table that isn't a model, with its
   footprint and height above the table surface; flat pieces (under ~0.5") are usually LCT's terrain-area mats,
   taller ones are features. LCT's scripting zones (deployment zones, objectives) are listed as
@@ -98,9 +96,6 @@ python3 tts_bridge.py run "<lua>"   # anything else, e.g. a specific object's bo
   Search and Destroy) work from the deployment card's geometry instead.
 - `summary` gives footprints, not shapes, walls, windows or floors. For line-of-sight calls
   that hinge on a specific wall, ask the user to check in TTS or send a screenshot.
-- `deploy_demo.py` shows a hand-written plan for the Tau list checked against a Search and
-  Destroy zone and terrain boxes. Its GUIDs are hard-coded, so it only works as a pattern for
-  scripting a whole deployment, not as a tool.
 
 **Placing a unit** (only the user's own units, and only when the user asks you to move them —
 in a game against a person, recommend and let them place unless told otherwise):

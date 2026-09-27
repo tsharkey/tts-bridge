@@ -112,8 +112,17 @@ with `board.py`, weighs cover and Hidden, objectives, shooting lanes, charge sta
 the opponent has placed, checks each position for both first-turn outcomes, and can place the unit for you.
 Give it the mission (both Primary Missions and the deployment card or layout), both lists, and which units start
 in reserves or transports. Set the table up with the web app first, then stop the web app before asking Claude
-Code to read the board (they share the bridge's listener port). Scenes sent before `board.py` existed tag both
-armies the same way; send them again so it can tell the armies apart.
+Code to read the board (they share the bridge's listener port).
+
+## Optional settings
+
+Settings are read from environment variables or from a `.env` file in the repo root (copy `.env.example`).
+None are needed.
+
+- **`VOD_INGEST_URL`**: a personal integration, not a normal way to load lists. If you run the
+  [40K VOD Index](https://40kvodindex.com) ingest tool locally (`pnpm ingest`), set this to its address
+  (e.g. `http://localhost:3001`) and **Armies** gets an "Import both lists from a 40K VOD Index game" option.
+  Without it, the option is hidden.
 
 ## Fixing model matches
 

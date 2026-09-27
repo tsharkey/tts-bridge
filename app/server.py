@@ -27,6 +27,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "app"))
 
 import army          # noqa: E402
+import config        # noqa: E402
 import recreate      # noqa: E402
 import tts_bridge as tts  # noqa: E402
 import vision        # noqa: E402
@@ -277,6 +278,8 @@ def lct_setup(red, blue, layout):
 def api_get(path, q):
     if path == "/api/status":
         return tts_status()
+    if path == "/api/config":
+        return {"vod_import": bool(config.VOD_INGEST_URL)}
     if path == "/api/models":
         return vision.vision_models()
     if path == "/api/lct/matchups":
@@ -309,8 +312,11 @@ def api_post(path, body):
         return lct_setup(int(body["red"]), int(body["blue"]), int(body["layout"]))
 
     if path == "/api/import_vod":
-        # The 40K VOD Index ingest tool is the only place list text lives.
-        base = (body.get("ingest") or "http://localhost:3001").rstrip("/")
+        # Personal integration: the maintainer's local 40K VOD Index ingest tool.
+        # Off unless VOD_INGEST_URL is set (see .env.example).
+        base = config.VOD_INGEST_URL
+        if not base:
+            raise ValueError("The VOD Index import isn't enabled. Set VOD_INGEST_URL in .env.")
         url = f"{base}/api/export/tts?" + urllib.parse.urlencode({"game": body["game"]})
         try:
             with urllib.request.urlopen(url, timeout=120) as r:

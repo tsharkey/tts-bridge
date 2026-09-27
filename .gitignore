@@ -1,5 +1,6 @@
 # local environment
 .venv/
+.env
 __pycache__/
 *.pyc
 .DS_Store
@@ -13,8 +14,6 @@ scenes/
 tts_state.json
 board.json
 .board_undo.json
-# turn panel event log
-events.jsonl
 # model spend log from the web app
 usage.jsonl
 # close-ups and model answers saved by each analysis
