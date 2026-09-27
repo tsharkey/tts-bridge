@@ -15,3 +15,9 @@ board.json
 .board_undo.json
 # turn panel event log
 events.jsonl
+# model spend log from the web app
+usage.jsonl
+# close-ups and model answers saved by each analysis
+debug/
+# official base sizes, downloaded from the Wahapedia export
+base_sizes.json
