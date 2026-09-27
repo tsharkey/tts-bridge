@@ -54,3 +54,9 @@ def test_bad_request_is_400_with_message(client):
     r = client.post("/api/parse", json={})
     assert r.status_code == 400
     assert r.json()["error"]
+
+
+def test_pages_are_rechecked(client):
+    """So a browser never pairs a new page with an old shared.css."""
+    for path in ("/", "/shared.css", "/shared.js", "/tools/data/"):
+        assert client.get(path).headers["cache-control"] == "no-cache", path
