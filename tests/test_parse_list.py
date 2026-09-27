@@ -115,6 +115,15 @@ def test_format_detection():
     assert army.parse_list((FIXTURES / "gw_app_raven_guard.txt").read_text(), {})["format"] == "gw"
 
 
+def test_gw_title_with_a_faction_in_it():
+    """A GW list titled "2k - T'au Empire - Ret Cadre" is still the GW format."""
+    text = (FIXTURES / "tau_gw.txt").read_text().replace("2k Ret Cadre v4", "2k - T'au Empire - Ret Cadre", 1)
+    parsed = army.parse_list(text, {})
+    assert (parsed["format"], parsed["title"]) == ("gw", "2k - T'au Empire - Ret Cadre")
+    assert (parsed["battle_size"], parsed["disposition"], parsed["points"]) == ("Strike Force", "Purge the Foe", 2005)
+    assert all(u["complete"] for u in parsed["units"])
+
+
 def test_army_fields():
     fields = ("title", "detachment", "disposition", "battle_size")
     got = {n: tuple(army.parse_list((FIXTURES / n).read_text(), {})[f] for f in fields) for n in FULL + PARTIAL}

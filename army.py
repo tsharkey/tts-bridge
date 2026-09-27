@@ -203,6 +203,8 @@ def list_format(lines):
     first = lines[0]
     if first.startswith("+"):
         return "tournament"
+    if re.search(r"\([\d,\s]+points\)$", first, re.I):  # a GW title can have " - " in it too
+        return "gw"
     if " - " in first and any(p.strip() in FACTIONS for p in first.split(" - ")):
         if not re.search(r"\[[\d,\s]+pts\]$", first, re.I):
             return "short"
