@@ -128,22 +128,41 @@ def parse_tile_script(script):
     return objs
 
 
-def cmd_index():
+def force_org_tiles(run_lua=None):
+    """GUIDs of the Force Org army tiles on the table; [] when Force Org isn't loaded."""
+    reply = (run_lua or tts.run_lua)(LIST_TILES_LUA)
+    if reply is None:
+        raise SystemExit("TTS didn't answer. Is a game loaded, and is the External Editor API on?")
+    return json.loads(reply) or []
+
+
+def cmd_index(log=print, run_lua=None):
+    """Copy every Force Org army tile's models into catalog/, skipping
+    unchanged tiles. run_lua defaults to tts.run_lua (the web app passes one
+    that holds its TTS lock per call). -> (tiles read, tiles updated)."""
+    run_lua = run_lua or tts.run_lua
+    guids = force_org_tiles(run_lua)
+    if not guids:
+        raise SystemExit("No Force Org army tiles on the table. Load the Force Org mod in TTS first.")
     CATALOG.mkdir(exist_ok=True)
-    guids = json.loads(tts.run_lua(LIST_TILES_LUA))
-    for g in guids:
-        script = tts.run_lua(f'return getObjectFromGUID("{g}").getLuaScript()', timeout=60)
+    updated = 0
+    for i, g in enumerate(guids, 1):
+        label = f"[{i}/{len(guids)}] {tile_label(g)} ({g})"
+        script = run_lua(f'return getObjectFromGUID("{g}").getLuaScript()', timeout=60)
         if not script or "objectJSONs" not in script:
-            print(f"{g}: no model data, skipped")
+            log(f"{label}: no model data, skipped")
             continue
         digest = hashlib.sha1(script.encode()).hexdigest()
         path = CATALOG / f"{g}.json"
         if path.exists() and json.loads(path.read_text()).get("sha1") == digest:
-            print(f"{g}: unchanged")
+            log(f"{label}: unchanged")
             continue
         objs = parse_tile_script(script)
         path.write_text(json.dumps({"tile": g, "sha1": digest, "objects": objs}))
-        print(f"{g}: {len(objs)} objects")
+        updated += 1
+        log(f"{label}: {len(objs)} objects")
+    log(f"{len(guids)} tiles read, {updated} updated")
+    return len(guids), updated
 
 
 def load_catalog():

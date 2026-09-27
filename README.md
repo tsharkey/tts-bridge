@@ -79,6 +79,14 @@ connected, and whether LCT is loaded.
 Each send is saved to `scenes/` (the lists, positions, frame and image) and can be reloaded from the
 **Load a saved scene** menu.
 
+### Data cache
+
+Shows what's in the local data cache: where the datasheets came from, which version, when they were fetched, and
+how many there are per faction. **Fetch** / **Refresh** downloads BSData and imports it, showing its progress
+and any error. Change the link or the branch/commit first to use a fork or pin a version. It doesn't need TTS.
+The Force Org model catalogue is shown too, with a light that turns green when Force Org is the game loaded in
+TTS; **Refresh from TTS** then rebuilds it, the same as `python3 army.py index`.
+
 ## Command-line tools
 
 These use the same catalogue. Stop the web app first: only one process can hold the bridge's listener port.

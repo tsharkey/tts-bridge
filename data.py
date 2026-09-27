@@ -81,23 +81,27 @@ def get(url, timeout=60, **headers):
 # Fetching: a source's files land in cache/<source>/raw, with source.json
 # saying where they came from.
 
-def source_dir(name, cache=CACHE):
+def source_dir(name, cache=None):
+    cache = cache or CACHE
     return cache / name
 
 
-def source_info(name, cache=CACHE):
+def source_info(name, cache=None):
+    cache = cache or CACHE
     return read_json(source_dir(name, cache) / "source.json")
 
 
-def raw_dir(name, cache=CACHE):
+def raw_dir(name, cache=None):
     """Where a source's files are: the local folder it was fetched from, or its copy in the cache."""
+    cache = cache or CACHE
     info = source_info(name, cache) or {}
     return Path(info["path"]) if info.get("kind") == "folder" else source_dir(name, cache) / "raw"
 
 
-def fetch(name, url=None, ref=None, cache=CACHE, log=print):
+def fetch(name, url=None, ref=None, cache=None, log=print):
     """Fetch a source into the cache. url/ref default to what was fetched last,
     then to the source's default. -> the new source.json content."""
+    cache = cache or CACHE
     if name not in SOURCES:
         raise DataError(f"Unknown source {name!r}. Known: {', '.join(SOURCES)}")
     last = source_info(name, cache) or {}
@@ -189,12 +193,14 @@ def git_commit(folder):
 # --------------------------------------------------------------------------
 # Importing into our own formats.
 
-def datasheet_dir(cache=CACHE):
+def datasheet_dir(cache=None):
+    cache = cache or CACHE
     return cache / "datasheets"
 
 
-def import_bsdata(cache=CACHE, log=print):
+def import_bsdata(cache=None, log=print):
     """Import the cached BSData files into cache/datasheets/. -> the index."""
+    cache = cache or CACHE
     import bsdata
 
     info = source_info("bsdata", cache)
@@ -229,27 +235,31 @@ IMPORTERS = {"bsdata": import_bsdata}
 # --------------------------------------------------------------------------
 # Reading the cache.
 
-def datasheet_index(cache=CACHE):
+def datasheet_index(cache=None):
+    cache = cache or CACHE
     return read_json(datasheet_dir(cache) / "index.json")
 
 
-def load_catalogue(name, cache=CACHE):
+def load_catalogue(name, cache=None):
+    cache = cache or CACHE
     index = datasheet_index(cache) or {"catalogues": {}}
     entry = index["catalogues"].get(name)
     return read_json(datasheet_dir(cache) / entry["file"]) if entry else None
 
 
-def faction_catalogue(faction, cache=CACHE):
+def faction_catalogue(faction, cache=None):
     """The catalogue name for an army.FACTIONS faction, or None."""
+    cache = cache or CACHE
     faction = FACTION_ALIASES.get(faction, faction)
     index = datasheet_index(cache) or {"catalogues": {}}
     return next((n for n, c in index["catalogues"].items() if c["faction"] == faction), None)
 
 
-def datasheets(faction, cache=CACHE):
+def datasheets(faction, cache=None):
     """Every datasheet an army of this faction can take: its own catalogue's,
     then those of the catalogues it imports (a chapter imports Space Marines).
     Each unit's "catalogue" says where it came from. [] if nothing is cached."""
+    cache = cache or CACHE
     name = faction_catalogue(faction, cache)
     out, seen, todo, done = [], set(), [name] if name else [], set()
     while todo:
@@ -265,8 +275,9 @@ def datasheets(faction, cache=CACHE):
     return out
 
 
-def status(cache=CACHE):
+def status(cache=None):
     """-> {source: {...source.json, "datasheets": n, "catalogues": n}} for what's cached."""
+    cache = cache or CACHE
     out = {}
     for name in SOURCES:
         info = source_info(name, cache)
