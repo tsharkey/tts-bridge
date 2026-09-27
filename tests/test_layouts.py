@@ -122,6 +122,22 @@ def test_build_one_layout():
     assert [z["side"] for z in terrain["zones"]] == ["red", "blue"]
 
 
+def test_a_piece_in_parts_is_one_feature():
+    """LCT builds some pieces from several meshes (TTS child objects); their
+    transforms are relative to the parent's."""
+    ruin = thing("r00002", "wall", 10, 15, rot=90, description="Dense", nickname="Ruin")
+    part = thing("p00001", "ruin", 0, 3)          # 3" along the parent's z, before the parent turns
+    part["Transform"]["posY"] = 0
+    ruin["ChildObjects"] = [part]
+    layout = {**LAYOUT, "objects": [LAYOUT["objects"][1], ruin]}
+    terrain, problems = layouts.build(layout, FakeMeshes())
+    assert not problems
+    [feature] = terrain["areas"][0]["features"]
+    xs = [x for x, _ in feature["polygon"]]
+    assert max(xs) == pytest.approx(14)          # the part sits at x 12..14 once turned 90°
+    assert feature["floors"] == [3.0] and feature["height"] == 5.0
+
+
 def test_categories():
     assert layouts.category({"Description": "Tower = Dense\nWalls = Light"}) == "dense"
     assert layouts.category({"Nickname": "Light terrain"}) == "light"

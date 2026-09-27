@@ -58,8 +58,8 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
   barriers and pipes often do); the rules use the area. A feature in no area gets an area of its own.
 - A feature's polygon is its **convex outline** seen from above, so an L-shaped ruin comes out as a triangle.
   Areas are LCT's mats, whose rugged edges are smoothed to within about 0.05 square inches.
-- `floors` are read from the mesh: level surfaces of 2 square inches or more. Some packs' ruins are modelled as
-  walls without floors, so theirs are `[]`.
+- A feature is the whole piece, including the parts TTS holds as its child objects. `floors` are read from its
+  meshes: level surfaces of 2 square inches or more, 1" or more up.
 - Categories are LCT's: each feature's description says Dense or Light (a piece that is both, like T5S2's tower
   with walls, counts as dense). Categories drive the rules (see the terrain table in the deployment skill): an area with a light or dense
   feature is **Obscuring** and gives **Hidden**; a dense feature is **Solid**; a floor above 3" gives

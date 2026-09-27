@@ -131,13 +131,15 @@ def rotate_euler(v, rx, ry, rz):
     return x, y, z
 
 
-def place(vertices, t):
+def place(vertices, *transforms):
     """Mesh vertices (as their files store them) -> table coordinates for an
-    object with TTS Transform t. TTS mirrors x on import, like Unity."""
-    out = []
-    for x, y, z in vertices:
-        v = rotate_euler((-x * t["scaleX"], y * t["scaleY"], z * t["scaleZ"]), t["rotX"], t["rotY"], t["rotZ"])
-        out.append((v[0] + t["posX"], v[1] + t["posY"], v[2] + t["posZ"]))
+    object with TTS Transform t. TTS mirrors x on import, like Unity. For a
+    child object, pass its transform then its parents', innermost first."""
+    out = [(-x, y, z) for x, y, z in vertices]
+    for t in transforms:
+        out = [rotate_euler((x * t["scaleX"], y * t["scaleY"], z * t["scaleZ"]), t["rotX"], t["rotY"], t["rotZ"])
+               for x, y, z in out]
+        out = [(x + t["posX"], y + t["posY"], z + t["posZ"]) for x, y, z in out]
     return out
 
 
@@ -196,7 +198,8 @@ def read_bundle(path):
         vs = [tuple(float(a) for a in line.split()[1:4]) for line in mesh.export().splitlines() if line.startswith("v ")]
         vs = [(-x, y, z) for x, y, z in vs]   # UnityPy's OBJ export mirrors x; undo it so bundles read like OBJ files
         go = mf.m_GameObject.read()
-        tr = next(c.component.read() for c in go.m_Component if c.component.type.name == "Transform")
+        parts = [c.component if hasattr(c, "component") else c[-1] for c in go.m_Component]   # older bundles: (id, part)
+        tr = next(c.read() for c in parts if c.type.name == "Transform")
         while tr.m_Father and tr.m_Father.path_id:   # every transform but the root's
             p, q, s = tr.m_LocalPosition, tr.m_LocalRotation, tr.m_LocalScale
             vs = [quat_rotate((x * s.x, y * s.y, z * s.z), (q.x, q.y, q.z, q.w)) for x, y, z in vs]
@@ -312,6 +315,25 @@ def zone_polygon(kind, position, value):
     return [(-x if flip_x else x, -z if flip_z else z) for x, z in poly]
 
 
+def object_mesh(o, meshes, parents=(), missing=None):
+    """An object's mesh and its child objects' (a piece made of several parts),
+    on the table -> (vertices, triangles), or None if its own mesh is missing."""
+    src = mesh_source(o)
+    mesh = meshes.load(*src) if src else ([], [])
+    if mesh is None:
+        if missing is not None:
+            missing.append(src[0])
+        return None
+    transforms = (o["Transform"], *parents)
+    world, tris = place(mesh[0], *transforms), list(mesh[1])
+    for child in o.get("ChildObjects") or []:
+        part = object_mesh(child, meshes, transforms, missing)
+        if part:
+            tris += [(a + len(world), b + len(world), c + len(world)) for a, b, c in part[1]]
+            world += part[0]
+    return world, tris
+
+
 def placed_objects(layout, meshes, problems=None):
     """[(LCT object, its mesh's vertices on the table, triangles, height span)]
     for every object with a mesh that isn't the table mat."""
@@ -320,13 +342,13 @@ def placed_objects(layout, meshes, problems=None):
         src = mesh_source(o)
         if not src or "battlemaster_battlemat" in (o.get("Tags") or []):
             continue
-        mesh = meshes.load(*src)
+        missing = []
+        mesh = object_mesh(o, meshes, missing=missing)
+        if missing and problems is not None:
+            problems += [f"{o.get('Nickname') or o['Name']} {o['GUID']}: TTS hasn't downloaded {url}" for url in missing]
         if mesh is None:
-            if problems is not None:
-                problems.append(f"{o.get('Nickname') or o['Name']} {o['GUID']}: TTS hasn't downloaded {src[0]}")
             continue
-        verts, tris = mesh
-        world = place(verts, o["Transform"])
+        world, tris = mesh
         xs, ys, zs = zip(*world)
         if max(max(xs) - min(xs), max(zs) - min(zs)) > MAT:
             continue
@@ -461,6 +483,21 @@ def angle_gap(a, b):
     return abs((a - b + 180) % 360 - 180)
 
 
+def box_corners(o, meshes, parents=()):
+    """TTS's bounds are the box around each part's own bounding box, turned:
+    the corners of those boxes, on the table, to compare like with like."""
+    transforms = (o["Transform"], *parents)
+    src = mesh_source(o)
+    verts = (meshes.load(*src) or ([], []))[0] if src else []
+    out = []
+    if verts:
+        lo_hi = [(min(v[i] for v in verts), max(v[i] for v in verts)) for i in range(3)]
+        out = place([(x, y, z) for x in lo_hi[0] for y in lo_hi[1] for z in lo_hi[2]], *transforms)
+    for child in o.get("ChildObjects") or []:
+        out += box_corners(child, meshes, transforms)
+    return out
+
+
 def compare(layout, live, meshes):
     """Match a layout's objects to the live table's (same mesh, nearest spot)
     -> (matched, missing, worst position gap, worst rotation gap, worst bounds gap)."""
@@ -472,10 +509,7 @@ def compare(layout, live, meshes):
             missing += 1
             continue
         lv = min(near, key=lambda lv: math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])))
-        # TTS's bounds are the box around the mesh's own bounding box, turned: compare like with like
-        verts = meshes.load(url, mesh_source(o)[1])[0]
-        lo_hi = [(min(v[i] for v in verts), max(v[i] for v in verts)) for i in range(3)]
-        corners = place([(x, y, z) for x in lo_hi[0] for y in lo_hi[1] for z in lo_hi[2]], t)
+        corners = box_corners(o, meshes)
         xs, zs = [x for x, _, _ in corners], [z for _, _, z in corners]
         box = ((max(xs) + min(xs)) / 2, (max(zs) + min(zs)) / 2, max(xs) - min(xs), max(zs) - min(zs))
         worst[0] = max(worst[0], math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])))
