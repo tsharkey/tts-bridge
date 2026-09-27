@@ -1,0 +1,53 @@
+{
+ "source": {
+  "source": "bsdata",
+  "kind": "folder",
+  "path": "tests/fixtures/datacache",
+  "fetched": null
+ },
+ "imported": null,
+ "skipped": {},
+ "catalogues": {
+  "Xenos - T'au Empire": {
+   "file": "Xenos - Tau Empire.json",
+   "faction": "T'au Empire",
+   "library": false,
+   "imports": [],
+   "units": 6
+  },
+  "Imperium - Adeptus Astartes - Space Marines": {
+   "file": "Imperium - Adeptus Astartes - Space Marines.json",
+   "faction": "Space Marines",
+   "library": false,
+   "imports": [
+    "Imperium - Agents of the Imperium"
+   ],
+   "units": 2
+  },
+  "Imperium - Adeptus Astartes - Raven Guard": {
+   "file": "Imperium - Adeptus Astartes - Raven Guard.json",
+   "faction": "Raven Guard",
+   "library": false,
+   "imports": [
+    "Imperium - Adeptus Astartes - Space Marines"
+   ],
+   "units": 1
+  },
+  "Imperium - Adeptus Astartes - Black Templars": {
+   "file": "Imperium - Adeptus Astartes - Black Templars.json",
+   "faction": "Black Templars",
+   "library": false,
+   "imports": [
+    "Imperium - Adeptus Astartes - Space Marines"
+   ],
+   "units": 1
+  },
+  "Imperium - Agents of the Imperium": {
+   "file": "Imperium - Agents of the Imperium.json",
+   "faction": "Agents of the Imperium",
+   "library": false,
+   "imports": [],
+   "units": 1
+  }
+ }
+}

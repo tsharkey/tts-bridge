@@ -18,6 +18,11 @@ they make there, so a list always comes out the same way; edit an entry to chang
     "models":  "<faction>|<unit>|<model>|<wargear>" -> ["<tile>:<index>", ...]
     "units":   "<faction>|<unit>" -> [["<model name>", count], ...]
                (model composition for datasheets the parser can't work out)
+    "datasheets": "<sub-faction or faction>|<unit>" -> {"id", "name", "catalogue"}
+               (the unit's datasheet, when data.py has cached them; see datasheets.py)
+
+`plan` shows each unit's datasheet and flags anything that didn't match. It
+works without the Force Org catalogue, showing only the datasheets.
 """
 
 import copy
@@ -615,7 +620,7 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False):
             n = variant.get(key, 0)
             variant[key] = n + 1
             m["pick"] = picks[n % len(picks)] if picks else None
-            rows.append((u["name"], m, how))
+            rows.append((u, m, how))
     return rows
 
 
@@ -624,19 +629,44 @@ def nickname(catalog, pick):
     return catalog[g][int(i)].get("Nickname", "").strip()
 
 
+def sheet_label(unit):
+    """"datasheet: <name> (<how>)", for plan output."""
+    if "datasheet" not in unit:
+        return ""
+    d = unit["datasheet"]
+    return f"datasheet: {d['name']} ({d['how']})" if d else "datasheet: NONE"
+
+
 def print_plan(army, catalog, rows):
+    """Each unit's datasheet and each model's pick. With no catalogue (rows
+    None), just the datasheets."""
+    import datasheets
+
     print(f"{army['title']}  [{army['faction']}{' / ' + army['sub'] if army['sub'] else ''}]")
-    last = None
-    for unit, m, how in rows:
-        if unit != last:
-            print(f"\n  {unit}")
-            last = unit
-        got = nickname(catalog, m["pick"]) if m["pick"] else "-"
-        gear = f"  ({', '.join(m['wargear'])})" if m["wargear"] else ""
-        print(f"    {m['name'][:34]:34} -> {got[:48]:48} {how}{gear[:60]}")
-    total = len(rows)
-    missing = sum(1 for _, m, _ in rows if not m["pick"])
-    print(f"\n{total} models, {missing} unmatched")
+    if rows is None:
+        for u in army["units"]:
+            print(f"  {u['name'][:44]:44} {sheet_label(u)}")
+    else:
+        last = None
+        for unit, m, how in rows:
+            if unit is not last:
+                print(f"\n  {unit['name']}  {sheet_label(unit)}")
+                last = unit
+            got = nickname(catalog, m["pick"]) if m["pick"] else "-"
+            gear = f"  ({', '.join(m['wargear'])})" if m["wargear"] else ""
+            print(f"    {m['name'][:34]:34} -> {got[:48]:48} {how}{gear[:60]}")
+        missing = sum(1 for _, m, _ in rows if not m["pick"])
+        print(f"\n{len(rows)} models, {missing} unmatched")
+    if not any(u.get("datasheet") for u in army["units"]):
+        return  # nothing cached, or nothing matched: sheet_label already says so
+    miss = datasheets.unmatched(army)
+    matched = sum(1 for u in army["units"] if u.get("datasheet"))
+    print(f"{len(army['units'])} units, {matched} matched to datasheets")
+    for label, items in (("no datasheet", miss["units"]),
+                         ("model not on its datasheet", [f"{u}: {m}" for u, m in miss["models"]]),
+                         ("wargear not on its datasheet", [f"{u}: {w}" for u, w in miss["wargear"]])):
+        if items:
+            print(f"  {label}: " + "; ".join(items))
 
 
 # --------------------------------------------------------------------------
@@ -772,9 +802,17 @@ def main():
         cmd_index()
         return
 
-    catalog = load_catalog()
+    import datasheets
+
     mappings = load_mappings()
     army = parse_list(Path(args[1]).read_text(), mappings)
+    if not datasheets.attach(army, mappings):
+        print("(No datasheets cached. Run `python3 data.py fetch bsdata` to match units to them.)\n")
+    if args[0] == "plan" and not CATALOG.exists():  # datasheets only
+        print_plan(army, None, None)
+        MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))
+        return
+    catalog = load_catalog()
     rows = resolve(army, catalog, mappings)
     print_plan(army, catalog, rows)
     MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))

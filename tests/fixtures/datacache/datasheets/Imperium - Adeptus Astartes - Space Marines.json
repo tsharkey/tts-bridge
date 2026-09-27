@@ -1,0 +1,182 @@
+{
+ "catalogue": "Imperium - Adeptus Astartes - Space Marines",
+ "id": "Imperium - Adeptus Astartes - Space Marines",
+ "revision": 1,
+ "library": false,
+ "faction": "Space Marines",
+ "imports": [
+  "Imperium - Agents of the Imperium"
+ ],
+ "units": [
+  {
+   "id": "sm-terminators",
+   "name": "Terminator Squad",
+   "catalogue": "Imperium - Adeptus Astartes - Space Marines",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-terminator-sergeant",
+     "name": "Terminator Sergeant",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Storm bolter",
+       "count": 1
+      }
+     ],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Power fist",
+        "Power weapon"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "m-terminator-w/-power-fist",
+     "name": "Terminator w/ Power Fist",
+     "min": 0,
+     "max": 9,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Power fist",
+       "count": 1
+      },
+      {
+       "name": "Storm bolter",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-terminator-w/-heavy-weapon",
+     "name": "Terminator w/ Heavy Weapon",
+     "min": 0,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Cyclone Missile Launcher & Storm Bolter",
+        "Assault Cannon"
+       ]
+      },
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Power fist"
+       ]
+      }
+     ]
+    }
+   ],
+   "wargear": {
+    "Storm bolter": {
+     "id": "w-storm-bolter",
+     "weapons": [
+      {
+       "name": "Storm bolter"
+      }
+     ],
+     "abilities": []
+    },
+    "Power fist": {
+     "id": "w-power-fist",
+     "weapons": [
+      {
+       "name": "Power fist"
+      }
+     ],
+     "abilities": []
+    },
+    "Power weapon": {
+     "id": "w-power-weapon",
+     "weapons": [
+      {
+       "name": "Power weapon"
+      }
+     ],
+     "abilities": []
+    },
+    "Assault Cannon": {
+     "id": "w-assault-cannon",
+     "weapons": [
+      {
+       "name": "Assault Cannon"
+      }
+     ],
+     "abilities": []
+    },
+    "Cyclone Missile Launcher & Storm Bolter": {
+     "id": "w-cyclone-missile-launcher-&-storm-bolter",
+     "weapons": [
+      {
+       "name": "Storm bolter"
+      },
+      {
+       "name": "Cyclone missile launcher - frag"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "sm-intercessors",
+   "name": "Intercessor Squad",
+   "catalogue": "Imperium - Adeptus Astartes - Space Marines",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-intercessor-sergeant",
+     "name": "Intercessor Sergeant",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    },
+    {
+     "id": "m-intercessor",
+     "name": "Intercessor",
+     "min": 4,
+     "max": 9,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    }
+   ],
+   "wargear": {}
+  }
+ ]
+}

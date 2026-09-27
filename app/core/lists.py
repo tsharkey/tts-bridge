@@ -4,6 +4,7 @@ import json
 import re
 
 import army
+import datasheets
 from app import ROOT
 
 LISTS = ROOT / "lists"
@@ -24,6 +25,7 @@ def parse(text):
         parsed = army.parse_list(text, mappings)
     except SystemExit as e:
         raise ValueError(str(e))
+    datasheets.attach(parsed, mappings)
     army.resolve(parsed, catalog, mappings)
     return parsed
 
@@ -104,6 +106,7 @@ def unit_summary(parsed):
     for u in parsed["units"]:
         seen[u["name"]] = seen.get(u["name"], 0) + 1
         out.append({"name": u["name"], "n": seen[u["name"]], "count": len(u["models"]),
+                    "datasheet": (u.get("datasheet") or {}).get("name"),
                     "unmatched": sum(1 for m in u["models"] if not m["pick"])})
     return {"title": parsed["title"], "faction": parsed["faction"], "sub": parsed["sub"],
             "units": out, "models": sum(u["count"] for u in out)}

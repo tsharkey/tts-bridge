@@ -1,0 +1,36 @@
+{
+ "catalogue": "Imperium - Agents of the Imperium",
+ "id": "Imperium - Agents of the Imperium",
+ "revision": 1,
+ "library": false,
+ "faction": "Agents of the Imperium",
+ "imports": [],
+ "units": [
+  {
+   "id": "ag-inquisitor",
+   "name": "Inquisitor",
+   "catalogue": "Imperium - Agents of the Imperium",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-inquisitor",
+     "name": "Inquisitor",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    }
+   ],
+   "wargear": {}
+  }
+ ]
+}

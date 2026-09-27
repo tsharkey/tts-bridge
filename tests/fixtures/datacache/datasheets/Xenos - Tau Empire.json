@@ -1,0 +1,341 @@
+{
+ "catalogue": "Xenos - T'au Empire",
+ "id": "Xenos - T'au Empire",
+ "revision": 1,
+ "library": false,
+ "faction": "T'au Empire",
+ "imports": [],
+ "units": [
+  {
+   "id": "t-farsight",
+   "name": "Commander Farsight",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-commander-farsight",
+     "name": "Commander Farsight",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Dawn Blade",
+       "count": 1
+      },
+      {
+       "name": "High-intensity plasma rifle",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "High-intensity plasma rifle": {
+     "id": "w-high-intensity-plasma-rifle",
+     "weapons": [
+      {
+       "name": "High-intensity plasma rifle"
+      }
+     ],
+     "abilities": []
+    },
+    "Dawn Blade": {
+     "id": "w-dawn-blade",
+     "weapons": [
+      {
+       "name": "Dawn Blade - strike"
+      },
+      {
+       "name": "Dawn Blade - sweep"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "t-stealth",
+   "name": "Stealth Battlesuits",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-stealth-shas’vre",
+     "name": "Stealth Shas’vre",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "Burst cannon",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-stealth-shas’ui-w/-burst-cannon",
+     "name": "Stealth Shas’ui w/ burst cannon",
+     "min": 2,
+     "max": 4,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "Burst cannon",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-stealth-shas’ui-w/-fusion-blaster",
+     "name": "Stealth Shas’ui w/ fusion blaster",
+     "min": 0,
+     "max": 2,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Battlesuit fists",
+       "count": 1
+      },
+      {
+       "name": "Fusion blaster",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Battlesuit fists": {
+     "id": "w-battlesuit-fists",
+     "weapons": [
+      {
+       "name": "Battlesuit fists"
+      }
+     ],
+     "abilities": []
+    },
+    "Burst cannon": {
+     "id": "w-burst-cannon",
+     "weapons": [
+      {
+       "name": "Burst cannon"
+      }
+     ],
+     "abilities": []
+    },
+    "Fusion blaster": {
+     "id": "w-fusion-blaster",
+     "weapons": [
+      {
+       "name": "Fusion blaster"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "t-broadside",
+   "name": "Broadside Battlesuits",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-broadside-shas’vre",
+     "name": "Broadside Shas’vre",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Heavy rail rifle",
+       "count": 1
+      }
+     ],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Missile Drone"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "m-broadside-shas’ui",
+     "name": "Broadside Shas’ui",
+     "min": 0,
+     "max": 2,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Heavy rail rifle",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Heavy rail rifle": {
+     "id": "w-heavy-rail-rifle",
+     "weapons": [
+      {
+       "name": "Heavy rail rifle"
+      }
+     ],
+     "abilities": []
+    },
+    "Missile Drone": {
+     "id": "w-missile-drone",
+     "weapons": [
+      {
+       "name": "Missile pod"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "t-lance",
+   "name": "The Twin Lance",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-ri’lantar",
+     "name": "Ri’Lantar",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    },
+    {
+     "id": "m-ri’locai",
+     "name": "Ri’Locai",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    }
+   ],
+   "wargear": {}
+  },
+  {
+   "id": "t-riptide",
+   "name": "Riptide Battlesuit [Legends]",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-riptide-battlesuit",
+     "name": "Riptide Battlesuit",
+     "min": 1,
+     "max": 1,
+     "stats": null,
+     "equipped": [
+      {
+       "name": "Riptide fists",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Riptide fists": {
+     "id": "w-riptide-fists",
+     "weapons": [
+      {
+       "name": "Riptide fists"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "t-crisis",
+   "name": "Crisis Fireknife Battlesuits",
+   "catalogue": "Xenos - T'au Empire",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    1,
+    1
+   ],
+   "models": [
+    {
+     "id": "m-crisis-fireknife-shas’ui",
+     "name": "Crisis Fireknife Shas’ui",
+     "min": 2,
+     "max": 2,
+     "stats": null,
+     "equipped": [],
+     "options": []
+    }
+   ],
+   "wargear": {}
+  }
+ ]
+}

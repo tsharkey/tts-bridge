@@ -156,6 +156,9 @@ yours: it's created on first use and isn't committed.
   entry to pick a different model, or delete it to have it matched again.
 - **`units`** gives the model composition for datasheets the parser can't work out from a list, for example
   `"T'au Empire|The Twin Lance": [["Ri'Lantar", 1], ["Ri'Locai", 1]]`.
+- **`datasheets`** maps `"<chapter or faction>|<unit>"` to the unit's datasheet (`{"id", "name", "catalogue"}`),
+  once datasheets are cached (`python3 data.py fetch bsdata`). `plan` shows each unit's datasheet and flags
+  anything that didn't match. Change the `id` to pick another datasheet, or delete the entry to match it again.
 - **`aliases`** renames a model the catalogue calls something else, per faction, for example
   `"Adepta Sororitas": {"Dominion": "Battle Sister"}`.
 
