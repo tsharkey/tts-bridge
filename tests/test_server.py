@@ -43,7 +43,8 @@ def test_every_tool_has_a_page(client):
     assert tools
     for t in tools:
         assert t["name"] and t["description"]
-        assert client.get(t["path"].rstrip("/"), follow_redirects=False).status_code == 307
+        r = client.get(t["path"].rstrip("/") + "?path=//elsewhere.example", follow_redirects=False)
+        assert r.status_code == 307 and r.headers["location"] == t["path"]
         r = client.get(t["path"])
         assert r.status_code == 200, t["path"]
         assert "/shared.js" in r.text

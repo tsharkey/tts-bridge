@@ -35,6 +35,13 @@ def slug(tool):
     return tool.__name__.rsplit(".", 1)[-1].replace("_", "-")
 
 
+def redirect_to(target):
+    # no parameters: FastAPI would read any as query parameters, letting ?x= pick the target
+    def redirect():
+        return RedirectResponse(target)
+    return redirect
+
+
 def create_app():
     app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None)
     app.include_router(shared)
@@ -46,7 +53,7 @@ def create_app():
     for t in TOOLS:
         path = f"/tools/{slug(t)}"
         app.include_router(t.router)
-        app.add_api_route(path, lambda path=path: RedirectResponse(path + "/"), include_in_schema=False)
+        app.add_api_route(path, redirect_to(path + "/"), include_in_schema=False)
         app.mount(path, StaticFiles(directory=Path(t.__file__).parent / "static", html=True))
     app.mount("/", StaticFiles(directory=STATIC, html=True))   # homepage and shared.css / shared.js
     return app
