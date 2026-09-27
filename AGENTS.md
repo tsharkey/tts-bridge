@@ -20,6 +20,8 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `app/static/` | The homepage, and `shared.css` / `shared.js` (header, `api()`, `store`, theme) that every page loads. |
 | `app/tools/<tool>/` | One tool: `TOOL` (its homepage card), `routes.py`, and `static/index.html`, served at `/tools/<tool-with-dashes>/`. |
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
+| `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
+| `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | The user's pinned model matches (git-ignored; created on first use). |
 | `lists/` | The user's saved army lists (git-ignored). Tests use the trimmed exports in `tests/fixtures/`. |
@@ -38,8 +40,10 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
   (−22…22), y up. Facing in degrees: 0 = +z, 90 = +x.
 - **`n` is the nth same-named unit in `parse_list` order** everywhere (vision, scenes, placement). Don't reorder.
-- **Never commit** army lists, `mappings.json`, `catalog/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
+- **Never commit** army lists, `mappings.json`, `catalog/`, `cache/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
   Test data goes in `tests/fixtures/`, trimmed to what the test needs and with no player names.
+- **Datasheets are read in our format only** (`data.datasheets()`), never from BSData's files, so another source
+  is just another importer. BSData test data is made up in its schema (`tests/fixtures/bsdata/`), not copied.
 - **Tests run without TTS.** Put new logic where it can be tested offline, and add tests for it.
 - **New tools go in `app/tools/<name>/`**, added to `TOOLS` in `app/server.py`. Make routers with
   `app.core.api.router()` so errors reach the page the same way, and hold `app.core.tts.lock` around TTS calls.

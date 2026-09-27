@@ -39,6 +39,18 @@ This copies the model data out of every Force Org army tile into `catalog/` (abo
 of seconds). You only need to do it again when Force Org updates; unchanged tiles are skipped. Once the
 catalogue exists, Force Org doesn't need to be open: armies can be spawned into any game.
 
+Datasheets (stats, weapons, abilities, keywords) come from the community's
+[BSData](https://github.com/BSData/wh40k-11e) files. Fetch them once; after that they work offline:
+
+```bash
+python3 data.py fetch bsdata
+```
+
+This downloads BSData (about 5 MB, no git needed) into `cache/` and imports it. Run it again to update; it
+skips the download when nothing has changed. `--from <link or folder>` uses a fork or a local checkout, and
+`--ref <branch or commit>` pins a version; both are remembered for the next fetch. `python3 data.py status`
+shows what's cached.
+
 ## The web app
 
 ```bash
