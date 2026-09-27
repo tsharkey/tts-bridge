@@ -1,10 +1,9 @@
-# Who reviews what. Later lines win. Update the paths when the hub restructure
-# moves files into app/tools/<tool>/ and app/core/.
+# Who reviews what. Later lines win.
 
 *                   @tsharkey
 
 # Board from image
-/app/vision.py      @tsharkey @arkraven000
+/app/tools/board_replay/  @tsharkey @arkraven000
 /recreate.py        @tsharkey @arkraven000
 
 # Lists, model matching and datasheets

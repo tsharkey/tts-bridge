@@ -5,9 +5,9 @@ this file has what the code assumes. The [README](README.md) explains what each 
 
 ## What this is
 
-Local tools for playing Warhammer 40,000 (11th edition) in Tabletop Simulator (TTS). Python, no framework:
-the web app is `http.server` plus one static HTML page (`app/static/index.html`, plain JS, three.js from a CDN).
-The command-line tools use only the standard library; `numpy` and `opencv` are for the web app.
+Local tools for playing Warhammer 40,000 (11th edition) in Tabletop Simulator (TTS). Python. The web app is a
+small FastAPI hub (`app/`): a homepage plus one page per tool, plain HTML/JS with no build step (three.js from a CDN).
+The command-line tools use only the standard library; FastAPI, `numpy` and `opencv` are for the web app.
 
 | File | Does |
 |---|---|
@@ -15,8 +15,11 @@ The command-line tools use only the standard library; `numpy` and `opencv` are f
 | `army.py` | Parses army lists (GW app export, `+++` format), matches them to Force Org models, spawns them, writes Saved Objects. |
 | `board.py` | Reads the table as units and terrain, measures between units, places a unit in formation. |
 | `recreate.py` | Rebuilds a board state from a scene (unit positions per army). |
-| `app/server.py` | The web app's HTTP API. |
-| `app/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
+| `app/server.py` | The hub: mounts the shared routes and each tool (`TOOLS`), serves the homepage. |
+| `app/core/` | Shared by every tool: TTS access and its lock (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
+| `app/static/` | The homepage, and `shared.css` / `shared.js` (header, `api()`, `store`, theme) that every page loads. |
+| `app/tools/<tool>/` | One tool: `TOOL` (its homepage card), `routes.py`, and `static/index.html`, served at `/tools/<tool-with-dashes>/`. |
+| `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | The user's pinned model matches (git-ignored; created on first use). |
 | `lists/` | The user's saved army lists (git-ignored). Tests use the trimmed exports in `tests/fixtures/`. |
@@ -38,6 +41,8 @@ The command-line tools use only the standard library; `numpy` and `opencv` are f
 - **Never commit** army lists, `mappings.json`, `catalog/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
   Test data goes in `tests/fixtures/`, trimmed to what the test needs and with no player names.
 - **Tests run without TTS.** Put new logic where it can be tested offline, and add tests for it.
+- **New tools go in `app/tools/<name>/`**, added to `TOOLS` in `app/server.py`. Make routers with
+  `app.core.api.router()` so errors reach the page the same way, and hold `app.core.tts.lock` around TTS calls.
 - Match the surrounding code: module docstrings with usage at the top, sparse comments that say why.
   User-facing text (README, UI) is plain and direct.
 

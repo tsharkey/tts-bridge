@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board from image · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px 20px; }
+  main > div { min-width: 0; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .section-head h2 { margin: 0; }
+  .army { border-left: 3px solid var(--red); padding-left: 10px; margin-bottom: 14px; }
+  .army.blue { border-color: var(--blue); }
+  .army h3 { margin: 0 0 4px; font-size: 14px; }
+  .stage { position: relative; background: #0d0e10; border-radius: 6px; overflow: hidden; min-height: 240px;
+           display: flex; align-items: center; justify-content: center; }
+  .stage canvas { display: block; max-width: 100%; }
+  #photo { cursor: grab; }
+  #board { cursor: default; }
+  #drop { color: var(--muted); padding: 60px; text-align: center; }
+  .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .inline-check { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td input { padding: 2px 4px; width: 60px; }
+  .conf-high { color: var(--ok); } .conf-medium { color: var(--warn); } .conf-low { color: var(--bad); }
+  .tag { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .results-grid > div { min-width: 0; overflow-x: auto; }
+  .reserves { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .collapsed-line { display: flex; align-items: center; gap: 12px; }
+  .collapsed-line img { height: 56px; border-radius: 4px; }
+  .collapsed-line .summary { flex: 1; margin: 0; }
+  .layout-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .layout-card { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 6px; border-radius: 6px;
+                 border: 2px solid var(--line); background: var(--panel2); color: var(--text); font-size: 12px; cursor: pointer; }
+  .layout-card:has(input:checked) { border-color: var(--accent); }
+  .layout-card img { width: 100%; aspect-ratio: 1170 / 1512; object-fit: cover; border-radius: 4px; background: #fff; }
+  .layout-card input { margin: 0 4px 0 0; vertical-align: middle; }
+  .layout-card small { color: var(--muted); }
+  .noart { aspect-ratio: 1170 / 1512; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.8); display: flex; align-items: center;
+              justify-content: center; z-index: 20; cursor: zoom-out; }
+  #lightbox img { max-height: 92vh; max-width: 92vw; border-radius: 6px; }
+  .unit-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 10px;
+                 border: 1px solid var(--accent); border-radius: 6px; background: var(--panel2); }
+  .unit-editor select { width: auto; flex: 1 1 260px; }
+  .unit-editor input { width: 64px; }
+  .unit-editor .muted { color: var(--muted); font-size: 12px; }
+  tr.pick { cursor: pointer; }
+  tr.pick:hover td { background: rgba(255,255,255,.03); }
+  tr.selected td { background: rgba(232,181,62,.12); }
+  button.danger { border-color: var(--bad); color: var(--bad); }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 30; display: flex;
+           align-items: center; justify-content: center; padding: 24px; }
+  .modal-box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(1200px, 100%);
+               height: min(820px, 100%); display: flex; flex-direction: column; overflow: hidden; }
+  .modal-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .modal-head h2 { flex: 1; margin: 0; font-size: 15px; }
+  .modal-body { flex: 1; display: grid; grid-template-columns: 1fr 380px; min-height: 0; }
+  #mmList { overflow-y: auto; padding: 8px 16px 16px; }
+  .mm-unit h4 { margin: 14px 0 6px; font-size: 13px; }
+  .mm-group { display: grid; grid-template-columns: 200px 1fr auto auto; gap: 8px; align-items: center;
+              padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+  .mm-group small { display: block; color: var(--muted); }
+  .mm-group select { font-size: 12px; }
+  .mm-group.active { background: rgba(232,181,62,.08); }
+  .badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
+  .badge.static { background: rgba(79,196,123,.15); color: var(--ok); }
+  .badge.animated { background: rgba(232,181,62,.15); color: var(--warn); }
+  .mm-preview { border-left: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  #mmCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
+  @media (max-width: 900px) { .modal-body { grid-template-columns: 1fr; } .mm-preview { display: none; } }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } .results-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Board from image</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+  <select id="sceneSelect" style="width:220px"><option value="">Load a saved scene…</option></select>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Model</h2>
+      <label for="apiKey">OpenRouter API key (kept in this browser only)</label>
+      <input id="apiKey" type="password" placeholder="sk-or-…" autocomplete="off">
+      <label for="modelFilter">Vision model</label>
+      <input id="modelFilter" placeholder="Filter models (e.g. claude, gemini, gpt)">
+      <select id="model" size="6" style="margin-top:6px"></select>
+      <div class="hint" id="modelInfo"></div>
+    </section>
+
+    <section>
+      <h2>Armies</h2>
+      <!-- Only shown when VOD_INGEST_URL is set (a personal integration, see .env.example). -->
+      <details id="vodBox" hidden style="margin-bottom:10px">
+        <summary>Import both lists from a 40K VOD Index game</summary>
+        <div class="row" style="margin-top:6px">
+          <input id="vodGame" placeholder="Paste a 40kvodindex.com game link">
+          <button id="vodImport" class="primary">Import</button>
+        </div>
+        <div class="msg" id="vodMsg"></div>
+        <div id="vodInfo" class="summary" hidden></div>
+      </details>
+      <div class="army" data-side="0">
+        <h3 style="color:var(--red)">Red army</h3>
+        <select class="savedList"><option value="">Saved lists…</option></select>
+        <textarea class="listText" placeholder="Paste army list" style="margin-top:6px"></textarea>
+        <label>How to spot them (optional)</label>
+        <input class="spot" placeholder="e.g. black armour, purple trim, black bases">
+        <div class="row" style="margin-top:8px">
+          <input class="saveName" placeholder="Save list as…">
+          <button class="saveBtn">Save</button>
+          <button class="parseBtn">Check</button>
+          <button class="modelsBtn" title="See and change which TTS model each unit uses">Choose models</button>
+        </div>
+        <div class="summary"></div>
+      </div>
+      <div class="army blue" data-side="1">
+        <h3 style="color:var(--blue)">Blue army</h3>
+        <select class="savedList"><option value="">Saved lists…</option></select>
+        <textarea class="listText" placeholder="Paste army list" style="margin-top:6px"></textarea>
+        <label>How to spot them (optional)</label>
+        <input class="spot" placeholder="e.g. silver armour, green weapon effects">
+        <div class="row" style="margin-top:8px">
+          <input class="saveName" placeholder="Save list as…">
+          <button class="saveBtn">Save</button>
+          <button class="parseBtn">Check</button>
+          <button class="modelsBtn" title="See and change which TTS model each unit uses">Choose models</button>
+        </div>
+        <div class="summary"></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Table (LCT)</h2>
+      <div class="row">
+        <div><label for="dispRed" style="color:var(--red)">Red disposition</label><select id="dispRed"></select></div>
+        <div><label for="dispBlue" style="color:var(--blue)">Blue disposition</label><select id="dispBlue"></select></div>
+      </div>
+      <div class="summary" id="matchupInfo">Loading matchups from LCT…</div>
+      <div id="layouts" style="margin-top:8px"></div>
+    </section>
+  </div>
+
+  <div>
+    <!-- 1. photo + board frame (collapses once the frame is fitted) -->
+    <section id="photoSection">
+      <div class="section-head"><h2>1 · Image</h2></div>
+      <div id="photoEditor">
+        <div class="stage" id="photoStage" style="margin-top:10px">
+          <div id="drop">Drop a top-down image here, or <label style="display:inline;color:var(--accent);cursor:pointer">
+            choose a file<input id="file" type="file" accept="image/*" hidden></label></div>
+          <canvas id="photo" hidden></canvas>
+        </div>
+        <p class="hint">Fit the yellow 60"×44" frame to the table edges: drag to move, scroll to resize (it can run off
+          the image when the photo is cropped), and rotate until the layout overlay's terrain and zones sit on the
+          photo's. A 40&nbsp;mm Terminator base is 1.57" if you need a scale reference.</p>
+        <div class="controls">
+          <div><label>Width (px) · <span id="ppi">–</span> px/in</label><input id="rWidth" type="number" step="1"></div>
+          <div><label>Rotation</label>
+            <div class="row"><select id="rRot"><option value="0">0°</option><option value="90">90°</option>
+              <option value="180">180°</option><option value="270">270°</option></select>
+              <button id="rotBtn" title="Rotate the frame a quarter turn clockwise">⟳</button></div></div>
+          <div><label><input id="photoOverlayOn" type="checkbox" checked style="margin:0 4px 0 0">Layout overlay</label>
+            <input id="photoOverlayAlpha" type="range" min="0" max="1" step="0.05" value="0.45" style="padding:0"></div>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div></div>
+          <button id="useBoardBtn" class="primary">Use this board</button>
+        </div>
+      </div>
+      <div id="photoCollapsed" class="collapsed-line" hidden style="margin-top:10px">
+        <img id="photoThumb" alt="">
+        <div class="summary" id="photoInfo"></div>
+        <button id="adjustBtn">Adjust</button>
+      </div>
+    </section>
+
+    <!-- 2. straightened board: analyse, then drag markers -->
+    <section id="boardSection" hidden>
+      <div class="section-head">
+        <h2>2 · Board</h2>
+        <div class="row fit" style="gap:12px">
+          <label class="inline-check"><input id="boardOverlayOn" type="checkbox">Layout overlay</label>
+          <input id="boardOverlayAlpha" type="range" min="0" max="1" step="0.05" value="0.4" style="width:110px;padding:0">
+        </div>
+      </div>
+      <div class="stage" style="margin-top:10px"><canvas id="board"></canvas></div>
+      <div id="unitEditor" class="unit-editor" hidden></div>
+      <p class="hint">This is the straightened board the model sees, in table inches. Click a unit's circle to select it
+        (change what it is, its model count, or remove it) and drag to move it. Delete removes the selected unit.</p>
+      <div class="row" style="margin-top:10px">
+        <div></div>
+        <button id="analyzeBtn" class="primary">Analyse image</button>
+      </div>
+      <div class="msg" id="analyzeMsg"></div>
+      <details id="notesBox" hidden><summary>Model notes</summary><div class="msg" id="notes"></div></details>
+    </section>
+
+    <!-- 3. units + send -->
+    <section>
+      <h2>3 · Units</h2>
+      <div class="results-grid">
+        <div id="res0"></div>
+        <div id="res1"></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <input id="sceneName" placeholder="Scene name (saved to scenes/)">
+        <button id="placeBtn" class="primary">Send to TTS</button>
+      </div>
+      <label class="inline-check" style="margin-top:8px"><input id="setupFirst" type="checkbox" checked>
+        Load the chosen LCT layout first (clears the table)</label>
+      <p class="hint">Replaces anything this app spawned before. Units not on the board go to each army's reserves board.</p>
+      <div class="msg" id="placeMsg"></div>
+    </section>
+  </div>
+</main>
+
+<div id="modelsModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="mmTitle">Models</h2>
+      <button id="mmStatic" title="Re-pick every model in this list, favouring static meshes">Prefer static models</button>
+      <button id="mmClose">Close</button>
+    </div>
+    <div class="modal-body">
+      <div id="mmList"></div>
+      <div class="mm-preview">
+        <canvas id="mmCanvas"></canvas>
+        <div class="summary" id="mmPreviewInfo">Pick a static model to preview it. Drag to turn it.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+<script type="module">
+// 3D preview of a static (OBJ) model, straight from Steam's CDN.
+import * as THREE from "three";
+import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+let renderer, scene, camera, controls, current = null, token = 0;
+function init() {
+  const canvas = document.getElementById("mmCanvas");
+  renderer = new THREE.WebGLRenderer({canvas, antialias: true});
+  renderer.setPixelRatio(window.devicePixelRatio);
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d0e10);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 2.2));
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.position.set(3, 5, 4);
+  scene.add(sun);
+  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+  controls = new OrbitControls(camera, canvas);
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 2;
+  (function loop() {
+    requestAnimationFrame(loop);
+    const w = canvas.clientWidth;
+    if (w && (canvas.width !== Math.round(w * devicePixelRatio))) {
+      renderer.setSize(w, w, false); camera.aspect = 1; camera.updateProjectionMatrix();
+    }
+    if (!document.getElementById("modelsModal").hidden) { controls.update(); renderer.render(scene, camera); }
+  })();
+}
+window.previewModel = async (info, status) => {
+  if (!renderer) init();
+  const mine = ++token;
+  if (current) { scene.remove(current); current = null; }
+  if (!info || !info.preview) return;
+  status("Loading model…");
+  try {
+    const loader = new OBJLoader(), textures = new THREE.TextureLoader();
+    // One group per TTS part: its own mesh plus its attached children, with the
+    // part's local transform (Unity Euler angles apply Z, then X, then Y).
+    async function build(part) {
+      const group = new THREE.Group();
+      group.position.set(...part.pos);
+      group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
+      group.scale.set(...part.scale);
+      if (part.mesh) {
+        const mesh = await loader.loadAsync(part.mesh);
+        let map = null;
+        if (part.diffuse) {
+          map = await textures.loadAsync(part.diffuse).catch(() => null);
+          if (map) map.colorSpace = THREE.SRGBColorSpace;
+        }
+        const c = part.color, tint = c[0] + c[1] + c[2] < 0.05 ? [0.55, 0.55, 0.58] : c;  // untinted black reads as nothing
+        const material = new THREE.MeshStandardMaterial({map, color: map ? 0xffffff : new THREE.Color(...tint),
+                                                         roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide});
+        mesh.traverse(m => { if (m.isMesh) m.material = material; });
+        group.add(mesh);
+      }
+      for (const child of await Promise.all(part.children.map(build))) group.add(child);
+      return group;
+    }
+    const model = await build(info.preview);
+    if (mine !== token) return;
+    const obj = new THREE.Group();
+    obj.add(model);
+    obj.scale.x = -1;  // Unity (TTS) meshes are mirrored relative to three.js
+    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
+    obj.position.sub(box.getCenter(new THREE.Vector3()));
+    const r = Math.max(size.x, size.y, size.z);
+    camera.position.set(r * 1.1, r * 0.8, r * 1.4);
+    camera.near = r / 100; camera.far = r * 20; camera.updateProjectionMatrix();
+    controls.target.set(0, 0, 0);
+    scene.add(obj);
+    current = obj;
+    status(null);
+  } catch (e) { if (mine === token) status("Couldn't load this model: " + e.message); }
+};
+</script>
+
+<script src="/shared.js"></script>
+<script>
+// ---------------------------------------------------------------- state
+const W_IN = 60, H_IN = 44;
+const BOARD = {px: 20, margin: 44};   // must match vision.py (PX, MARGIN)
+const COLORS = ["#ff5d5d", "#4aa8ff"];
+const state = {
+  photo: null, imageData: null, rect: null,   // uploaded image and the fitted frame
+  board: null,                                 // Image of the straightened board
+  armies: [{summary: null}, {summary: null}],
+  units: [[], []],                             // {unit, n, at:[x,z], count, confidence}
+};
+let lct = null, overlay = null;
+
+// ---------------------------------------------------------------- models
+let models = [];
+$("#apiKey").value = store.get("openrouterKey");
+$("#apiKey").addEventListener("input", e => store.set("openrouterKey", e.target.value.trim()));
+function renderModels() {
+  const f = $("#modelFilter").value.toLowerCase(), chosen = store.get("model", "anthropic/claude-opus-5.5");
+  const sel = $("#model");
+  sel.innerHTML = "";
+  for (const m of models.filter(m => !f || m.id.toLowerCase().includes(f) || m.name.toLowerCase().includes(f))) {
+    const o = new Option(`${m.id}${m.structured ? "" : "  (no JSON mode)"}`, m.id);
+    if (m.id === chosen) o.selected = true;
+    sel.add(o);
+  }
+  showModelInfo();
+}
+function showModelInfo() {
+  const m = models.find(m => m.id === $("#model").value);
+  if (!m) { $("#modelInfo").textContent = ""; return; }
+  const per = p => p == null ? "?" : `$${(parseFloat(p) * 1e6).toFixed(2)}`;
+  $("#modelInfo").textContent = `${m.name} · ${per(m.prompt_price)} in / ${per(m.completion_price)} out per 1M tokens`
+    + (m.structured ? "" : " · no JSON mode, will parse the reply");
+}
+$("#modelFilter").addEventListener("input", renderModels);
+$("#model").addEventListener("change", () => { store.set("model", $("#model").value); showModelInfo(); });
+api("/api/models").then(m => { models = m; renderModels(); })
+  .catch(e => $("#modelInfo").textContent = "Couldn't load models from OpenRouter: " + e.message);
+
+// ---------------------------------------------------------------- armies
+const armyEl = i => $(`.army[data-side="${i}"]`);
+async function refreshSavedLists() {
+  const names = await api("/api/lists");
+  for (const sel of $$(".savedList")) {
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">Saved lists…</option>' + names.map(n => `<option>${n}</option>`).join("");
+    sel.value = cur;
+  }
+}
+refreshSavedLists();
+
+async function checkArmy(i) {
+  const el = armyEl(i), text = $(".listText", el).value.trim(), out = $(".summary", el);
+  if (!text) { out.textContent = ""; state.armies[i].summary = null; renderResults(); return; }
+  out.textContent = "Checking…";
+  try {
+    const s = await api("/api/parse", {text});
+    state.armies[i].summary = s;
+    const missing = s.units.reduce((a, u) => a + u.unmatched, 0);
+    out.innerHTML = `<b>${s.title}</b><br>${s.faction}${s.sub ? " / " + s.sub : ""} · ${s.units.length} units · `
+      + `${s.models} models${missing ? ` · <span style="color:var(--bad)">${missing} without a model</span>` : ""}`;
+  } catch (e) { out.innerHTML = `<span style="color:var(--bad)">${e.message}</span>`; state.armies[i].summary = null; }
+  renderResults();
+  autoDispositions();
+}
+for (const i of [0, 1]) {
+  const el = armyEl(i);
+  $(".listText", el).value = store.get(`list${i}`);
+  $(".spot", el).value = store.get(`hint${i}`);
+  $(".listText", el).addEventListener("change", e => { store.set(`list${i}`, e.target.value); checkArmy(i); });
+  $(".spot", el).addEventListener("input", e => store.set(`hint${i}`, e.target.value));
+  $(".parseBtn", el).addEventListener("click", () => checkArmy(i));
+  $(".savedList", el).addEventListener("change", async e => {
+    if (!e.target.value) return;
+    const {text} = await api("/api/list?name=" + encodeURIComponent(e.target.value));
+    $(".listText", el).value = text; store.set(`list${i}`, text);
+    $(".saveName", el).value = e.target.value;
+    checkArmy(i);
+  });
+  $(".saveBtn", el).addEventListener("click", async () => {
+    try {
+      const r = await api("/api/lists", {name: $(".saveName", el).value, text: $(".listText", el).value});
+      $(".summary", el).insertAdjacentHTML("beforeend", `<br><span style="color:var(--ok)">Saved as ${r.saved}</span>`);
+      refreshSavedLists();
+    } catch (e) { alert(e.message); }
+  });
+  if ($(".listText", el).value.trim()) checkArmy(i);
+}
+// ---------------------------------------------------------------- choose models
+let mm = null;   // {side, data}
+const typeBadge = o => `<span class="badge ${o.static ? "static" : "animated"}">${o.static ? "Static" : "Animated"}</span>`;
+
+async function openModels(side, opts = {}) {
+  const text = $(".listText", armyEl(side)).value.trim();
+  if (!text) return alert("Paste a list first.");
+  $("#modelsModal").hidden = false;
+  $("#mmList").innerHTML = '<p class="summary">Loading…</p>';
+  try {
+    const data = await api("/api/army_models", {text, ...opts});
+    mm = {side, data};
+    $("#mmTitle").textContent = `${side === 0 ? "Red" : "Blue"} · ${data.title}`;
+    renderModels_();
+  } catch (e) { $("#mmList").innerHTML = `<p class="msg error">${e.message}</p>`; }
+}
+function renderModels_() {
+  const units = mm.data.units;
+  $("#mmList").innerHTML = units.map((u, ui) => `
+    <div class="mm-unit"><h4>${u.name}${u.n > 1 ? " #" + u.n : ""}</h4>
+      ${u.groups.map((g, gi) => {
+        const cur = g.picks[0] || {};
+        const opts = g.options.map(o => `<option value="${o.pick}" ${o.pick === cur.pick ? "selected" : ""}>`
+          + `${o.name} · ${o.static ? "static" : "animated"} · ${o.tile}</option>`).join("");
+        return `<div class="mm-group" data-u="${ui}" data-g="${gi}">
+          <div>${g.model} ×${g.count}${g.wargear.length ? `<small>${g.wargear.join(", ")}</small>` : ""}
+            ${g.picks.length > 1 ? `<small>Currently alternates between ${g.picks.length} sculpts</small>` : ""}</div>
+          <select class="mmSel">${opts}</select>
+          ${cur.name ? typeBadge(cur) : '<span class="badge animated">No match</span>'}
+          <button class="mmPrev" ${cur.preview ? "" : "disabled"} title="${cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">Preview</button>
+        </div>`;
+      }).join("")}
+    </div>`).join("");
+}
+function preview(info, row) {
+  $$(".mm-group.active").forEach(r => r.classList.remove("active"));
+  if (row) row.classList.add("active");
+  const status = t => $("#mmPreviewInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
+  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel && window.previewModel(null, () => {}); return; }
+  window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
+}
+$("#mmList").addEventListener("change", async e => {
+  if (!e.target.classList.contains("mmSel")) return;
+  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
+  const info = g.options.find(o => o.pick === e.target.value);
+  await api("/api/pin", {key: g.key, pick: info.pick});
+  g.picks = [info];
+  renderModels_();
+  const fresh = $(`.mm-group[data-u="${row.dataset.u}"][data-g="${row.dataset.g}"]`);
+  preview(info, fresh);
+});
+$("#mmList").addEventListener("click", e => {
+  if (!e.target.classList.contains("mmPrev")) return;
+  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
+  preview(g.picks[0], row);
+});
+$("#mmStatic").addEventListener("click", () => {
+  if (!mm) return;
+  if (!confirm("Re-pick every model in this list, favouring static meshes? Models you picked by hand in this list will be re-picked too.")) return;
+  openModels(mm.side, {prefer_static: true, repick: true});
+});
+$("#mmClose").addEventListener("click", () => { $("#modelsModal").hidden = true; });
+$("#modelsModal").addEventListener("click", e => { if (e.target.id === "modelsModal") $("#modelsModal").hidden = true; });
+for (const i of [0, 1]) $(".modelsBtn", armyEl(i)).addEventListener("click", () => openModels(i));
+
+// ---------------------------------------------------------------- 40K VOD Index import
+// Optional: only offered when the server has VOD_INGEST_URL set.
+api("/api/config").then(c => { $("#vodBox").hidden = !c.vod_import; }).catch(() => {});
+let imported = null;
+
+// A link to the broadcast at the second the game starts.
+function vodAt(url, seconds) {
+  if (!url || seconds == null) return url;
+  const u = new URL(url);
+  if (u.hostname.includes("twitch.tv")) {
+    const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), sec = seconds % 60;
+    u.searchParams.set("t", `${h}h${m}m${sec}s`);
+  } else u.searchParams.set("t", `${seconds}s`);
+  return u.toString();
+}
+const esc = t => String(t ?? "").replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+async function fillFromImport() {
+  const g = imported;
+  for (const i of [0, 1]) {
+    const p = g.players[i], el = armyEl(i);
+    $(".listText", el).value = p.listText || "";
+    store.set(`list${i}`, p.listText || "");
+    $(".saveName", el).value = p.name ? p.name.replace(/[^A-Za-z0-9 _-]+/g, "").trim() : "";
+  }
+  state.units = [[], []];
+  selected = null; renderEditor();
+  await Promise.all([checkArmy(0), checkArmy(1)]);
+  // the index's dispositions win over whatever the list header suggests
+  if (lct) {
+    for (const [i, id] of [[0, "#dispRed"], [1, "#dispBlue"]]) {
+      const d = lct.dispositions.indexOf(g.players[i].disposition);
+      if (d >= 0) $(id).value = d + 1;
+    }
+    renderMatchup();
+  }
+  for (const i of [0, 1]) {
+    const p = g.players[i];
+    if (p.listStatus !== "ok") {
+      $(".summary", armyEl(i)).innerHTML = `<span style="color:var(--bad)">No list for ${esc(p.name || "this player")}: `
+        + `${esc(p.listNote)}</span>${p.listLink ? ` <a href="${esc(p.listLink)}" target="_blank" rel="noopener">Open it on BCP</a>` : ""}`
+        + "<br>Paste it here by hand.";
+    }
+  }
+  const [a, b] = g.players, side = (p, col) => `<b style="color:${col}">${esc(p.name || "?")}</b> · ${esc(p.army || "?")}`
+    + `${p.detachments.length ? " · " + esc(p.detachments.join(", ")) : ""}${p.disposition ? " · " + esc(p.disposition) : ""}`;
+  $("#vodInfo").innerHTML = `<b>${esc(g.tournament || "Unknown event")}</b>${g.round ? ` · round ${g.round}` : ""}<br>
+    Red: ${side(a, "var(--red)")}<br>Blue: ${side(b, "var(--blue)")}
+    <div class="row" style="margin-top:8px">
+      ${g.vodUrl ? `<a href="${esc(vodAt(g.vodUrl, g.startSeconds))}" target="_blank" rel="noopener">Open the VOD at the game's start ↗</a>` : "<span></span>"}
+      <button id="vodSwap" title="Make player 2 Red and player 1 Blue">Swap Red / Blue</button>
+    </div>`;
+  $("#vodInfo").hidden = false;
+  $("#vodSwap").onclick = () => { imported = {...imported, players: [imported.players[1], imported.players[0]]}; fillFromImport(); };
+  const slug = `${a.name || "red"} vs ${b.name || "blue"}`.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+  $("#sceneName").value = slug.slice(0, 60);
+}
+
+$("#vodImport").addEventListener("click", async () => {
+  const game = $("#vodGame").value.trim(), msg = $("#vodMsg");
+  if (!game) return setMsg(msg, "Paste a game link first.", "error");
+  $("#vodImport").disabled = true;
+  setMsg(msg, "Asking the ingest tool…");
+  try {
+    imported = await api("/api/import_vod", {game});
+    await fillFromImport();
+    const got = imported.players.filter(p => p.listStatus === "ok").length;
+    setMsg(msg, `Imported. ${got} of 2 lists found. Add the screenshot and pick the layout next.`, got === 2 ? "ok" : "error");
+  } catch (e) { setMsg(msg, e.message, "error"); }
+  $("#vodImport").disabled = false;
+});
+$("#vodGame").addEventListener("keydown", e => { if (e.key === "Enter") $("#vodImport").click(); });
+
+const armiesPayload = () => [0, 1].map(i => ({text: $(".listText", armyEl(i)).value, hint: $(".spot", armyEl(i)).value}));
+
+// ---------------------------------------------------------------- LCT matchup + layout picker
+const layoutChoice = () => +(($('input[name="layout"]:checked') || {}).value || 0);
+function currentMatchup() { return lct && lct.matchups[`${$("#dispRed").value}_${$("#dispBlue").value}`]; }
+function currentLayout() { const m = currentMatchup(); return m ? m.layouts[layoutChoice()] : null; }
+function currentDeployment() { const l = currentLayout(); return l ? l.deployment : null; }
+
+function refreshOverlay() {
+  const l = currentLayout();
+  if (!l || !l.art) { overlay = null; redraw(); return; }
+  if (overlay && overlay.src === l.art) { redraw(); return; }
+  overlay = new Image();
+  overlay.onload = redraw;
+  overlay.src = l.art;
+}
+function renderMatchup() {
+  if (!lct) return;
+  store.set("dispRed", $("#dispRed").value); store.set("dispBlue", $("#dispBlue").value);
+  const m = currentMatchup();
+  if (!m) { $("#matchupInfo").textContent = "No matchup for that pair."; $("#layouts").innerHTML = ""; return; }
+  $("#matchupInfo").innerHTML = `<b>${m.label}</b><br>Red primary: ${m.red_mission} · Blue primary: ${m.blue_mission}`;
+  const keep = Math.min(+store.get("layout", 0), m.layouts.length - 1);
+  $("#layouts").innerHTML = `<div class="layout-grid">${m.layouts.map((l, i) => `
+    <label class="layout-card">
+      ${l.art ? `<img src="${l.art}" alt="${l.card} layout" data-full="${l.art}">` : '<div class="noart">No preview</div>'}
+      <span><input type="radio" name="layout" value="${i}" ${i === keep ? "checked" : ""}>
+        ${l.card}<br><small>${l.deployment}</small></span></label>`).join("")}</div>
+    <p class="hint">Click a picture to enlarge it. Red deploys at the top of each diagram.</p>`;
+  refreshOverlay();
+}
+$("#layouts").addEventListener("change", () => { store.set("layout", layoutChoice()); refreshOverlay(); });
+$("#layouts").addEventListener("click", e => {
+  if (!e.target.dataset.full) return;
+  e.preventDefault();
+  const box = document.createElement("div");
+  box.id = "lightbox";
+  box.innerHTML = `<img src="${e.target.dataset.full}" alt="Layout">`;
+  box.onclick = () => box.remove();
+  document.body.append(box);
+});
+$("#dispRed").addEventListener("change", renderMatchup);
+$("#dispBlue").addEventListener("change", renderMatchup);
+
+function autoDispositions() {
+  if (!lct) return;
+  for (const [i, id] of [[0, "#dispRed"], [1, "#dispBlue"]]) {
+    const head = $(".listText", armyEl(i)).value.split("\n").slice(0, 15).join("\n").toLowerCase();
+    const d = lct.dispositions.findIndex(d => head.includes(d.toLowerCase()));
+    if (d >= 0) $(id).value = d + 1;
+  }
+  renderMatchup();
+}
+async function loadMatchups() {
+  try {
+    lct = await api("/api/lct/matchups");
+    for (const id of ["#dispRed", "#dispBlue"]) {
+      $(id).innerHTML = lct.dispositions.map((d, i) => `<option value="${i + 1}">${d}</option>`).join("");
+    }
+    $("#dispRed").value = store.get("dispRed", "4"); $("#dispBlue").value = store.get("dispBlue", "4");
+    autoDispositions();
+  } catch (e) {
+    $("#matchupInfo").innerHTML = `<span style="color:var(--bad)">${e.message}</span> <button id="retryLct">Retry</button>`;
+    $("#retryLct").onclick = loadMatchups;
+    $("#setupFirst").checked = false;
+  }
+}
+loadMatchups();
+
+// Where each army's label goes, per deployment (table inches).
+const ZONE_LABELS = {
+  "Hammer and Anvil": [[24, 0], [-24, 0]], "Crucible of Battle": [[22, 0], [-22, 0]],
+  "Tipping Point": [[24, 0], [-24, 0]], "Dawn of War": [[0, 17], [0, -17]],
+  "Sweeping Engagement": [[0, 18], [0, -18]], "Search and Destroy": [[20, 14], [-20, -14]],
+};
+// The board area inside LCT's layout art (fractions of the image).
+const ART_BOARD = {x: 0.0966, y: 0.0946, w: 0.8085, h: 0.8505};
+
+// Draw the layout diagram and zone labels into a board-local frame: origin at
+// the table centre, +x right, +y = -z, k canvas units per inch.
+function drawLayout(ctx, k, alpha, lineScale) {
+  const W = W_IN * k, H = H_IN * k;
+  if (overlay && overlay.complete && overlay.naturalWidth && alpha > 0) {
+    // LCT diagrams are portrait with table +x at the top: turn them a quarter clockwise
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.rotate(Math.PI / 2);
+    const a = ART_BOARD, iw = overlay.naturalWidth, ih = overlay.naturalHeight;
+    ctx.drawImage(overlay, a.x * iw, a.y * ih, a.w * iw, a.h * ih, -H / 2, -W / 2, H, W);
+    ctx.restore();
+  }
+  const labels = ZONE_LABELS[currentDeployment()];
+  if (!labels) return;
+  ctx.font = `bold ${16 * lineScale}px sans-serif`; ctx.textAlign = "center";
+  for (const [i, name] of [[0, "RED"], [1, "BLUE"]]) {
+    const [x, z] = labels[i];
+    ctx.lineWidth = 4 * lineScale; ctx.strokeStyle = "rgba(0,0,0,.8)"; ctx.fillStyle = COLORS[i];
+    ctx.strokeText(name, x * k, -z * k); ctx.fillText(name, x * k, -z * k);
+  }
+  ctx.textAlign = "start";
+}
+function redraw() { drawPhoto(); drawBoard(); }
+
+// ---------------------------------------------------------------- 1. photo + frame
+// The frame is the table in photo pixels: centre, width (the 60" side) and rot,
+// how far the table is turned counter-clockwise (0 = table +x points right).
+const photo = $("#photo"), pctx = photo.getContext("2d");
+let pview = 1;                       // canvas px per photo px
+
+function loadPhoto(src, rect) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      state.photo = img;
+      const maxW = $("#photoStage").clientWidth || 900;
+      pview = Math.min(1, maxW / img.width);
+      photo.width = Math.round(img.width * pview);
+      photo.height = Math.round(img.height * pview);
+      photo.hidden = false; $("#drop").hidden = true;
+      state.rect = normaliseRect(rect) || defaultRect(img);
+      syncRectInputs(); drawPhoto();
+      resolve();
+    };
+    img.src = src;
+  });
+}
+function normaliseRect(r) {
+  if (!r) return null;
+  if (r.cx !== undefined) return {rot: 0, ...r};
+  return {cx: r.left + r.width / 2, cy: r.top + r.width * H_IN / W_IN / 2, width: r.width, rot: 0};
+}
+function defaultRect(img) {
+  const width = img.width / img.height > W_IN / H_IN ? img.height * W_IN / H_IN : img.width;
+  return {cx: img.width / 2, cy: img.height / 2, width, rot: 0};
+}
+function readFile(file) {
+  const r = new FileReader();
+  r.onload = () => {
+    state.imageData = r.result; state.board = null;
+    showPhotoEditor(true); $("#boardSection").hidden = true;
+    loadPhoto(r.result);
+  };
+  r.readAsDataURL(file);
+}
+$("#file").addEventListener("change", e => e.target.files[0] && readFile(e.target.files[0]));
+$("#photoStage").addEventListener("dragover", e => e.preventDefault());
+$("#photoStage").addEventListener("drop", e => { e.preventDefault(); e.dataTransfer.files[0] && readFile(e.dataTransfer.files[0]); });
+
+const ppi = () => state.rect.width / W_IN;
+function drawPhoto() {
+  if (!state.photo || $("#photoEditor").hidden) return;
+  const r = state.rect, k = ppi(), W = W_IN * k, H = H_IN * k;
+  pctx.setTransform(1, 0, 0, 1, 0, 0);
+  pctx.clearRect(0, 0, photo.width, photo.height);
+  pctx.setTransform(pview, 0, 0, pview, 0, 0);
+  pctx.drawImage(state.photo, 0, 0);
+  pctx.save();
+  pctx.translate(r.cx, r.cy);
+  pctx.rotate(-r.rot * Math.PI / 180);
+  pctx.fillStyle = "rgba(0,0,0,.45)";
+  pctx.beginPath(); pctx.rect(-1e5, -1e5, 2e5, 2e5); pctx.rect(-W / 2, -H / 2, W, H); pctx.fill("evenodd");
+  drawLayout(pctx, k, $("#photoOverlayOn").checked ? +$("#photoOverlayAlpha").value : 0, 1 / pview);
+  pctx.lineWidth = 1 / pview; pctx.strokeStyle = "rgba(232,181,62,.35)";
+  for (let x = -20; x <= 20; x += 10) { pctx.beginPath(); pctx.moveTo(x * k, -H / 2); pctx.lineTo(x * k, H / 2); pctx.stroke(); }
+  for (let z = -20; z <= 20; z += 10) { pctx.beginPath(); pctx.moveTo(-W / 2, z * k); pctx.lineTo(W / 2, z * k); pctx.stroke(); }
+  pctx.lineWidth = 3 / pview; pctx.strokeStyle = "#e8b53e";
+  pctx.strokeRect(-W / 2, -H / 2, W, H);
+  pctx.restore();
+}
+function syncRectInputs() {
+  $("#rWidth").value = Math.round(state.rect.width);
+  $("#rRot").value = String(state.rect.rot);
+  $("#ppi").textContent = ppi().toFixed(1);
+}
+$("#rWidth").addEventListener("input", e => { if (!state.rect) return; state.rect.width = +e.target.value; $("#ppi").textContent = ppi().toFixed(1); drawPhoto(); });
+$("#rRot").addEventListener("change", e => { if (!state.rect) return; state.rect.rot = +e.target.value; drawPhoto(); });
+$("#rotBtn").addEventListener("click", () => { if (!state.rect) return; state.rect.rot = (state.rect.rot + 270) % 360; syncRectInputs(); drawPhoto(); });
+$("#photoOverlayOn").addEventListener("change", drawPhoto);
+$("#photoOverlayAlpha").addEventListener("input", drawPhoto);
+
+function canvasPos(canvas, e, scale) {
+  const b = canvas.getBoundingClientRect();
+  return [(e.clientX - b.left) * (canvas.width / b.width) / scale, (e.clientY - b.top) * (canvas.height / b.height) / scale];
+}
+let photoDrag = null;
+photo.addEventListener("mousedown", e => {
+  if (!state.rect) return;
+  const [px, py] = canvasPos(photo, e, pview);
+  photoDrag = {px, py, cx: state.rect.cx, cy: state.rect.cy};
+  photo.style.cursor = "grabbing";
+});
+photo.addEventListener("wheel", e => {
+  if (!state.rect) return;
+  e.preventDefault();
+  const [px, py] = canvasPos(photo, e, pview), r = state.rect, k = Math.exp(-e.deltaY * 0.001);
+  r.cx = px + (r.cx - px) * k; r.cy = py + (r.cy - py) * k; r.width *= k;
+  syncRectInputs(); drawPhoto();
+}, {passive: false});
+
+function showPhotoEditor(open) {
+  $("#photoEditor").hidden = !open;
+  $("#photoCollapsed").hidden = open;
+  if (open) drawPhoto();
+}
+async function useBoard() {
+  if (!state.imageData) return;
+  const r = await api("/api/board", {image: state.imageData, rect: state.rect});
+  await setBoard(r.board);
+  $("#photoThumb").src = state.imageData;
+  $("#photoInfo").innerHTML = `<b>Board fitted</b> · ${ppi().toFixed(1)} px/in · rotated ${state.rect.rot}°`;
+  showPhotoEditor(false);
+  $("#boardSection").hidden = false;
+  fitBoardCanvas();
+  drawBoard();
+}
+$("#useBoardBtn").addEventListener("click", () => useBoard().catch(e => alert(e.message)));
+$("#adjustBtn").addEventListener("click", () => showPhotoEditor(true));
+
+// ---------------------------------------------------------------- 2. straightened board + markers
+const board = $("#board"), bctx = board.getContext("2d");
+let bview = 1;                        // canvas px per board-image px
+function setBoard(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { state.board = img; fitBoardCanvas(); resolve(); };
+    img.src = src;
+  });
+}
+function fitBoardCanvas() {
+  if (!state.board) return;
+  const maxW = board.parentElement.clientWidth || 900;
+  bview = Math.min(1, maxW / state.board.width);
+  board.width = Math.round(state.board.width * bview);
+  board.height = Math.round(state.board.height * bview);
+}
+// the unit picked on the board or in the table (an entry of state.units[side])
+let selected = null;
+const sideOf = u => state.units[0].includes(u) ? 0 : state.units[1].includes(u) ? 1 : -1;
+function select(u) { selected = u; renderEditor(); renderResults(); drawBoard(); }
+function removeUnit(u) {
+  const side = sideOf(u);
+  if (side < 0) return;
+  state.units[side].splice(state.units[side].indexOf(u), 1);
+  if (selected === u) selected = null;
+  renderEditor(); renderResults(); drawBoard();
+}
+
+// Editor bar under the board: what the selected marker is, how many models, remove.
+function renderEditor() {
+  const box = $("#unitEditor");
+  const side = selected ? sideOf(selected) : -1;
+  if (side < 0) { selected = null; box.hidden = true; return; }
+  const placed = new Set([0, 1].flatMap(s => state.units[s].filter(u => u !== selected).map(u => `${s}|${u.unit}|${u.n || 1}`)));
+  const groups = [0, 1].map(s => {
+    const sum = state.armies[s].summary;
+    if (!sum) return "";
+    const opts = sum.units.map(u => {
+      const key = `${s}|${u.name}|${u.n}`;
+      const cur = s === side && u.name === selected.unit && u.n === (selected.n || 1);
+      const taken = placed.has(key);
+      return `<option value="${key}|${u.count}" ${cur ? "selected" : ""}>${u.name}${u.n > 1 ? " #" + u.n : ""}`
+        + ` (${u.count})${taken ? " · already on the board" : ""}</option>`;
+    }).join("");
+    return `<optgroup label="${s === 0 ? "Red" : "Blue"} · ${sum.faction}">${opts}</optgroup>`;
+  }).join("");
+  const max = ((state.armies[side].summary || {units: []}).units
+    .find(u => u.name === selected.unit && u.n === (selected.n || 1)) || {}).count || 99;
+  box.innerHTML = `<span class="tag" style="background:${COLORS[side]}"></span>
+    <select id="edUnit" title="What this unit is">${groups}</select>
+    <span class="muted">Models</span><input id="edCount" type="number" min="1" max="${max}" value="${selected.count}">
+    <span class="muted">of ${max}</span>
+    <button id="edRemove" class="danger">Remove</button>
+    <button id="edClose" title="Deselect">Done</button>`;
+  box.hidden = false;
+  $("#edUnit").onchange = e => {
+    const [s, unit, n, count] = e.target.value.split("|");
+    const from = sideOf(selected), to = +s;
+    Object.assign(selected, {unit, n: +n, count: Math.min(selected.count, +count), confidence: "manual"});
+    if (from !== to) { state.units[from].splice(state.units[from].indexOf(selected), 1); state.units[to].push(selected); }
+    renderEditor(); renderResults(); drawBoard();
+  };
+  $("#edCount").oninput = e => { selected.count = Math.max(1, Math.min(max, +e.target.value || 1)); renderResults(); drawBoard(); };
+  $("#edRemove").onclick = () => removeUnit(selected);
+  $("#edClose").onclick = () => select(null);
+}
+document.addEventListener("keydown", e => {
+  if (!selected || !["Delete", "Backspace"].includes(e.key)) return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+  e.preventDefault();
+  removeUnit(selected);
+});
+
+// table inches <-> board-image pixels
+const toBoard = (x, z) => [BOARD.margin + (x + W_IN / 2) * BOARD.px, BOARD.margin + (H_IN / 2 - z) * BOARD.px];
+const fromBoard = (u, v) => [(u - BOARD.margin) / BOARD.px - W_IN / 2, H_IN / 2 - (v - BOARD.margin) / BOARD.px];
+const markerRadius = u => Math.max(9 / bview, Math.sqrt(u.count) * 0.8 * BOARD.px);
+
+function drawBoard() {
+  if (!state.board || $("#boardSection").hidden) return;
+  bctx.setTransform(1, 0, 0, 1, 0, 0);
+  bctx.clearRect(0, 0, board.width, board.height);
+  bctx.setTransform(bview, 0, 0, bview, 0, 0);
+  bctx.drawImage(state.board, 0, 0);
+  bctx.save();
+  bctx.translate(...toBoard(0, 0));
+  drawLayout(bctx, BOARD.px, $("#boardOverlayOn").checked ? +$("#boardOverlayAlpha").value : 0, 1 / bview);
+  bctx.restore();
+  const s = 1 / bview;   // keep text and outlines the same size on screen
+  for (const side of [0, 1]) for (const u of state.units[side]) {
+    const [px, py] = toBoard(u.at[0], u.at[1]), rad = markerRadius(u);
+    bctx.lineWidth = 2.5 * s; bctx.strokeStyle = COLORS[side]; bctx.fillStyle = COLORS[side] + (u === selected ? "66" : "33");
+    bctx.beginPath(); bctx.arc(px, py, rad, 0, 7); bctx.fill(); bctx.stroke();
+    if (u === selected) {
+      bctx.lineWidth = 2 * s; bctx.strokeStyle = "#fff"; bctx.setLineDash([5 * s, 4 * s]);
+      bctx.beginPath(); bctx.arc(px, py, rad + 4 * s, 0, 7); bctx.stroke(); bctx.setLineDash([]);
+    }
+    const label = `${u.unit}${(u.n || 1) > 1 ? " #" + u.n : ""} (${u.count})`;
+    bctx.font = `bold ${12 * s}px sans-serif`; bctx.lineWidth = 3 * s;
+    bctx.strokeStyle = "rgba(0,0,0,.85)"; bctx.fillStyle = "#fff";
+    bctx.strokeText(label, px + rad + 3 * s, py + 4 * s); bctx.fillText(label, px + rad + 3 * s, py + 4 * s);
+  }
+}
+$("#boardOverlayOn").addEventListener("change", drawBoard);
+$("#boardOverlayAlpha").addEventListener("input", drawBoard);
+
+function unitAt(e) {
+  const [u, v] = canvasPos(board, e, bview);
+  let best = null, bestD = 1e9;
+  for (const side of [0, 1]) for (const unit of state.units[side]) {
+    const [px, py] = toBoard(unit.at[0], unit.at[1]), d = Math.hypot(u - px, v - py);
+    if (d < markerRadius(unit) && d < bestD) { best = unit; bestD = d; }
+  }
+  return best;
+}
+let boardDrag = null;
+board.addEventListener("mousedown", e => {
+  const u = unitAt(e);
+  boardDrag = u;
+  if (u) { board.style.cursor = "grabbing"; if (u !== selected) select(u); }
+  else if (selected) select(null);
+});
+board.addEventListener("mousemove", e => { if (!boardDrag) board.style.cursor = unitAt(e) ? "grab" : "default"; });
+window.addEventListener("mousemove", e => {
+  if (photoDrag) {
+    const [px, py] = canvasPos(photo, e, pview);
+    state.rect.cx = photoDrag.cx + px - photoDrag.px; state.rect.cy = photoDrag.cy + py - photoDrag.py;
+    drawPhoto();
+  } else if (boardDrag) {
+    const [x, z] = fromBoard(...canvasPos(board, e, bview));
+    boardDrag.at = [+Math.max(-30, Math.min(30, x)).toFixed(1), +Math.max(-22, Math.min(22, z)).toFixed(1)];
+    drawBoard(); renderResults();
+  }
+});
+window.addEventListener("mouseup", () => {
+  photoDrag = null; boardDrag = null;
+  photo.style.cursor = "grab"; board.style.cursor = "default";
+});
+
+$("#analyzeBtn").addEventListener("click", async () => {
+  const msg = $("#analyzeMsg");
+  if (!$("#apiKey").value.trim()) return setMsg(msg, "Enter your OpenRouter API key.", "error");
+  if (!$("#model").value) return setMsg(msg, "Pick a model.", "error");
+  if (!state.armies[0].summary || !state.armies[1].summary) return setMsg(msg, "Both lists need to pass Check first.", "error");
+  $("#analyzeBtn").disabled = true;
+  setMsg(msg, `Asking ${$("#model").value}… this can take a minute.`);
+  try {
+    const r = await api("/api/analyze", {api_key: $("#apiKey").value.trim(), model: $("#model").value,
+      image: state.imageData, rect: state.rect, armies: armiesPayload(), deployment: currentDeployment()});
+    state.units = r.units;
+    selected = null; renderEditor();
+    await setBoard(r.board);
+    const n = r.units[0].length + r.units[1].length;
+    const tok = r.usage && r.usage.prompt_tokens ? ` · ${r.usage.prompt_tokens} in / ${r.usage.completion_tokens} out tokens` : "";
+    setMsg(msg, `Found ${n} units in ${r.seconds}s${tok}.` + (r.problems.length ? "\nIgnored: " + r.problems.join("; ") : ""), "ok");
+    $("#notes").textContent = r.notes || ""; $("#notesBox").hidden = !r.notes;
+    renderResults(); drawBoard();
+  } catch (e) { setMsg(msg, e.message, "error"); }
+  $("#analyzeBtn").disabled = false;
+});
+
+// ---------------------------------------------------------------- 3. units table
+function renderResults() {
+  for (const side of [0, 1]) {
+    const box = $("#res" + side), s = state.armies[side].summary, col = COLORS[side];
+    const rows = state.units[side].map((u, i) => `
+      <tr class="pick${u === selected ? " selected" : ""}" data-row-s="${side}" data-row-i="${i}">
+      <td><span class="tag" style="background:${col}"></span>${u.unit}${(u.n || 1) > 1 ? " #" + u.n : ""}</td>
+      <td><input data-s="${side}" data-i="${i}" data-k="x" type="number" step="0.5" value="${u.at[0]}"></td>
+      <td><input data-s="${side}" data-i="${i}" data-k="z" type="number" step="0.5" value="${u.at[1]}"></td>
+      <td><input data-s="${side}" data-i="${i}" data-k="count" type="number" min="1" value="${u.count}" style="width:46px"></td>
+      <td class="conf-${u.confidence || "high"}">${u.confidence || "–"}</td>
+      <td><button data-s="${side}" data-i="${i}" class="rm danger" title="Take it off the board (it goes to reserves)">Remove</button></td></tr>`).join("");
+    let reserves = "", add = "";
+    if (s) {
+      const placed = new Set(state.units[side].map(u => `${u.unit}#${u.n || 1}`));
+      const rest = s.units.filter(u => !placed.has(`${u.name}#${u.n}`));
+      reserves = rest.length ? `Reserves / dead / not spotted: ${rest.map(u => u.name + (u.n > 1 ? " #" + u.n : "")).join(", ")}` : "Every unit is on the table.";
+      add = rest.length ? `<select data-add="${side}"><option value="">Add a unit at the centre…</option>${rest.map(u =>
+        `<option value="${u.name}|${u.n}|${u.count}">${u.name}${u.n > 1 ? " #" + u.n : ""}</option>`).join("")}</select>` : "";
+    }
+    box.innerHTML = `<h3 style="margin:0 0 6px;color:${col};font-size:14px">${side === 0 ? "Red" : "Blue"}${s ? " · " + s.faction : ""}</h3>
+      <table><tr><th>Unit</th><th>x</th><th>z</th><th>Models</th><th>Conf.</th><th></th></tr>${rows}</table>
+      <div style="margin-top:6px">${add}</div><div class="reserves">${reserves}</div>`;
+  }
+}
+document.addEventListener("input", e => {
+  const d = e.target.dataset;
+  if (d.k === undefined || d.s === undefined) return;
+  const u = state.units[d.s][d.i];
+  if (d.k === "x") u.at[0] = +e.target.value; else if (d.k === "z") u.at[1] = +e.target.value; else u.count = +e.target.value;
+  drawBoard();
+});
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("rm")) return removeUnit(state.units[e.target.dataset.s][+e.target.dataset.i]);
+  const row = e.target.closest("tr.pick");
+  if (row && !["INPUT", "BUTTON"].includes(e.target.tagName)) select(state.units[row.dataset.rowS][+row.dataset.rowI]);
+});
+document.addEventListener("change", e => {
+  const side = e.target.dataset.add;
+  if (side === undefined || !e.target.value) return;
+  const [unit, n, count] = e.target.value.split("|");
+  const added = {unit, n: +n, at: [0, 0], count: +count, confidence: "manual"};
+  state.units[side].push(added);
+  select(added);
+});
+renderResults();
+
+// ---------------------------------------------------------------- send to TTS (layout, then models)
+$("#placeBtn").addEventListener("click", async () => {
+  const msg = $("#placeMsg");
+  const name = $("#sceneName").value.trim() || `scene_${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`;
+  if (!state.armies[0].summary || !state.armies[1].summary) return setMsg(msg, "Both lists need to pass Check first.", "error");
+  const table = lct ? {red: $("#dispRed").value, blue: $("#dispBlue").value, layout: layoutChoice()} : null;
+  const setup = $("#setupFirst").checked && table;
+  const layout = currentLayout();
+  if (setup && !confirm(`Clear the TTS table, load ${currentMatchup().label} on ${layout.card} (${layout.deployment}), `
+                        + "then place both armies?")) return;
+  $("#placeBtn").disabled = true;
+  setMsg(msg, setup ? "Loading the layout, then placing models…" : "Placing models…");
+  try {
+    const armies = armiesPayload().map((a, i) => ({text: a.text, units: state.units[i]}));
+    const r = await api("/api/place", {name, armies, rect: state.rect, image: state.imageData,
+      deployment: currentDeployment(), table, setup: setup ? table : null, source: $("#model").value || "manual"});
+    setMsg(msg, (r.layout ? `Loaded ${r.layout}. ` : "") + `Placed ${r.on_table} models on the table and `
+      + `${r.in_reserves} in reserves` + (r.reserve_boards ? "." : " (no reserves boards here, used a strip beside the table).")
+      + ` Saved as scenes/${r.saved}.json`, "ok");
+    loadScenes();
+  } catch (e) { setMsg(msg, e.message, "error"); }
+  $("#placeBtn").disabled = false;
+});
+
+// ---------------------------------------------------------------- saved scenes
+async function loadScenes() {
+  const names = await api("/api/scenes");
+  $("#sceneSelect").innerHTML = '<option value="">Load a saved scene…</option>' + names.map(n => `<option>${n}</option>`).join("");
+}
+loadScenes();
+$("#sceneSelect").addEventListener("change", async e => {
+  const name = e.target.value;
+  if (!name) return;
+  const sc = await api("/api/scene?name=" + encodeURIComponent(name));
+  sc.armies.forEach((a, i) => {
+    $(".listText", armyEl(i)).value = a.list_text; store.set(`list${i}`, a.list_text);
+    state.units[i] = a.units.map(u => ({...u, n: u.n || 1}));
+  });
+  selected = null; renderEditor();
+  $("#sceneName").value = name;
+  await Promise.all([checkArmy(0), checkArmy(1)]);
+  if (sc.table && lct) {
+    $("#dispRed").value = sc.table.red; $("#dispBlue").value = sc.table.blue;
+    store.set("layout", sc.table.layout); renderMatchup();
+  }
+  if (sc.has_image) {
+    const blob = await (await fetch("/api/scene_image?name=" + encodeURIComponent(name))).blob();
+    const dataUrl = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+    state.imageData = dataUrl;
+    showPhotoEditor(true);
+    await loadPhoto(dataUrl, sc.rect);
+    await useBoard();
+  }
+  renderResults(); drawBoard();
+});
+</script>
+</body>
+</html>
