@@ -57,6 +57,14 @@ def start_listener():
     threading.Thread(target=listener_thread, args=(srv,), daemon=True).start()
 
 
+def use_hub():
+    """Always send Lua through the web app, never listening on the port: for
+    long-running helpers (the MCP server Claude Desktop starts) that mustn't
+    keep the web app from starting. Calls fail until the web app is up."""
+    global hub
+    hub = f"http://{TTS_HOST}:{HUB_PORT}"
+
+
 def hub_answers(url):
     try:
         with urllib.request.urlopen(f"{url}/api/tts", timeout=2) as r:
@@ -200,7 +208,7 @@ def forward(script, timeout):
             sys.exit(error or "TTS isn't responding")
         return {"ok": False, "error": error or f"The web app answered {e.code}"}
     except OSError as e:
-        sys.exit(f"Lost the web app at {hub} ({e}). Is it still running?")
+        sys.exit(f"Can't reach the web app at {hub} ({e}). Is it running? Start it with: .venv/bin/python app/server.py")
 
 
 def run_lua(script: str, timeout=10):

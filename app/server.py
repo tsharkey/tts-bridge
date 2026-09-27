@@ -8,9 +8,10 @@ holds the bridge's listener port and forwards Lua for tts_bridge.py, army.py,
 board.py and recreate.py, so they can run while it's up (start it first).
 
 Adding a tool: make app/tools/<name>/ (see app/tools/__init__.py) and add it
-to TOOLS below.
+to TOOLS below. The MCP server for Claude is at /mcp (see app/mcp_server/).
 """
 
+import contextlib
 import logging
 import sys
 from pathlib import Path
@@ -24,6 +25,7 @@ from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 import tts_bridge as tts  # noqa: E402
+from app import mcp_server  # noqa: E402
 from app.core.api import shared  # noqa: E402
 from app.tools import board_replay, data, models, scribe  # noqa: E402
 
@@ -57,10 +59,19 @@ def redirect_to(target):
 def create_app(hosts=None):
     """hosts: the Host names to answer (all if None). The server passes
     HOSTS, so a web page can't reach /api/tts/lua by DNS rebinding."""
-    app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None)
+    mcp = mcp_server.server()
+    mcp_app = mcp.streamable_http_app(streamable_http_path="/mcp", host="127.0.0.1")
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app):
+        async with mcp.session_manager.run():
+            yield
+
+    app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
     app.include_router(shared)
+    app.router.routes.extend(mcp_app.routes)   # /mcp, before the pages' catch-all mount
 
     @app.get("/api/tools")
     def tools():

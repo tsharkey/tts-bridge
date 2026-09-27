@@ -191,6 +191,37 @@ python3 tts_bridge.py state            # dump every object on the table to tts_s
 python3 tts_bridge.py run "<lua>"      # run Lua in the game and print the result
 ```
 
+## Claude tools (MCP)
+
+The web app is also an [MCP](https://modelcontextprotocol.io) server, so Claude can use the game directly from
+Claude Code or Claude Desktop's chat. For now it has one tool, `status` (is TTS reachable, is LCT loaded); the
+rest (board summary, measuring, line of sight, placing units) are coming. Tools only run while the web app is
+up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
+only answers requests from this computer.
+
+**Claude Code** (with the web app running):
+
+```bash
+claude mcp add --transport http tts-bridge http://127.0.0.1:8765/mcp
+```
+
+**Claude Desktop** starts its tools itself, over stdio. Add this to its config (Settings → Developer → Edit
+Config), with this folder's path, and restart Claude Desktop:
+
+```json
+{
+  "mcpServers": {
+    "tts-bridge": {
+      "command": "/path/to/tts-bridge/.venv/bin/python",
+      "args": ["-m", "app.mcp_server"],
+      "env": {"PYTHONPATH": "/path/to/tts-bridge"}
+    }
+  }
+}
+```
+
+It sends everything through the web app, so start the web app too (in either order).
+
 ## Deployment planning with Claude Code
 
 `.claude/skills/wh40k-deployment-planner/` is a Claude Code skill for the deployment phase. Open Claude Code in
