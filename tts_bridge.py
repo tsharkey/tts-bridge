@@ -74,23 +74,29 @@ def hub_answers(url):
 
 
 def listener_thread(srv):
-    # TTS connects once per message, sends JSON and closes
+    # TTS connects once per message, sends JSON and closes. Every run_lua in this
+    # process (and every call forwarded to the hub) depends on this thread, so
+    # nothing one message holds may end it.
     while True:
         conn, _ = srv.accept()
         data = b""
-        while True:
-            chunk = conn.recv(4096)
-            if not chunk:
-                break
-            data += chunk
-        conn.close()
+        try:
+            while True:
+                chunk = conn.recv(4096)
+                if not chunk:
+                    break
+                data += chunk
+        except OSError:
+            continue
+        finally:
+            conn.close()
         if not data:
             continue
         try:
             msg = json.loads(data.decode("utf-8"))
-        except json.JSONDecodeError:
+        except ValueError:   # not JSON, or not UTF-8
             msg = {"raw": data.decode("utf-8", errors="replace")}
-        dispatch(msg)
+        dispatch(msg if isinstance(msg, dict) else {"raw": msg})
 
 
 def dispatch(msg):
@@ -105,7 +111,10 @@ def dispatch(msg):
             q.put(custom)
         return  # a reply nobody waits for any more (it timed out)
     for listener in list(listeners) or [handle_passive]:
-        listener(msg)
+        try:
+            listener(msg)
+        except Exception as e:   # e.g. a print the console can't encode; the next message still gets through
+            print(f"[tts_bridge] a listener failed on a message from TTS: {e!r}", file=sys.stderr)
 
 
 def send_message(msg: dict):
