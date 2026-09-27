@@ -29,15 +29,19 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Then build the model catalogue. Load the **Force Org** mod in TTS and run:
+Then build the model catalogue and the LCT layouts. Subscribe to **Force Org** and **LCT** in the Steam
+Workshop (and open each once in TTS so it downloads), then run:
 
 ```bash
-python3 army.py index
+python3 data.py mods
 ```
 
-This copies the model data out of every Force Org army tile into `catalog/` (about 34 MB, 44 tiles, a couple
-of seconds). You only need to do it again when Force Org updates; unchanged tiles are skipped. Once the
-catalogue exists, Force Org doesn't need to be open: armies can be spawned into any game.
+This reads both mods straight from TTS's Workshop folder, so TTS can be closed. It copies the model data out of
+every Force Org army tile into `catalog/` (about 34 MB, 44 tiles) and every LCT layout into `cache/lct/`. Run it
+again when a mod updates; unchanged tiles are skipped. If your Workshop folder isn't in the usual place, or
+you're subscribed to more than one version of a mod, see `.env.example`.
+
+(`python3 army.py index` still builds the catalogue the old way, through TTS with Force Org loaded.)
 
 Datasheets (stats, weapons, abilities, keywords) come from the community's
 [BSData](https://github.com/BSData/wh40k-11e) files. Fetch them once; after that they work offline:
@@ -84,8 +88,9 @@ Each send is saved to `scenes/` (the lists, positions, frame and image) and can 
 Shows what's in the local data cache: where the datasheets came from, which version, when they were fetched, and
 how many there are per faction. **Fetch** / **Refresh** downloads BSData and imports it, showing its progress
 and any error. Change the link or the branch/commit first to use a fork or pin a version. It doesn't need TTS.
-The Force Org model catalogue is shown too, with a light that turns green when Force Org is the game loaded in
-TTS; **Refresh from TTS** then rebuilds it, the same as `python3 army.py index`.
+The Force Org models and LCT layouts are shown too. **Refresh from mod files** reads them from TTS's Workshop
+folder, with TTS closed. Force Org can also be read from TTS: a light turns green when Force Org is the game
+loaded, and **Refresh from TTS** rebuilds the catalogue the same way as `python3 army.py index`.
 
 ## Command-line tools
 

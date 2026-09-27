@@ -1,0 +1,22 @@
+[
+ {
+  "Directory": "/Users/someone//Library//Tabletop Simulator//Mods//Workshop/1111.json",
+  "Name": "Something Else",
+  "UpdateTime": 1
+ },
+ {
+  "Directory": "/Users/someone//Library//Tabletop Simulator//Mods//Workshop/2000.json",
+  "Name": "ForceOrg",
+  "UpdateTime": 100
+ },
+ {
+  "Directory": "/Users/someone//Library//Tabletop Simulator//Mods//Workshop/3000.json",
+  "Name": "ForceOrg",
+  "UpdateTime": 300
+ },
+ {
+  "Directory": "/Users/someone//Library//Tabletop Simulator//Mods//Workshop/4000.json",
+  "Name": "LCT",
+  "UpdateTime": 200
+ }
+]
