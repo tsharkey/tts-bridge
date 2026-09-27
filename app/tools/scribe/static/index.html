@@ -38,8 +38,14 @@
   td select { font-size: 12px; }
   td .pickcell { display: flex; gap: 6px; align-items: center; }
   .gear { color: var(--muted); }
-  #preview { display: none; }
-  #preview.on { display: block; }
+  /* the 3D view: a modal over the page */
+  #preview { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
+             align-items: center; justify-content: center; padding: 16px; }
+  #preview.on { display: flex; }
+  #preview .box { width: min(620px, 100%); margin: 0; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+  #preview .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  #preview .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
+  #preview #pvCanvas { width: min(100%, calc(100vh - 170px)); margin: 0 auto; }  /* square, and it fits the window */
   #pvCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
   .empty { color: var(--muted); padding: 40px; text-align: center; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
@@ -87,17 +93,20 @@
       <div class="msg" id="spawnMsg"></div>
     </section>
 
-    <section id="preview">
-      <h2>Model</h2>
-      <canvas id="pvCanvas"></canvas>
-      <div class="summary" id="pvInfo"></div>
-    </section>
   </div>
 
   <div>
     <div id="result"><div class="empty">Paste a list and press <b>Read list</b> to see what TTS will get.</div></div>
   </div>
 </main>
+
+<div id="preview">
+  <section class="box">
+    <div class="section-head"><h2 id="pvTitle">Model</h2><button class="fit" id="pvClose">Close</button></div>
+    <canvas id="pvCanvas"></canvas>
+    <div class="summary" id="pvInfo">Drag to turn it, scroll to zoom.</div>
+  </section>
+</div>
 
 <script type="importmap">
 {"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
@@ -330,10 +339,15 @@ $("#result").addEventListener("change", async e => {
 
 function showPreview(info) {
   $("#preview").classList.add("on");
+  $("#pvTitle").textContent = info.name;
   const status = t => $("#pvInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
   if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel?.(null, () => {}); return; }
   window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
 }
+
+$("#pvClose").addEventListener("click", () => $("#preview").classList.remove("on"));
+$("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("#preview").classList.remove("on"); });
 
 // ---------------------------------------------------------------- output
 $("#saveObjBtn").addEventListener("click", async () => {
