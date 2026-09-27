@@ -1,0 +1,55 @@
++++++++++++++++++++++++++++++++++++++++++++++++
++ FACTION KEYWORD: Xenos - T'au Empire
++ DETACHMENT: Retaliation Cadre (Bonded Heroes)
++ FORCE DISPOSITION: Purge the Foe
++ TOTAL ARMY POINTS: 2005pts
++
++ ENHANCEMENT: Starflare Ignition System (on Char5: Commander in Coldstar Battlesuit)
++ NUMBER OF UNITS: 17
++ SECONDARY: - Bring It Down: (8x2) + (4x4) - Assassination: 5 Characters
++++++++++++++++++++++++++++++++++++++++++++++++
+
+Char1: 1x Commander Farsight (70 pts): Dawn Blade, High-intensity plasma rifle
+Char4: 1x Commander in Coldstar Battlesuit (95 pts): Gun Drone, Marker Drone, Cyclic ion blaster, High-output burst cannon, 2x Missile pod, Battlesuit fists
+Char5: 1x Commander in Coldstar Battlesuit (115 pts): Gun Drone, Marker Drone, Cyclic ion blaster, High-output burst cannon, 2x Missile pod, Battlesuit fists
+Enhancement: Starflare Ignition System (+20 pts)
+Char2: 1x Darkstrider (60 pts): Close combat weapon, Shade
+Char3: 2x The Twin Lance (230 pts)
+• 1x Ri'Lantar: MV15 Gun Drone, Twin pulse blaster, Fusion eliminator, Twin pulse blaster, Shardstorm burst system, XV pulse pistol
+• 1x Ri'Locai: MV15 Gun Drone, Twin pulse blaster, Ion scattercannon, Twin pulse blaster, Shardstorm burst system, XV pulse pistol
+
+10x Breacher Team (90 pts)
+• 1x Breacher Fire Warrior Shas'ui: Guardian Drone, Gun Drone, Close combat weapon, Pulse blaster, Pulse pistol, Support turret
+• 9x Breacher Fire Warriors: 9 with Close combat weapon, Pulse blaster, Pulse pistol
+10x Breacher Team (90 pts)
+• 1x Breacher Fire Warrior Shas'ui: Guardian Drone, Gun Drone, Close combat weapon, Pulse blaster, Pulse pistol, Support turret
+• 9x Breacher Fire Warriors: 9 with Close combat weapon, Pulse blaster, Pulse pistol
+
+1x Broadside Battlesuits (75 pts): 2x Missile Drone, Weapon support system, Crushing bulk, Heavy rail rifle, Seeker missile
+1x Broadside Battlesuits (75 pts): 2x Missile Drone, Weapon support system, Crushing bulk, Heavy rail rifle, Seeker missile
+3x Crisis Starscythe Battlesuits (100 pts)
+• 1x Crisis Starscythe Shas’vre: Gun Drone, Shield Drone, 2x Burst cannon, Battlesuit fists
+• 2x Crisis Starscythe Shas’ui: 2 with Gun Drone, Shield Drone, 2x Burst cannon, Battlesuit fists
+3x Crisis Starscythe Battlesuits (100 pts)
+• 1x Crisis Starscythe Shas’vre: Gun Drone, Shield Drone, 2x Burst cannon, Battlesuit fists
+• 2x Crisis Starscythe Shas’ui: 2 with Gun Drone, Shield Drone, 2x Burst cannon, Battlesuit fists
+3x Crisis Sunforge Battlesuits (125 pts)
+• 1x Crisis Sunforge Shas’vre: Gun Drone, Shield Drone, 2x Fusion blaster, Battlesuit fists
+• 2x Crisis Sunforge Shas’ui: 2 with Gun Drone, Shield Drone, Battlesuit fists, 2x Fusion blaster
+1x Ghostkeel Battlesuit (150 pts): Battlesuit support system, Ghostkeel fists, Fusion collider, Twin fusion blaster
+1x Riptide Battlesuit (215 pts): Riptide fists, Ion accelerator, 2x Missile pod, Twin plasma rifle
+1x Riptide Battlesuit (215 pts): Riptide fists, Ion accelerator, 2x Missile pod, Twin plasma rifle
+5x Stealth Battlesuits (100 pts)
+• 4x Stealth Shas'ui
+    1 with Battlesuit fists, Burst cannon
+    1 with Homing beacon, Battlesuit fists, Burst cannon
+    2 with Battlesuit fists, Fusion blaster
+• 1x Stealth Shas'vre: Gun Drone, Marker Drone, Battlesuit fists, Pulse pistol, Burst cannon
+5x Stealth Battlesuits (100 pts)
+• 4x Stealth Shas'ui
+    1 with Battlesuit fists, Burst cannon
+    1 with Homing beacon, Battlesuit fists, Burst cannon
+    2 with Battlesuit fists, Fusion blaster
+• 1x Stealth Shas'vre: Gun Drone, Marker Drone, Battlesuit fists, Pulse pistol, Burst cannon
+
+Created with newrecruit.eu v36.25

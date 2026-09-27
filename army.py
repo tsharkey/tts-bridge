@@ -9,7 +9,9 @@ army.py — turn an army list into Force Org models in Tabletop Simulator.
                                                # facing degrees: 180 = -z, 270 = -x, 90 = +x)
                                                # and write a Saved Object
 
-Understands the GW app export (• / ◦ bullets) and the "+++" header format.
+Understands the GW app export (• / ◦ bullets), the "+++" tournament format, and
+New Recruit's full, simple and short exports. Simple and short lists don't say
+every model, so their units are marked "complete": false.
 
 Matching decisions live in mappings.json. `plan` and `build` pin every choice
 they make there, so a list always comes out the same way; edit an entry to change it.
@@ -153,9 +155,13 @@ def load_catalog():
 # --------------------------------------------------------------------------
 # List parsing.
 
-# "Unit (80 Points)", and NewRecruit's compact "Char1: 10x Unit (50 pts): wargear".
-UNIT_RE = re.compile(r"^(?:Char\d+:\s*)?(?:(?P<count>\d+)x\s+)?(?P<name>.+?)\s*\([\d,\s]+\s*(?:pts|points)\)"
-                     r"\s*(?::\s*(?P<gear>.+))?$", re.I)
+# "Unit (80 Points)", NewRecruit's compact "Char1: 10x Unit (50 pts): wargear",
+# and its full export's "Unit [50 pts]: wargear" (or "Unit [50 pts]:" over • lines).
+UNIT_RE = re.compile(r"^(?:Char\d+:\s*)?(?:(?P<count>\d+)x\s+)?(?P<name>.+?)\s*"
+                     r"[(\[](?P<pts>[\d,\s]+?)\s*(?:pts|points)[)\]]\s*(?::\s*(?P<gear>.*))?$", re.I)
+BATTLE_SIZE_RE = re.compile(r"^(?:Combat Patrol|Incursion|Strike Force|Onslaught)\b", re.I)
+# "[20 pts]" after a paid option in New Recruit's full export
+COST_RE = re.compile(r"\s*\[[\d,\s]+pts\]", re.I)
 LOADOUT_RE = re.compile(r"^(\d+) with (.+)$")
 COUNT_RE = re.compile(r"^(\d+)x\s+(.+)$")
 # Titles that mark a line as a model rather than wargear in the flat "+++" format.
@@ -191,6 +197,89 @@ def list_title(lines, faction):
     return re.sub(r"\s*\([^)]*points\)\s*$", "", first, flags=re.I).strip()
 
 
+def list_format(lines):
+    """tournament ("+++" header), nr / simple / short (New Recruit, titled
+    "Faction - Name - [pts]" or "Faction - Detachment"), or gw (the GW app)."""
+    first = lines[0]
+    if first.startswith("+"):
+        return "tournament"
+    if " - " in first and any(p.strip() in FACTIONS for p in first.split(" - ")):
+        if not re.search(r"\[[\d,\s]+pts\]$", first, re.I):
+            return "short"
+        return "nr" if any(ln.startswith("##") for ln in lines) else "simple"
+    return "gw"
+
+
+def number(s):
+    digits = re.sub(r"\D", "", s or "")
+    return int(digits) if digits else None
+
+
+def bare(s):
+    """"Retaliation Cadre (3 Detachment Points)" -> "Retaliation Cadre"."""
+    return re.sub(r"\s*[(\[][^)\]]*[)\]]", "", s).strip()
+
+
+def read_header(lines, fmt):
+    """The army's own fields: title, faction, sub, detachment, disposition,
+    battle_size, points (None where the list doesn't say)."""
+    h = dict.fromkeys(["detachment", "disposition", "battle_size", "points"])
+    if fmt in ("nr", "simple", "short"):
+        parts = [p.strip() for p in lines[0].split(" - ")]
+        if fmt != "short":
+            h["points"] = number(parts.pop())
+        known = [i for i, p in enumerate(parts) if p in FACTIONS]
+        names = [parts[i] for i in known]
+        h["sub"] = next((n for n in names if n in SUBFACTION_OF), None)
+        h["faction"] = next((n for n in names if n not in SUBFACTION_OF), SUBFACTION_OF.get(h["sub"]))
+        rest = " - ".join(parts[known[-1] + 1:])
+        if fmt == "short":
+            h["detachment"] = rest or None
+            h["title"] = f"{h['sub'] or h['faction']} {rest}".strip()
+        else:
+            h["title"] = rest or h["sub"] or h["faction"]
+        for ln in lines:
+            m = re.match(r"(Battle Size|Detachment|Force Disposition)\b[^:]*:\s*(.+)", ln)
+            if m:
+                key = {"Battle Size": "battle_size", "Detachment": "detachment"}.get(m.group(1), "disposition")
+                h[key] = h[key] or bare(m.group(2))
+        return h
+
+    h["faction"], h["sub"] = detect_faction(lines)
+    h["title"] = list_title(lines, h["faction"])
+    if fmt == "tournament":
+        for ln in lines:
+            m = re.match(r"\+\s*(DETACHMENT|FORCE DISPOSITION|TOTAL ARMY POINTS):\s*(.+)", ln)
+            if m:
+                key = {"DETACHMENT": "detachment", "FORCE DISPOSITION": "disposition"}.get(m.group(1))
+                if key:
+                    h[key] = m.group(2).strip()
+                else:
+                    h["points"] = number(m.group(2))
+        return h
+
+    # GW app: title, faction (and chapter), detachment, disposition and
+    # battle size, one per line, before the first heading or unit.
+    pts = re.search(r"\(([\d,\s]+)points\)\s*$", lines[0], re.I)
+    h["points"] = number(pts and pts.group(1))
+    rest = []
+    for ln in lines[1:]:
+        if ln.isupper() or (UNIT_RE.match(ln) and not BATTLE_SIZE_RE.match(ln)):
+            break
+        if ln in FACTIONS:
+            continue
+        if BATTLE_SIZE_RE.match(ln):
+            h["battle_size"] = bare(ln)
+        elif "detachment point" in ln.lower():
+            h["detachment"] = bare(ln)
+        else:
+            rest.append(ln)
+    if h["detachment"] is None and rest:
+        h["detachment"] = rest.pop(0)
+    h["disposition"] = rest[0] if rest else None
+    return h
+
+
 def tokens_of(s):
     # apostrophes split words, so "Ri'Lantar" and "Shas'ri Lantar" share "lantar"
     s = re.sub(r"\[[0-9a-f]{6}\]|\[-\]", " ", clean(s).lower().replace("w/", " with "))
@@ -220,23 +309,28 @@ def split_wargear(n, gear):
 def parse_list(text, mappings):
     raw = [(len(ln) - len(ln.lstrip()), clean(ln)) for ln in text.splitlines() if clean(ln)]
     lines = [ln for _, ln in raw]
-    faction, sub = detect_faction(lines)
-    army = {"title": list_title(lines, faction), "faction": faction, "sub": sub, "units": []}
+    fmt = list_format(lines)
+    army = {"format": fmt, **read_header(lines, fmt), "units": []}
+    faction = army["faction"]
+    # New Recruit's full export gives each model's own gear ("2x Burst cannon"
+    # on each of 2 Shas'ui); the tournament format gives the group's ("2 with ...").
+    per_model = fmt == "nr"
     allied = False
     unit = None
-    for indent, ln in raw:
-        if ln.startswith("+"):
+    for indent, ln in raw[1:]:  # the first line is always the title
+        if ln.startswith(("+", "#")):
             continue
         if ln.upper() == "ALLIED UNITS":
             allied = True
             continue
         m = UNIT_RE.match(ln)
         if m and not ln.startswith(("•", "◦")):
-            unit = {"name": m.group("name").strip(), "allied": allied, "lines": []}
+            unit = {"name": m.group("name").strip(), "allied": allied, "lines": [],
+                    "count": int(m.group("count") or 1), "points": number(m.group("pts"))}
             army["units"].append(unit)
             if m.group("gear"):  # compact single-line unit: every model carries this
-                unit["lines"].append((0, MODEL, int(m.group("count") or 1), unit["name"]))
-                unit["lines"] += compact_gear(m.group("gear"))
+                unit["lines"].append((0, MODEL, unit["count"], unit["name"]))
+                unit["lines"] += compact_gear(m.group("gear"), unit["count"] if per_model else 1)
             continue
         if unit is None:
             continue
@@ -249,18 +343,28 @@ def parse_list(text, mappings):
         if cm and bullet == "•" and ": " in cm.group(2):  # compact "• 9x Cultist: 9 with Autopistol, ..."
             name, gear = cm.group(2).split(": ", 1)
             unit["lines"].append((indent, MODEL, int(cm.group(1)), name.strip()))
-            unit["lines"] += compact_gear(gear)
+            unit["lines"] += compact_gear(gear, int(cm.group(1)) if per_model else 1)
+            continue
+        if cm and bullet == "•" and fmt in ("nr", "simple"):  # a model with no gear listed
+            unit["lines"].append((indent, MODEL, int(cm.group(1)), cm.group(2).strip()))
             continue
         # drones are wargear with no model of their own in 10th edition
         if cm and not re.search(r"\bdrone\b|,", cm.group(2), re.I):
             unit["lines"].append((indent, bullet, int(cm.group(1)), cm.group(2).strip()))
 
+    # Short and simple exports leave models out; stand the unit's own name in
+    # for them until datasheets can say what the unit holds.
+    complete = fmt not in ("short", "simple")
     for u in army["units"]:
+        if not u["lines"] and not complete:
+            u["lines"].append((0, MODEL, u["count"], u["name"]))
         u["items"] = nest_lines(u.pop("lines"))
     army["units"] = [u for u in army["units"] if u["items"]]
     for u in army["units"]:
         u["models"] = unit_models(u, faction, mappings)
-        del u["items"]
+        u["complete"] = complete
+        del u["items"], u["count"]
+    army["points"] = army["points"] or sum(u["points"] or 0 for u in army["units"]) or None
     return army
 
 
@@ -268,7 +372,7 @@ MODEL = "model"   # a line already known to be a model (NewRecruit compact)
 
 
 def nest_lines(lines):
-    """(level, count, name) for a unit's "Nx ..." lines. "◦" is always wargear.
+    """(level, count, name, known model) for a unit's "Nx ..." lines. "◦" is always wargear.
     Newer GW app exports nest everything under "•" and show it by indentation
     (model at one depth, its wargear deeper); the shallowest bulleted depth is
     the model level. An indented unbulleted line continues the bullet above it,
@@ -287,20 +391,22 @@ def nest_lines(lines):
             level = 1 if indent <= base else 2
         elif indent <= base:
             continue
-        out.append((level, n, name))
+        out.append((level, n, name, bullet == MODEL))
     return out
 
 
-def compact_gear(text):
+def compact_gear(text, n=1):
     """NewRecruit compact wargear ("3 with Blastmaster, 2x Heavy bolter") as
-    ◦ lines, so it groups under its model like the GW app's wargear does."""
-    n, rest = 1, text
+    ◦ lines, so it groups under its model like the GW app's wargear does.
+    n is how many models carry it when the text doesn't say ("3 with")."""
+    rest = text
     lm = LOADOUT_RE.match(text.strip())
     if lm:
         n, rest = int(lm.group(1)), lm.group(2)
     out = []
-    for piece in rest.split(","):
-        piece = piece.strip()
+    # commas inside brackets belong to one piece: "Gun Drone (Twin pulse carbine)"
+    for piece in re.split(r",(?![^()]*\))", rest):
+        piece = COST_RE.sub("", piece).strip()
         if not piece or re.search(r"\bdrone\b", piece, re.I):
             continue
         cm = COUNT_RE.match(piece)
@@ -314,21 +420,22 @@ def unit_models(unit, faction, mappings):
     override = mappings.get("units", {}).get(f"{faction}|{unit['name']}")
     unit_tokens = tokens_of(unit["name"])
 
-    if any(lvl == 2 for lvl, _, _ in items):
-        # GW app export: model lines are the • lines that own ◦ wargear lines.
+    if any(lvl == 2 or known for lvl, _, _, known in items):
+        # GW app export: model lines are the • lines that own ◦ wargear lines,
+        # plus lines already known to be models.
         groups = []
-        for lvl, n, name in items:
+        for lvl, n, name, known in items:
             if lvl == 1:
-                groups.append([n, name, []])
+                groups.append([n, name, [], known])
             elif groups:
                 groups[-1][2].append((name, n))
-        groups = [g for g in groups if g[2]]
+        groups = [g[:3] for g in groups if g[2] or g[3]]
     else:
         # Flat format: model lines are recognised by rank titles or by
         # ending in a word from the unit's name ("9x Pathfinders").
         groups = []
         known = {m for m, _ in override} if override else set()
-        for _, n, name in items:
+        for _, n, name, _ in items:
             toks = [t for t in re.findall(r"[a-z0-9]+", clean(name).lower().replace("'", ""))]
             last = tokens_of(toks[-1]) if toks else set()
             # a rank titles a model when it ends the line ("Ravener Prime",
@@ -347,7 +454,7 @@ def unit_models(unit, faction, mappings):
         groups = [g[:3] for g in groups]
 
     if not groups:
-        groups = [[1, unit["name"], [(name, n) for _, n, name in items]]]
+        groups = [[1, unit["name"], [(name, n) for _, n, name, _ in items]]]
 
     models = []
     for n, name, gear in groups:

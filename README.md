@@ -71,7 +71,7 @@ Each send is saved to `scenes/` (the lists, positions, frame and image) and can 
 
 These use the same catalogue. Stop the web app first: only one process can hold the bridge's listener port.
 
-**Spawn an army list** (GW app exports and the `+++` format both work):
+**Spawn an army list** (GW app, `+++` tournament, and New Recruit full, simple and short exports all work; simple and short ones leave out models, so check what `plan` shows):
 
 ```bash
 python3 army.py plan my_list.txt                # show which model each list entry matched
