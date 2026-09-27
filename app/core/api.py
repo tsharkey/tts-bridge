@@ -11,6 +11,7 @@ handling: TTS unreachable → 503, anything else → 400, both as {"error": ...}
 so the page can show the message.
 """
 
+import math
 import traceback
 
 from fastapi import APIRouter, HTTPException, Request
@@ -20,6 +21,9 @@ from fastapi.routing import APIRoute
 import army
 import tts_bridge
 from app.core import lct, lists, tts
+
+
+MIN_TIMEOUT, MAX_TIMEOUT = 0.1, 600   # seconds, for /api/tts/lua
 
 
 class ApiRoute(APIRoute):
@@ -59,8 +63,12 @@ def gateway():
 
 @shared.post("/api/tts/lua")
 def tts_lua(body: dict):
-    """Run Lua in the game: {script, timeout} -> {ok, result} or {ok: false, error}."""
-    return tts_bridge.execute(body["script"], float(body.get("timeout", 10)))
+    """Run Lua in the game: {script, timeout} -> {ok, result} or {ok: false, error}.
+    The timeout is clamped to 0.1..600 s, so a caller can't hold a worker thread for good."""
+    timeout = float(body.get("timeout", 10))
+    if not math.isfinite(timeout):
+        raise ValueError("timeout must be a number of seconds")
+    return tts_bridge.execute(body["script"], min(max(timeout, MIN_TIMEOUT), MAX_TIMEOUT))
 
 
 @shared.get("/api/tts/events")
