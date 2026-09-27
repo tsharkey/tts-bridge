@@ -42,7 +42,12 @@ def start_listener():
     """Listen for TTS's replies, or, if the web app already does, forward through it."""
     global hub
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # Forwarding relies on this bind failing while the hub holds the port. On Windows,
+    # SO_REUSEADDR would let a second socket share it, so ask for the port exclusively there.
+    if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+    else:
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         srv.bind((TTS_HOST, LISTEN_PORT))
     except OSError:
