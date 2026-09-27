@@ -167,3 +167,16 @@ def test_pack_wraps_rows():
     zs = {k: z for k, _, z in moves}
     assert xs[0] < xs[1] and zs[2] < zs[0]  # a third model wraps to the next line
     assert zs[3] < zs[2]                   # the next unit wraps to the next row
+
+
+@pytest.mark.parametrize("faction,title,folder,name", [
+    ("T'au Empire", "2k Ret Cadre", "T'au Empire", "2k Ret Cadre"),
+    ("../../../etc", "a/b:c", "etc", "abc"),        # a list can't write outside Saved Objects
+    ("..", "..", "Armies", "Army"),
+    ("Orks", "  ", "Orks", "Army"),
+])
+def test_saved_object_path_stays_inside(monkeypatch, tmp_path, faction, title, folder, name):
+    monkeypatch.setenv("TTS_SAVED_OBJECTS", str(tmp_path))
+    path = army.saved_object_path({"sub": None, "faction": faction, "title": title})
+    assert path == tmp_path / folder / f"{name}.json"
+    assert path.resolve().is_relative_to(tmp_path.resolve())

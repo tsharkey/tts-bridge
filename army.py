@@ -948,10 +948,17 @@ def spawn(army, catalog, x0, z0, width=110, facing=180, run_lua=None, log=print)
     return guids
 
 
+def file_name(text, default):
+    """A list's own words as one file or folder name: no path separators or
+    characters Windows forbids, and never "." or ".." (a list can say anything)."""
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", text or "").strip().strip(".").strip()
+    return name or default
+
+
 def saved_object_path(army):
-    folder = saved_objects_dir() / (army["sub"] or army["faction"])
-    name = re.sub(r'[\\/:*?"<>|]', "", army["title"]).strip() or "Army"
-    return folder / f"{name}.json"
+    """<Saved Objects>/<chapter or faction>/<title>.json, inside the Saved Objects folder."""
+    folder = saved_objects_dir() / file_name(army["sub"] or army["faction"], "Armies")
+    return folder / f"{file_name(army['title'], 'Army')}.json"
 
 
 def write_saved_object(army, states):
