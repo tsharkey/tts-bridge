@@ -1,0 +1,311 @@
+{
+ "catalogue": {
+  "id": "cat-armoury",
+  "name": "Test - Armoury",
+  "library": true,
+  "revision": 1,
+  "gameSystemId": "gs",
+  "sharedProfiles": [
+   {
+    "id": "p-trooper",
+    "name": "Trooper",
+    "typeName": "Unit",
+    "characteristics": [
+     {
+      "name": "M",
+      "$text": "6\""
+     },
+     {
+      "name": "T",
+      "$text": "3"
+     },
+     {
+      "name": "Sv",
+      "$text": "4+"
+     },
+     {
+      "name": "W",
+      "$text": "1"
+     },
+     {
+      "name": "LD",
+      "$text": "7+"
+     },
+     {
+      "name": "OC",
+      "$text": "2"
+     },
+     {
+      "name": "InSv",
+      "$text": ""
+     }
+    ]
+   }
+  ],
+  "sharedSelectionEntries": [
+   {
+    "id": "w-rifle",
+    "name": "Pulse rifle",
+    "type": "upgrade",
+    "profiles": [
+     {
+      "id": "pw-rifle",
+      "name": "Pulse rifle",
+      "typeName": "Ranged Weapons",
+      "characteristics": [
+       {
+        "name": "Range",
+        "$text": "30\""
+       },
+       {
+        "name": "A",
+        "$text": "1"
+       },
+       {
+        "name": "BS",
+        "$text": "4+"
+       },
+       {
+        "name": "S",
+        "$text": "5"
+       },
+       {
+        "name": "AP",
+        "$text": "0"
+       },
+       {
+        "name": "D",
+        "$text": "1"
+       },
+       {
+        "name": "Keywords",
+        "$text": "Rapid Fire 1, Heavy"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "w-ccw",
+    "name": "Close combat weapon",
+    "type": "upgrade",
+    "profiles": [
+     {
+      "id": "pw-ccw",
+      "name": "Close combat weapon",
+      "typeName": "Melee Weapons",
+      "characteristics": [
+       {
+        "name": "Range",
+        "$text": "Melee"
+       },
+       {
+        "name": "A",
+        "$text": "1"
+       },
+       {
+        "name": "WS",
+        "$text": "5+"
+       },
+       {
+        "name": "S",
+        "$text": "3"
+       },
+       {
+        "name": "AP",
+        "$text": "0"
+       },
+       {
+        "name": "D",
+        "$text": "1"
+       },
+       {
+        "name": "Keywords",
+        "$text": ""
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "w-blade",
+    "name": "Twin blade",
+    "type": "upgrade",
+    "profiles": [
+     {
+      "id": "pw-strike",
+      "name": "➤ Twin blade - strike",
+      "typeName": "Melee Weapons",
+      "characteristics": [
+       {
+        "name": "Range",
+        "$text": "Melee"
+       },
+       {
+        "name": "A",
+        "$text": "4"
+       },
+       {
+        "name": "WS",
+        "$text": "2+"
+       },
+       {
+        "name": "S",
+        "$text": "10"
+       },
+       {
+        "name": "AP",
+        "$text": "-2"
+       },
+       {
+        "name": "D",
+        "$text": "3"
+       },
+       {
+        "name": "Keywords",
+        "$text": ""
+       }
+      ]
+     },
+     {
+      "id": "pw-sweep",
+      "name": "➤ Twin blade - sweep",
+      "typeName": "Melee Weapons",
+      "characteristics": [
+       {
+        "name": "Range",
+        "$text": "Melee"
+       },
+       {
+        "name": "A",
+        "$text": "8"
+       },
+       {
+        "name": "WS",
+        "$text": "2+"
+       },
+       {
+        "name": "S",
+        "$text": "6"
+       },
+       {
+        "name": "AP",
+        "$text": "-1"
+       },
+       {
+        "name": "D",
+        "$text": "1"
+       },
+       {
+        "name": "Keywords",
+        "$text": ""
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "w-drone",
+    "name": "Marker Drone",
+    "type": "upgrade",
+    "profiles": [
+     {
+      "id": "pa-drone",
+      "name": "Marker Drone",
+      "typeName": "Abilities",
+      "characteristics": [
+       {
+        "name": "Description",
+        "$text": "The bearer's unit can act as an Observer."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "m-boss",
+    "name": "Boss",
+    "type": "model",
+    "profiles": [
+     {
+      "id": "p-boss",
+      "name": "Boss",
+      "typeName": "Unit",
+      "characteristics": [
+       {
+        "name": "M",
+        "$text": "6\""
+       },
+       {
+        "name": "T",
+        "$text": "3"
+       },
+       {
+        "name": "Sv",
+        "$text": "5+"
+       },
+       {
+        "name": "W",
+        "$text": "1"
+       },
+       {
+        "name": "LD",
+        "$text": "7+"
+       },
+       {
+        "name": "OC",
+        "$text": "1"
+       },
+       {
+        "name": "InSv",
+        "$text": ""
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "m-grunt",
+    "name": "Grunt",
+    "type": "model",
+    "profiles": [
+     {
+      "id": "p-grunt",
+      "name": "Grunt",
+      "typeName": "Unit",
+      "characteristics": [
+       {
+        "name": "M",
+        "$text": "6\""
+       },
+       {
+        "name": "T",
+        "$text": "3"
+       },
+       {
+        "name": "Sv",
+        "$text": "5+"
+       },
+       {
+        "name": "W",
+        "$text": "1"
+       },
+       {
+        "name": "LD",
+        "$text": "7+"
+       },
+       {
+        "name": "OC",
+        "$text": "1"
+       },
+       {
+        "name": "InSv",
+        "$text": ""
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

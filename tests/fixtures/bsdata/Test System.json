@@ -1,0 +1,33 @@
+{
+ "gameSystem": {
+  "id": "gs",
+  "name": "Test System",
+  "revision": 1,
+  "sharedRules": [
+   {
+    "id": "r-deep",
+    "name": "Deep Strike"
+   }
+  ],
+  "sharedProfiles": [
+   {
+    "id": "p-shared",
+    "name": "Shared Ability",
+    "typeName": "Abilities",
+    "characteristics": [
+     {
+      "name": "Description",
+      "$text": "An ability every army has."
+     }
+    ]
+   }
+  ],
+  "sharedSelectionEntries": [
+   {
+    "id": "e-warlord",
+    "name": "Warlord",
+    "type": "upgrade"
+   }
+  ]
+ }
+}

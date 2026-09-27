@@ -24,3 +24,5 @@ usage.jsonl
 debug/
 # official base sizes, downloaded from the Wahapedia export
 base_sizes.json
+# local data cache: BSData and other sources, fetched by `python3 data.py fetch`
+cache/

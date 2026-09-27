@@ -1,0 +1,670 @@
+{
+ "catalogue": {
+  "id": "cat-test",
+  "name": "Xenos - Test Empire",
+  "library": false,
+  "revision": 3,
+  "gameSystemId": "gs",
+  "catalogueLinks": [
+   {
+    "id": "cl-armoury",
+    "name": "Test - Armoury",
+    "targetId": "cat-armoury",
+    "type": "catalogue",
+    "importRootEntries": true
+   }
+  ],
+  "entryLinks": [
+   {
+    "id": "root-cmd",
+    "name": "Test Commander",
+    "targetId": "u-cmd",
+    "type": "selectionEntry",
+    "constraints": []
+   },
+   {
+    "id": "root-squad",
+    "name": "Test Squad",
+    "targetId": "u-squad",
+    "type": "selectionEntry",
+    "constraints": []
+   },
+   {
+    "id": "root-comp",
+    "name": "Composition Squad",
+    "targetId": "u-comp",
+    "type": "selectionEntry",
+    "constraints": []
+   },
+   {
+    "id": "root-hidden",
+    "name": "Retired Unit",
+    "targetId": "u-hidden",
+    "type": "selectionEntry",
+    "constraints": []
+   },
+   {
+    "id": "root-upgrade",
+    "name": "Detachment",
+    "targetId": "e-detachment",
+    "type": "selectionEntry",
+    "constraints": []
+   }
+  ],
+  "sharedSelectionEntries": [
+   {
+    "id": "e-detachment",
+    "name": "Detachment",
+    "type": "upgrade"
+   },
+   {
+    "id": "u-cmd",
+    "name": "Test Commander",
+    "type": "model",
+    "costs": [
+     {
+      "name": "pts",
+      "typeId": "pts",
+      "value": 80
+     }
+    ],
+    "categoryLinks": [
+     {
+      "id": "cl-character",
+      "name": "Character",
+      "targetId": "cat-character"
+     },
+     {
+      "id": "cl-epic-hero",
+      "name": "Epic Hero",
+      "targetId": "cat-epic hero"
+     },
+     {
+      "id": "cl-faction:-test-empire",
+      "name": "Faction: Test Empire",
+      "targetId": "cat-faction: test empire"
+     }
+    ],
+    "profiles": [
+     {
+      "id": "p-cmd",
+      "name": "Test Commander",
+      "typeName": "Unit",
+      "characteristics": [
+       {
+        "name": "M",
+        "$text": "10\""
+       },
+       {
+        "name": "T",
+        "$text": "5"
+       },
+       {
+        "name": "Sv",
+        "$text": "2+"
+       },
+       {
+        "name": "W",
+        "$text": "8"
+       },
+       {
+        "name": "LD",
+        "$text": "6+"
+       },
+       {
+        "name": "OC",
+        "$text": "2"
+       },
+       {
+        "name": "InSv",
+        "$text": "4+"
+       }
+      ]
+     },
+     {
+      "id": "pa-inspire",
+      "name": "Inspiring",
+      "typeName": "Abilities",
+      "characteristics": [
+       {
+        "name": "Description",
+        "$text": "Add 1 to Leadership tests."
+       }
+      ]
+     }
+    ],
+    "infoLinks": [
+     {
+      "id": "il-deep",
+      "name": "Deep Strike",
+      "targetId": "r-deep",
+      "type": "rule"
+     },
+     {
+      "id": "il-shared",
+      "name": "Shared Ability",
+      "targetId": "p-shared",
+      "type": "profile"
+     }
+    ],
+    "entryLinks": [
+     {
+      "id": "l-cmd-blade",
+      "name": "Twin blade",
+      "targetId": "w-blade",
+      "type": "selectionEntry",
+      "constraints": [
+       {
+        "id": "l-cmd-blade-min",
+        "field": "selections",
+        "scope": "parent",
+        "type": "min",
+        "value": 1
+       },
+       {
+        "id": "l-cmd-blade-max",
+        "field": "selections",
+        "scope": "parent",
+        "type": "max",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "id": "l-cmd-warlord",
+      "name": "Warlord",
+      "targetId": "e-warlord",
+      "type": "selectionEntry",
+      "constraints": []
+     }
+    ],
+    "selectionEntryGroups": [
+     {
+      "id": "g-crusade",
+      "name": "Crusade",
+      "selectionEntries": [
+       {
+        "id": "e-honour",
+        "name": "Battle Honour",
+        "type": "upgrade"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "u-squad",
+    "name": "Test Squad",
+    "type": "unit",
+    "costs": [
+     {
+      "name": "pts",
+      "typeId": "pts",
+      "value": 90
+     }
+    ],
+    "categoryLinks": [
+     {
+      "id": "cl-infantry",
+      "name": "Infantry",
+      "targetId": "cat-infantry"
+     },
+     {
+      "id": "cl-battleline",
+      "name": "Battleline",
+      "targetId": "cat-battleline"
+     },
+     {
+      "id": "cl-faction:-test-empire",
+      "name": "Faction: Test Empire",
+      "targetId": "cat-faction: test empire"
+     }
+    ],
+    "profiles": [
+     {
+      "id": "pa-hold",
+      "name": "Hold the Line",
+      "typeName": "Abilities",
+      "characteristics": [
+       {
+        "name": "Description",
+        "$text": "This unit has OC 3 while on an objective."
+       }
+      ]
+     }
+    ],
+    "selectionEntryGroups": [
+     {
+      "id": "g-squad",
+      "name": "Squad",
+      "constraints": [
+       {
+        "id": "g-squad-min",
+        "field": "selections",
+        "scope": "parent",
+        "type": "min",
+        "value": 5
+       },
+       {
+        "id": "g-squad-max",
+        "field": "selections",
+        "scope": "parent",
+        "type": "max",
+        "value": 10
+       }
+      ],
+      "selectionEntries": [
+       {
+        "id": "m-leader",
+        "name": "Squad Leader",
+        "type": "model",
+        "constraints": [
+         {
+          "id": "m-leader-min",
+          "field": "selections",
+          "scope": "parent",
+          "type": "min",
+          "value": 1
+         },
+         {
+          "id": "m-leader-max",
+          "field": "selections",
+          "scope": "parent",
+          "type": "max",
+          "value": 1
+         }
+        ],
+        "profiles": [
+         {
+          "id": "p-leader",
+          "name": "Squad Leader",
+          "typeName": "Unit",
+          "characteristics": [
+           {
+            "name": "M",
+            "$text": "6\""
+           },
+           {
+            "name": "T",
+            "$text": "3"
+           },
+           {
+            "name": "Sv",
+            "$text": "4+"
+           },
+           {
+            "name": "W",
+            "$text": "1"
+           },
+           {
+            "name": "LD",
+            "$text": "7+"
+           },
+           {
+            "name": "OC",
+            "$text": "2"
+           },
+           {
+            "name": "InSv",
+            "$text": ""
+           }
+          ]
+         }
+        ],
+        "selectionEntryGroups": [
+         {
+          "id": "g-weapon",
+          "name": "Weapon",
+          "constraints": [
+           {
+            "id": "g-weapon-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 1
+           },
+           {
+            "id": "g-weapon-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ],
+          "defaultSelectionEntryId": "l-leader-rifle",
+          "entryLinks": [
+           {
+            "id": "l-leader-rifle",
+            "name": "Pulse rifle",
+            "targetId": "w-rifle",
+            "type": "selectionEntry",
+            "constraints": []
+           },
+           {
+            "id": "l-leader-ccw",
+            "name": "Close combat weapon",
+            "targetId": "w-ccw",
+            "type": "selectionEntry",
+            "constraints": []
+           }
+          ]
+         },
+         {
+          "id": "g-drones",
+          "name": "Drones (0-1)",
+          "constraints": [
+           {
+            "id": "g-drones-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ],
+          "entryLinks": [
+           {
+            "id": "l-leader-drone",
+            "name": "Marker Drone",
+            "targetId": "w-drone",
+            "type": "selectionEntry",
+            "constraints": []
+           }
+          ]
+         },
+         {
+          "id": "g-crusade",
+          "name": "Crusade",
+          "selectionEntries": [
+           {
+            "id": "e-honour",
+            "name": "Battle Honour",
+            "type": "upgrade"
+           }
+          ]
+         }
+        ],
+        "selectionEntries": [
+         {
+          "id": "e-secret",
+          "name": "Boarding Actions kit",
+          "type": "upgrade",
+          "hidden": true
+         }
+        ]
+       },
+       {
+        "id": "m-trooper",
+        "name": "Trooper",
+        "type": "model",
+        "constraints": [
+         {
+          "id": "m-trooper-min",
+          "field": "selections",
+          "scope": "parent",
+          "type": "min",
+          "value": 4
+         },
+         {
+          "id": "m-trooper-max",
+          "field": "selections",
+          "scope": "parent",
+          "type": "max",
+          "value": 9
+         }
+        ],
+        "infoLinks": [
+         {
+          "id": "il-trooper",
+          "name": "Trooper",
+          "targetId": "p-trooper",
+          "type": "profile"
+         }
+        ],
+        "entryLinks": [
+         {
+          "id": "l-trooper-rifle",
+          "name": "Pulse rifle",
+          "targetId": "w-rifle",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-trooper-rifle-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 1
+           },
+           {
+            "id": "l-trooper-rifle-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ]
+         },
+         {
+          "id": "l-trooper-ccw",
+          "name": "Close combat weapon",
+          "targetId": "w-ccw",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-trooper-ccw-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 1
+           },
+           {
+            "id": "l-trooper-ccw-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "id": "m-special",
+        "name": "Trooper w/ twin blade",
+        "type": "model",
+        "constraints": [
+         {
+          "id": "m-special-max",
+          "field": "selections",
+          "scope": "parent",
+          "type": "max",
+          "value": 2
+         }
+        ],
+        "entryLinks": [
+         {
+          "id": "l-special-blade",
+          "name": "Twin blade",
+          "targetId": "w-blade",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-special-blade-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 1
+           },
+           {
+            "id": "l-special-blade-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "u-comp",
+    "name": "Composition Squad",
+    "type": "unit",
+    "costs": [
+     {
+      "name": "pts",
+      "typeId": "pts",
+      "value": 60
+     }
+    ],
+    "categoryLinks": [
+     {
+      "id": "cl-infantry",
+      "name": "Infantry",
+      "targetId": "cat-infantry"
+     },
+     {
+      "id": "cl-faction:-test-empire",
+      "name": "Faction: Test Empire",
+      "targetId": "cat-faction: test empire"
+     }
+    ],
+    "selectionEntryGroups": [
+     {
+      "id": "g-comp",
+      "name": "Unit Composition",
+      "constraints": [
+       {
+        "id": "g-comp-min",
+        "field": "selections",
+        "scope": "parent",
+        "type": "min",
+        "value": 1
+       },
+       {
+        "id": "g-comp-max",
+        "field": "selections",
+        "scope": "parent",
+        "type": "max",
+        "value": 1
+       }
+      ],
+      "selectionEntries": [
+       {
+        "id": "o-small",
+        "name": "1 Boss and 4 Grunts",
+        "type": "upgrade",
+        "entryLinks": [
+         {
+          "id": "l-small-boss",
+          "name": "Boss",
+          "targetId": "m-boss",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-small-boss-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 1
+           },
+           {
+            "id": "l-small-boss-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 1
+           }
+          ]
+         },
+         {
+          "id": "l-small-grunt",
+          "name": "Grunt",
+          "targetId": "m-grunt",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-small-grunt-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 4
+           },
+           {
+            "id": "l-small-grunt-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 4
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "id": "o-big",
+        "name": "2 Bosses and 8 Grunts",
+        "type": "upgrade",
+        "entryLinks": [
+         {
+          "id": "l-big-boss",
+          "name": "Boss",
+          "targetId": "m-boss",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-big-boss-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 2
+           },
+           {
+            "id": "l-big-boss-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 2
+           }
+          ]
+         },
+         {
+          "id": "l-big-grunt",
+          "name": "Grunt",
+          "targetId": "m-grunt",
+          "type": "selectionEntry",
+          "constraints": [
+           {
+            "id": "l-big-grunt-min",
+            "field": "selections",
+            "scope": "parent",
+            "type": "min",
+            "value": 8
+           },
+           {
+            "id": "l-big-grunt-max",
+            "field": "selections",
+            "scope": "parent",
+            "type": "max",
+            "value": 8
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "id": "u-hidden",
+    "name": "Retired Unit",
+    "type": "unit",
+    "hidden": true
+   }
+  ]
+ }
+}
