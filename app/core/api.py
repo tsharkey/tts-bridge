@@ -1,6 +1,10 @@
 """
 API plumbing shared by every tool, and the routes every tool can use (TTS
-status, LCT setup, saved lists, model picks, and browsing the model catalogue).
+status and the TTS gateway, LCT setup, saved lists, model picks, and browsing
+the model catalogue).
+
+/api/tts/lua runs any Lua you send it in your game. The hub binds 127.0.0.1
+only and refuses other Host names, so only programs on this computer reach it.
 
 Each tool's routes.py makes its own `router()` so it gets the same error
 handling: TTS unreachable → 503, anything else → 400, both as {"error": ...}
@@ -9,11 +13,12 @@ so the page can show the message.
 
 import traceback
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 
 import army
+import tts_bridge
 from app.core import lct, lists, tts
 
 
@@ -44,6 +49,23 @@ shared = router()
 @shared.get("/api/status")
 def status():
     return tts.status()
+
+
+@shared.get("/api/tts")
+def gateway():
+    """How the CLI tools tell the hub from something else on its port."""
+    return {"gateway": True}
+
+
+@shared.post("/api/tts/lua")
+def tts_lua(body: dict):
+    """Run Lua in the game: {script, timeout} -> {ok, result} or {ok: false, error}."""
+    return tts_bridge.execute(body["script"], float(body.get("timeout", 10)))
+
+
+@shared.get("/api/tts/events")
+def tts_events(request: Request):
+    return StreamingResponse(tts.events(request.is_disconnected), media_type="text/event-stream")
 
 
 @shared.get("/api/lct/matchups")

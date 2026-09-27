@@ -12,38 +12,61 @@ Usage:
     python tts_bridge.py state                 # dump the whole board to tts_state.json
     python tts_bridge.py run "<lua code>"       # run arbitrary Lua, print result
 
-Only one process can listen on 39998 at a time, so stop the web app
-(app/server.py) before running these.
+Only one process can listen on 39998. When the web app (app/server.py) has
+it, the tools here send their Lua through the app instead (its
+/api/tts/lua), so both can run at once.
 """
 
-import socket
 import json
-import threading
 import queue
+import socket
 import sys
-import time
+import threading
+import urllib.error
+import urllib.request
 import uuid
 
 TTS_HOST = "127.0.0.1"
 TTS_SEND_PORT = 39999   # TTS listens here
 LISTEN_PORT = 39998     # we listen here
+HUB_PORT = 8765         # the web app, which forwards Lua for us when it holds LISTEN_PORT
 
-incoming = queue.Queue()
+hub = None              # the web app's URL while we forward through it, else None
+waiting = {}            # reply id -> queue for the run_lua call waiting on it
+waiting_lock = threading.Lock()
+listeners = []          # callables given everything TTS sends that isn't a reply
 
 
 def start_listener():
+    """Listen for TTS's replies, or, if the web app already does, forward through it."""
+    global hub
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         srv.bind((TTS_HOST, LISTEN_PORT))
     except OSError:
-        sys.exit(f"Port {LISTEN_PORT} is busy. Is the web app (app/server.py) "
-                 "already running? Stop it first.")
+        srv.close()
+        url = f"http://{TTS_HOST}:{HUB_PORT}"
+        if not hub_answers(url):
+            sys.exit(f"Port {LISTEN_PORT} is busy, and the web app isn't answering at {url}. "
+                     "Is another tts_bridge.py, army.py, board.py or recreate.py still running?")
+        hub = url
+        return
+    hub = None
     srv.listen(5)
     threading.Thread(target=listener_thread, args=(srv,), daemon=True).start()
 
 
+def hub_answers(url):
+    try:
+        with urllib.request.urlopen(f"{url}/api/tts", timeout=2) as r:
+            return json.load(r).get("gateway") is True
+    except (OSError, ValueError):
+        return False
+
+
 def listener_thread(srv):
+    # TTS connects once per message, sends JSON and closes
     while True:
         conn, _ = srv.accept()
         data = b""
@@ -59,7 +82,22 @@ def listener_thread(srv):
             msg = json.loads(data.decode("utf-8"))
         except json.JSONDecodeError:
             msg = {"raw": data.decode("utf-8", errors="replace")}
-        incoming.put(msg)
+        dispatch(msg)
+
+
+def dispatch(msg):
+    """A reply goes to the call waiting on it; anything else to the listeners
+    (or is printed, when nothing is listening)."""
+    custom = msg.get("customMessage")
+    reply_id = custom.get("reply") if msg.get("messageID") == 4 and isinstance(custom, dict) else None
+    if reply_id is not None:
+        with waiting_lock:
+            q = waiting.get(reply_id)
+        if q:
+            q.put(custom)
+        return  # a reply nobody waits for any more (it timed out)
+    for listener in list(listeners) or [handle_passive]:
+        listener(msg)
 
 
 def send_message(msg: dict):
@@ -84,19 +122,6 @@ def handle_passive(msg):
         print("[TTS] game saved")
     elif mid == 7:
         print("[TTS] object created:", msg.get("guid"))
-
-
-def wait_for(match, timeout=10):
-    end = time.time() + timeout
-    while time.time() < end:
-        try:
-            msg = incoming.get(timeout=max(0.1, end - time.time()))
-        except queue.Empty:
-            break
-        if match(msg):
-            return msg
-        handle_passive(msg)
-    return None
 
 
 GET_STATE_LUA = """
@@ -131,22 +156,60 @@ sendExternalMessage({{reply = "{reply_id}", ok = __ok, result = __r}})
 """
 
 
-def run_lua(script: str, timeout=10):
+NO_RESPONSE = ("No response from TTS. Is it running with a game loaded, "
+               "and is the External Editor API enabled?")
+
+
+def execute(script: str, timeout=10):
+    """Run Lua in the game -> {"ok": True, "result": ...} or {"ok": False, "error": ...}.
+    Exits (SystemExit) if TTS isn't reachable. Safe to call from several threads at once."""
+    if hub:
+        return forward(script, timeout)
     reply_id = uuid.uuid4().hex
-    wrapped = LUA_WRAPPER.format(script=script, reply_id=reply_id)
-    send_message({"messageID": 3, "guid": "-1", "script": wrapped})
-    answer = wait_for(lambda m: m.get("messageID") == 4
-                      and m.get("customMessage", {}).get("reply") == reply_id,
-                      timeout=timeout)
-    if not answer:
-        print("No response from TTS. Is it running with a game loaded, "
-              "and is the External Editor API enabled?")
-        return None
-    payload = answer["customMessage"]
+    q = queue.Queue(1)
+    with waiting_lock:
+        waiting[reply_id] = q
+    try:
+        send_message({"messageID": 3, "guid": "-1",
+                      "script": LUA_WRAPPER.format(script=script, reply_id=reply_id)})
+        payload = q.get(timeout=timeout)
+    except queue.Empty:
+        return {"ok": False, "error": NO_RESPONSE}
+    finally:
+        with waiting_lock:
+            waiting.pop(reply_id, None)
     if not payload.get("ok"):
-        print("[Lua error]", payload.get("result"))
+        return {"ok": False, "error": f"Lua error: {payload.get('result')}"}
+    return {"ok": True, "result": payload.get("result")}
+
+
+def forward(script, timeout):
+    """execute() through the web app, which holds the listener port."""
+    req = urllib.request.Request(f"{hub}/api/tts/lua", method="POST",
+                                 data=json.dumps({"script": script, "timeout": timeout}).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout + 10) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        try:
+            error = json.load(e).get("error")
+        except ValueError:
+            error = None
+        if e.code == 503:
+            sys.exit(error or "TTS isn't responding")
+        return {"ok": False, "error": error or f"The web app answered {e.code}"}
+    except OSError as e:
+        sys.exit(f"Lost the web app at {hub} ({e}). Is it still running?")
+
+
+def run_lua(script: str, timeout=10):
+    """Run Lua in the game and return its result, or print why not and return None."""
+    answer = execute(script, timeout)
+    if not answer["ok"]:
+        print(answer["error"])
         return None
-    return payload.get("result")
+    return answer["result"]
 
 
 def lua_str(s: str) -> str:

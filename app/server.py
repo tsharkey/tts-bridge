@@ -3,9 +3,9 @@ server.py — the hub: a local web app with a page per tool.
 
     .venv/bin/python app/server.py        # then open http://localhost:8765
 
-Needs TTS running with a game loaded and the External Editor API on. Only
-one process can hold the bridge's listener port, so stop any other
-tts_bridge.py / army.py / recreate.py runs while this is up.
+Needs TTS running with a game loaded and the External Editor API on. The hub
+holds the bridge's listener port and forwards Lua for tts_bridge.py, army.py,
+board.py and recreate.py, so they can run while it's up (start it first).
 
 Adding a tool: make app/tools/<name>/ (see app/tools/__init__.py) and add it
 to TOOLS below.
@@ -19,6 +19,7 @@ if __package__ in (None, ""):   # run as a script: make `app` importable
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.trustedhost import TrustedHostMiddleware  # noqa: E402
 from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
@@ -26,7 +27,8 @@ import tts_bridge as tts  # noqa: E402
 from app.core.api import shared  # noqa: E402
 from app.tools import board_replay, data, models, scribe  # noqa: E402
 
-PORT = 8765
+PORT = tts.HUB_PORT
+HOSTS = ["127.0.0.1", "localhost"]
 STATIC = Path(__file__).resolve().parent / "static"
 TOOLS = [scribe, models, board_replay, data]
 
@@ -52,8 +54,12 @@ def redirect_to(target):
     return redirect
 
 
-def create_app():
+def create_app(hosts=None):
+    """hosts: the Host names to answer (all if None). The server passes
+    HOSTS, so a web page can't reach /api/tts/lua by DNS rebinding."""
     app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None)
+    if hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
     app.include_router(shared)
 
     @app.get("/api/tools")
@@ -81,7 +87,7 @@ def main():
     tts.start_listener()
     logging.getLogger("uvicorn.access").addFilter(QuietAccessLog())
     print(f"TTS Bridge app running at http://localhost:{PORT}  (Ctrl+C to stop)")
-    uvicorn.run(create_app(), host="127.0.0.1", port=PORT)
+    uvicorn.run(create_app(HOSTS), host="127.0.0.1", port=PORT)
 
 
 if __name__ == "__main__":

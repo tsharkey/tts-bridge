@@ -71,6 +71,11 @@ python3 data.py fetch wahapedia
 Open <http://localhost:8765>. The homepage lists the tools; every page's header shows whether TTS is
 connected, and whether LCT is loaded.
 
+The web app is also the gateway to TTS for everything else here: the command-line tools (and Claude) send
+their Lua through it. `POST /api/tts/lua` with `{"script": "...", "timeout": 10}` **runs any Lua you send it in
+your game**, and `GET /api/tts/events` streams what TTS prints and sends. It only listens on 127.0.0.1 and only
+answers requests addressed to `localhost` or `127.0.0.1`, so only programs on your computer can use it.
+
 ### Scribe
 
 Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (full, simple or short export) or a
@@ -136,7 +141,8 @@ loaded, and **Refresh from TTS** rebuilds the catalogue the same way as `python3
 
 ## Command-line tools
 
-These use the same catalogue. Stop the web app first: only one process can hold the bridge's listener port.
+These use the same catalogue. They work with the web app running too: it holds the bridge's listener port and
+passes their Lua on to TTS.
 
 **Spawn an army list** (GW app, `+++` tournament, and New Recruit full, simple and short exports all work; simple and short ones leave out models, so check what `plan` shows). **Scribe** in the web app does the same without a terminal:
 
@@ -181,8 +187,7 @@ this folder and ask it to plan your deployment, or to pick your next drop as uni
 with `board.py`, weighs cover and Hidden, objectives, shooting lanes, charge staging and screening against what
 the opponent has placed, checks each position for both first-turn outcomes, and can place the unit for you.
 Give it the mission (both Primary Missions and the deployment card or layout), both lists, and which units start
-in reserves or transports. Set the table up with the web app first, then stop the web app before asking Claude
-Code to read the board (they share the bridge's listener port).
+in reserves or transports. The web app can stay open while it works.
 
 ## Optional settings
 

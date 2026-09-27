@@ -47,8 +47,7 @@ gives the units and terrain; the mission, lists and battle formations still come
 
 This repo talks to the running TTS game through the External Editor API, so read the
 board and move models with its tools instead of asking the user to describe positions.
-Only one process can hold the bridge's listener port: if the web app (`app/server.py`) is
-running, ask the user to stop it first.
+They work whether or not the web app (`app/server.py`) is running.
 
 **Coordinates.** Table inches, 0,0 at the centre. x runs along the 60" edge (−30…30), z along
 the 44" edge (−22…22), y is height. Facing is degrees: 0 = +z, 90 = +x, 180 = −z, 270 = −x.
