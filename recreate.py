@@ -87,12 +87,13 @@ def shelf(rect, sizes, groups):
     return out
 
 
-def model_object(catalog, m, unit_name, tag, facing):
+def model_object(catalog, m, unit_name, tag, facing, tags=()):
     g, i = m["pick"].split(":")
     o = json.loads(json.dumps(catalog[g][int(i)]))
     o.pop("GUID", None)
     o["GMNotes"] = tag
     tooltips.describe(o, unit_name, m)
+    army.tag(o, list(tags))
     o["Locked"] = True
     o["Transform"].update(rotX=0, rotY=facing, rotZ=0)
     return o
@@ -114,19 +115,22 @@ def place_scene(scene, tag="recreate:scene", keep=False, log=print):
         atag = f"{tag}:{'Red' if ai == 0 else 'Blue'}"  # lets board.py tell the armies apart
         used = set()
         by_spot = {}
+        # each model's unit tags (army.unit_tags), so board.py knows its unit wherever it stands
+        tags = {id(u): army.unit_tags(i, u) for i, u in enumerate(parsed["units"], 1)}
         for entry in a["units"]:
             unit, placed, rest = pick_models(parsed, entry)
             used.add(id(unit))
             key = tuple(entry["at"])
             for m in placed:
                 if m["pick"]:
-                    by_spot.setdefault(key, []).append(model_object(catalog, m, unit["name"], atag, facing))
+                    by_spot.setdefault(key, []).append(
+                        model_object(catalog, m, unit["name"], atag, facing, tags[id(unit)]))
             if rest:
-                reserves.append((ai, [model_object(catalog, m, unit["name"], atag, facing)
+                reserves.append((ai, [model_object(catalog, m, unit["name"], atag, facing, tags[id(unit)])
                                       for m in rest if m["pick"]]))
         for u in parsed["units"]:
             if id(u) not in used:
-                reserves.append((ai, [model_object(catalog, m, u["name"], atag, facing)
+                reserves.append((ai, [model_object(catalog, m, u["name"], atag, facing, tags[id(u)])
                                       for m in u["models"] if m["pick"]]))
         field += [(k, facing, objs) for k, objs in by_spot.items()]
 

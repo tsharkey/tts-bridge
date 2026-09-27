@@ -40,6 +40,9 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 - **The first line of a spawned model's description is exactly `[<unit name>]`.** `board.py` groups models into
   units by it (`UNIT_RE`). Put anything else (datasheets, tooltips) after that line.
 - **Army tags live in GM Notes:** `army.py:<list title>` or `recreate:<scene>:Red|Blue`. Keep them there.
+- **Unit membership lives in TTS tags:** `tts-bridge:unit:<n>` (the unit's place in its list, from 1) and
+  `tts-bridge:sheet:<datasheet id>`, set by `army.unit_tags` / `army.tag`. `board.py` groups by them and falls back
+  to distance for untagged models. Don't put other data in `tts-bridge:` tags without adding it here.
 - **Write tooltip names to `Nickname`, never `Name`**, which is the TTS object type. Build spawned objects with
   `army.model_objects` (or `tooltips.describe`) so the `[<unit>]` line and tooltip stay consistent.
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
