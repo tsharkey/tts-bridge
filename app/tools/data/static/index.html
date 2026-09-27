@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data cache · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { max-width: 900px; padding: 16px 20px; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .section-head h2 { margin: 0; }
+  .state { font-size: 12px; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+  .state.ok { background: rgba(79,196,123,.15); color: var(--ok); }
+  .state.missing { background: rgba(255,93,93,.15); color: var(--bad); }
+  .about { color: var(--muted); margin: 6px 0 10px; }
+  dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0 0 10px; font-size: 13px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  code { font-size: 12px; }
+  a { color: var(--accent); }
+  .fields { display: grid; grid-template-columns: 1fr 180px auto; gap: 8px; align-items: end; }
+  .fields label { margin-top: 0; }
+  pre.log { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 8px;
+            font-size: 12px; max-height: 200px; overflow: auto; margin: 10px 0 0; white-space: pre-wrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  td.n { text-align: right; }
+  .tts-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 10px; }
+  .tts-check a { font-size: 12px; }
+  .dot.wait { background: var(--muted); }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 640px) { .fields { grid-template-columns: 1fr; } dl { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Data cache</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+
+<main>
+  <p class="hint" style="margin:0 0 14px">Community and mod data the tools use, kept on this computer in
+    <code>cache/</code> and <code>catalog/</code>. Nothing here needs TTS unless it says so.</p>
+  <div id="sources"></div>
+  <section id="forceOrg" data-source="force_org"></section>
+  <div class="msg" id="pageMsg"></div>
+</main>
+
+<script src="/shared.js"></script>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const when = iso => iso ? new Date(iso).toLocaleString() : "";
+let polling = null, lastStatus = null;
+
+function sourceHtml(s) {
+  const c = s.cached;
+  const facts = c ? `
+    <dl>
+      <dt>From</dt><dd>${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">${esc(c.url)}</a>` : esc(c.path)}</dd>
+      <dt>Version</dt><dd>${esc(c.ref || "default branch")}${c.commit ? ` · <code>${esc(c.commit.slice(0, 10))}</code>` : ""}</dd>
+      <dt>Fetched</dt><dd>${esc(when(c.fetched))}</dd>
+      ${c.datasheets !== undefined ? `<dt>Holds</dt><dd>${c.datasheets} datasheets in ${c.catalogues} catalogues,
+        ${(s.factions || []).length} factions (imported ${esc(when(c.imported))})</dd>` : ""}
+    </dl>` : `<p class="msg error" style="margin:0 0 10px">Not fetched yet. Fetch it below; it only takes a few seconds.</p>`;
+  const factions = (s.factions || []).length ? `
+    <details><summary>Factions</summary>
+      <table><tr><th>Faction</th><th>Catalogue</th><th class="n">Datasheets</th></tr>
+      ${s.factions.map(f => `<tr><td>${esc(f.faction)}</td><td>${esc(f.catalogue)}</td><td class="n">${f.units}</td></tr>`).join("")}
+      </table></details>` : "";
+  const skipped = Object.keys(s.skipped || {}).length ? `
+    <details><summary>Left out of the import</summary>
+      <table>${Object.entries(s.skipped).map(([k, n]) => `<tr><td>${esc(k)}</td><td class="n">${n}</td></tr>`).join("")}</table>
+    </details>` : "";
+  return `
+  <section data-source="${esc(s.key)}">
+    <div class="section-head"><h2>${esc(s.name)}</h2>
+      <span class="state ${c ? "ok" : "missing"}">${c ? "Cached" : "Missing"}</span></div>
+    <p class="about">${esc(s.about)}</p>
+    ${facts}
+    <div class="fields">
+      <div><label>Link (GitHub repo, git remote or local folder)</label>
+        <input class="url" value="${esc(c ? (c.url || c.path) : s.default_url)}" placeholder="${esc(s.default_url)}"></div>
+      <div><label>Branch, tag or commit</label><input class="ref" value="${esc(c?.ref || "")}" placeholder="default branch"></div>
+      <button class="primary run">${c ? "Refresh" : "Fetch"}</button>
+    </div>
+    <p class="hint">Leave the version blank for the latest. <a href="#" class="reset">Use the default link</a></p>
+    <pre class="log" hidden></pre>
+    <div class="msg"></div>
+    ${factions}${skipped}
+  </section>`;
+}
+
+// Whether Force Org is the game loaded in TTS: null while checking, else {loaded} or {error}.
+let forceOrg = null;
+
+function forceOrgHtml(f) {
+  const text = forceOrg === null ? "Checking whether Force Org is loaded in TTS…"
+    : forceOrg.error ? forceOrg.error
+    : forceOrg.loaded ? "Force Org is loaded in TTS" : "Force Org isn't loaded in TTS";
+  return `
+    <div class="section-head"><h2>Models (Force Org)</h2>
+      <span class="state ${f.tiles ? "ok" : "missing"}">${f.tiles ? "Cached" : "Missing"}</span></div>
+    <p class="about">The 3D models armies are spawned with, copied from the Force Org mod's army tiles.</p>
+    ${f.tiles ? `<dl><dt>Holds</dt><dd>${f.tiles} army tiles</dd><dt>Built</dt><dd>${esc(when(f.built))}</dd></dl>`
+      : `<p class="msg error" style="margin:0 0 10px">Not built yet.</p>`}
+    <div class="tts-check"><span class="dot ${forceOrg === null ? "wait" : forceOrg.loaded ? "on" : ""}"></span><span>${esc(text)}</span>
+      <a href="#" class="recheck">Check again</a></div>
+    <button class="primary run" ${forceOrg?.loaded ? "" : "disabled"}>${f.tiles ? "Refresh" : "Build"} from TTS</button>
+    <p class="hint">Load the Force Org mod in TTS to turn this on. It reads each army tile, skipping any that
+      haven't changed; you can load another game afterwards.</p>
+    <pre class="log" hidden></pre>
+    <div class="msg"></div>`;
+}
+
+let checking = false;
+async function checkForceOrg() {
+  if (checking) return;   // a check can take TTS's full timeout; don't stack them
+  checking = true;
+  try { forceOrg = await api("/api/data/force-org"); }
+  catch (e) { forceOrg = {error: e.message}; }
+  finally { checking = false; }
+  const job = await api("/api/data/job").catch(() => null);
+  $("#forceOrg").innerHTML = forceOrgHtml(lastStatus.force_org);
+  if (job?.source === "force_org") showJob(job);
+}
+
+function showJob(j) {
+  const sec = j.source && $(`section[data-source="${j.source}"]`);
+  if (!sec) return;
+  const log = $(".log", sec), msg = $(".msg", sec);
+  log.hidden = !j.log.length;
+  log.textContent = j.log.join("\n");
+  log.scrollTop = log.scrollHeight;
+  $(".run", sec).disabled = j.running || (j.source === "force_org" && !forceOrg?.loaded);
+  if (j.running) setMsg(msg, "Working…");
+  else if (j.error) setMsg(msg, j.error, "error");
+  else if (j.finished) setMsg(msg, "Done.", "ok");
+}
+
+async function load() {
+  try {
+    const s = lastStatus = await api("/api/data/status");
+    $("#sources").innerHTML = s.sources.map(sourceHtml).join("");
+    $("#forceOrg").innerHTML = forceOrgHtml(s.force_org);
+    showJob(s.job);
+    if (s.job.running) poll();
+  } catch (e) { setMsg($("#pageMsg"), "Couldn't read the cache: " + e.message, "error"); }
+}
+
+function poll() {
+  clearInterval(polling);
+  polling = setInterval(async () => {
+    try {
+      const j = await api("/api/data/job");
+      showJob(j);
+      if (!j.running) {
+        clearInterval(polling);
+        polling = null;
+        const sec = $(`section[data-source="${j.source}"]`);
+        const typed = sec && $(".url", sec) && [$(".url", sec).value, $(".ref", sec).value];
+        await load();   // new counts; the finished job's log and message stay on screen
+        if (j.error && typed) {   // keep what was typed, so it can be fixed and retried
+          const again = $(`section[data-source="${j.source}"]`);
+          [$(".url", again).value, $(".ref", again).value] = typed;
+        }
+      }
+    } catch (e) { clearInterval(polling); polling = null; setMsg($("#pageMsg"), e.message, "error"); }
+  }, 500);
+}
+
+$("main").addEventListener("click", async ev => {
+  const sec = ev.target.closest("section[data-source]");
+  if (!sec) return;
+  if (ev.target.matches(".reset")) {
+    ev.preventDefault();
+    $(".url", sec).value = $(".url", sec).placeholder;
+    $(".ref", sec).value = "";
+    return;
+  }
+  if (ev.target.matches(".recheck")) {
+    ev.preventDefault();
+    if (!checking) { forceOrg = null; sec.innerHTML = forceOrgHtml(lastStatus.force_org); }
+    return checkForceOrg();
+  }
+  if (!ev.target.matches(".run")) return;
+  try {
+    const j = sec.dataset.source === "force_org" ? await api("/api/data/force-org/refresh", {})
+      : await api("/api/data/fetch", {source: sec.dataset.source, url: $(".url", sec).value, ref: $(".ref", sec).value});
+    showJob(j);
+    poll();
+  } catch (e) { setMsg($(".msg", sec), e.message, "error"); }
+});
+
+load().then(checkForceOrg);
+// keep the light current, like the header's: loading Force Org in TTS turns the button on
+setInterval(() => { if (lastStatus && !polling && !document.hidden) checkForceOrg(); }, 10000);
+</script>
+</body>
+</html>
