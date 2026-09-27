@@ -1,6 +1,6 @@
 """
-Parsing army lists. Needs only mappings.json, not TTS or the Force Org
-catalogue, so it runs anywhere.
+Parsing army lists. Needs no TTS, Force Org catalogue or mappings.json, so it
+runs anywhere.
 
 The lists in tests/fixtures/ are trimmed exports, one per format the parser
 understands. Saved lists in lists/ are the user's own and aren't committed.
@@ -18,7 +18,9 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 @pytest.fixture(scope="module")
 def mappings():
-    return army.load_mappings()
+    # Not the user's mappings.json (git-ignored, and it varies): only the
+    # composition override these fixtures need.
+    return {"units": {"T'au Empire|The Twin Lance": [["Ri'Lantar", 1], ["Ri'Locai", 1]]}, "models": {}}
 
 
 def compositions(name, mappings):
@@ -53,7 +55,7 @@ def test_plus_format(mappings):
     assert units == {
         "Commander Farsight": [{"Commander Farsight": 1}],
         "Crisis Fireknife Battlesuits": [{"Crisis Fireknife Shas'vre": 1, "Crisis Fireknife Shas'ui": 2}],
-        # pinned in mappings.json "units": the flat export can't express it
+        # from the "units" override above: the flat export can't express it
         "The Twin Lance": [{"Ri'Lantar": 1, "Ri'Locai": 1}],
         "Pathfinder Team": [{"Pathfinder Shas'ui": 1, "Pathfinders": 9}],
         "Stealth Battlesuits": [{"Stealth Shas'vre": 1, "Stealth Shas'ui": 4}],
