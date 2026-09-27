@@ -1,0 +1,38 @@
+{
+ "SaveName": "ForceOrg",
+ "LuaScript": "",
+ "ObjectStates": [
+  {
+   "GUID": "e598e0",
+   "Name": "Custom_Tile",
+   "Nickname": "",
+   "LuaScript": "function onLoad() self.createButton({label = \"Load Models\"}) end\nobjectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Nickname\": \"Commander Farsight\"}]],\n[[{\"Name\": \"Custom_Model\", \"Nickname\": \"Crisis Shas'ui\"}]]\n}\n"
+  },
+  {
+   "GUID": "1e84c2",
+   "Name": "Custom_Tile",
+   "Nickname": "",
+   "LuaScript": "function onLoad() self.createButton({label = \"Load Models\"}) end\nobjectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Nickname\": \"Intercessor\"}]]\n}\n"
+  },
+  {
+   "GUID": "b00b00",
+   "Name": "Bag",
+   "Nickname": "Tools",
+   "LuaScript": "",
+   "ContainedObjects": [
+    {
+     "GUID": "c82355",
+     "Name": "Custom_Tile",
+     "Nickname": "",
+     "LuaScript": "objectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Nickname\": \"Tile Creator\"}]]\n}\n"
+    }
+   ]
+  },
+  {
+   "GUID": "aaaaaa",
+   "Name": "Custom_Tile",
+   "Nickname": "Rules",
+   "LuaScript": "print('hi')"
+  }
+ ]
+}

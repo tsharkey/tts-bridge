@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 import army
 import data
+import mods
 import tts_bridge as tts
 from app.core.api import router as api_router
 from app.core.tts import lock as tts_lock
@@ -57,11 +58,30 @@ def locked_lua(code, **kw):
         return tts.run_lua(code, **kw)
 
 
+def mod_file(key):
+    """The mod's save file, or why it can't be read."""
+    try:
+        path, entry = mods.find_mod(key)
+        return {"file": str(path), "workshop_id": entry["id"], "error": None}
+    except data.DataError as e:
+        return {"file": None, "workshop_id": None, "error": str(e)}
+
+
 def force_org():
     tiles = sorted(army.CATALOG.glob("*.json")) if army.CATALOG.exists() else []
     newest = max((p.stat().st_mtime for p in tiles), default=None)
     return {"tiles": len(tiles),
-            "built": datetime.fromtimestamp(newest, timezone.utc).isoformat(timespec="seconds") if newest else None}
+            "built": datetime.fromtimestamp(newest, timezone.utc).isoformat(timespec="seconds") if newest else None,
+            "source": data.read_json(mods.forceorg_source_file()), "mod": mod_file("forceorg")}
+
+
+def lct():
+    index = mods.lct_index()
+    out = {"mod": mod_file("lct"), "source": None, "layouts": 0, "matchups": 0}
+    if index:
+        seen = {lo["guid"] for m in [*index["matchups"].values(), *index["other"].values()] for lo in m["layouts"]}
+        out.update(source=index["source"], layouts=len(seen), matchups=len(index["matchups"]))
+    return out
 
 
 @router.get("/api/data/status")
@@ -76,7 +96,7 @@ def status():
                                      key=lambda f: f["faction"])
             row["skipped"] = index.get("skipped", {})
         sources.append(row)
-    return {"sources": sources, "force_org": force_org(), "job": job}
+    return {"sources": sources, "force_org": force_org(), "lct": lct(), "job": job}
 
 
 @router.post("/api/data/fetch")
@@ -102,6 +122,16 @@ def force_org_loaded():
 @router.post("/api/data/force-org/refresh")
 def force_org_refresh():
     return start("force_org", lambda: army.cmd_index(log=log, run_lua=locked_lua))
+
+
+@router.post("/api/data/force-org/read-mods")
+def force_org_from_mods():
+    return start("force_org", lambda: mods.read_force_org(log=log))
+
+
+@router.post("/api/data/lct/read-mods")
+def lct_from_mods():
+    return start("lct", lambda: mods.read_lct(log=log))
 
 
 @router.get("/api/data/job")

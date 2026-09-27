@@ -149,25 +149,30 @@ def cmd_index(log=print, run_lua=None):
     guids = force_org_tiles(run_lua)
     if not guids:
         raise SystemExit("No Force Org army tiles on the table. Load the Force Org mod in TTS first.")
-    CATALOG.mkdir(exist_ok=True)
     updated = 0
     for i, g in enumerate(guids, 1):
-        label = f"[{i}/{len(guids)}] {tile_label(g)} ({g})"
         script = run_lua(f'return getObjectFromGUID("{g}").getLuaScript()', timeout=60)
-        if not script or "objectJSONs" not in script:
-            log(f"{label}: no model data, skipped")
-            continue
-        digest = hashlib.sha1(script.encode()).hexdigest()
-        path = CATALOG / f"{g}.json"
-        if path.exists() and json.loads(path.read_text()).get("sha1") == digest:
-            log(f"{label}: unchanged")
-            continue
-        objs = parse_tile_script(script)
-        path.write_text(json.dumps({"tile": g, "sha1": digest, "objects": objs}))
-        updated += 1
-        log(f"{label}: {len(objs)} objects")
+        updated += write_tile(g, script, f"[{i}/{len(guids)}] {tile_label(g)} ({g})", log)
     log(f"{len(guids)} tiles read, {updated} updated")
     return len(guids), updated
+
+
+def write_tile(g, script, label, log=print):
+    """Save one army tile's models to catalog/<guid>.json unless its script is
+    unchanged. -> 1 if it was written. Shared by the TTS and mod-file indexers."""
+    if not script or "objectJSONs" not in script:
+        log(f"{label}: no model data, skipped")
+        return 0
+    digest = hashlib.sha1(script.encode()).hexdigest()
+    path = CATALOG / f"{g}.json"
+    if path.exists() and json.loads(path.read_text()).get("sha1") == digest:
+        log(f"{label}: unchanged")
+        return 0
+    CATALOG.mkdir(exist_ok=True)
+    objs = parse_tile_script(script)
+    path.write_text(json.dumps({"tile": g, "sha1": digest, "objects": objs}))
+    log(f"{label}: {len(objs)} objects")
+    return 1
 
 
 def load_catalog():

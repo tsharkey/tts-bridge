@@ -17,6 +17,7 @@ FIXTURE = Path(__file__).resolve().parent / "fixtures" / "bsdata"
 def client(monkeypatch, tmp_path):
     monkeypatch.setattr(data, "CACHE", tmp_path / "cache")
     monkeypatch.setattr(army, "CATALOG", tmp_path / "catalog")
+    monkeypatch.setenv("TTS_MODS_DIR", str(tmp_path / "no-mods"))  # not this machine's real mods
     return TestClient(server.create_app())
 
 
@@ -34,7 +35,8 @@ def test_empty_cache_shows_missing(client):
     [bsdata] = s["sources"]
     assert (bsdata["key"], bsdata["cached"]) == ("bsdata", None)
     assert bsdata["default_url"] == "https://github.com/BSData/wh40k-11e"
-    assert s["force_org"] == {"tiles": 0, "built": None}
+    assert (s["force_org"]["tiles"], s["force_org"]["built"], s["force_org"]["source"]) == (0, None, None)
+    assert s["lct"]["layouts"] == 0 and s["lct"]["mod"]["file"] is None
 
 
 def test_fetch_fills_the_cache(client):
@@ -104,3 +106,30 @@ def test_force_org_check_when_tts_is_silent(client, monkeypatch):
     monkeypatch.setattr(tts_bridge, "run_lua", lambda code, **kw: None)  # run_lua's timeout
     r = client.get("/api/data/force-org")
     assert r.status_code == 503 and "didn't answer" in r.json()["error"]
+
+
+MODS = Path(__file__).resolve().parent / "fixtures" / "mods"
+
+
+def test_read_from_mod_files(client, monkeypatch):
+    monkeypatch.setenv("TTS_MODS_DIR", str(MODS))
+    s = client.get("/api/data/status").json()
+    assert s["force_org"]["mod"]["workshop_id"] == "3000" and s["force_org"]["tiles"] == 0
+    assert (s["lct"]["mod"]["workshop_id"], s["lct"]["layouts"]) == ("4000", 0)
+
+    client.post("/api/data/force-org/read-mods")
+    assert wait(client)["error"] is None
+    client.post("/api/data/lct/read-mods")
+    job = wait(client)
+    assert job["error"] is None and job["source"] == "lct"
+    s = client.get("/api/data/status").json()
+    assert s["force_org"]["tiles"] == 2 and s["force_org"]["source"]["workshop_id"] == "3000"
+    assert (s["lct"]["layouts"], s["lct"]["matchups"]) == (3, 2)
+
+
+def test_missing_mod_files(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("TTS_MODS_DIR", str(tmp_path / "nowhere"))
+    s = client.get("/api/data/status").json()
+    assert "TTS_MODS_DIR" in s["lct"]["mod"]["error"] and s["lct"]["mod"]["file"] is None
+    client.post("/api/data/lct/read-mods")
+    assert "TTS_MODS_DIR" in wait(client)["error"]

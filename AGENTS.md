@@ -22,6 +22,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
 | `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
 | `datasheets.py` | Matches a parsed list's units, models and wargear to cached datasheets, pinning choices in `mappings.json`. |
+| `mods.py` | Reads Force Org (into `catalog/`) and LCT's layouts (into `cache/lct/`) from TTS's Workshop folder, with TTS closed. |
 | `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | The user's pinned model matches (git-ignored; created on first use). |

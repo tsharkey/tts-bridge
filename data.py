@@ -9,6 +9,7 @@ data.py — the local data cache: community data fetched once, kept in cache/
     python3 data.py fetch bsdata --from <git url>   # any other git remote (needs git)
     python3 data.py import bsdata                   # re-import what's cached, no network
     python3 data.py status                          # what's cached, from where, and when
+    python3 data.py mods [forceorg|lct]             # read Force Org and LCT from TTS's mod files (see mods.py)
 
 A source's link and ref are remembered, so a plain `fetch` refreshes the same
 one. Imported datasheets are in cache/datasheets/, one file per catalogue, in
@@ -311,6 +312,9 @@ def main(args):
             IMPORTERS[name]()
         elif cmd == "import" and name in IMPORTERS:
             IMPORTERS[name]()
+        elif cmd == "mods":
+            import mods
+            mods.main(rest[1:])
         elif cmd == "status":
             for src, info in status().items():
                 if not info:

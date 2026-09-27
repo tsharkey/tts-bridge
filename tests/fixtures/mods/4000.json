@@ -1,0 +1,44 @@
+{
+ "SaveName": "LCT",
+ "LuaScript": "\nmissionMatchups = {\n    [\"5_4\"] = { red = \"Hold Fast\",   blue = \"Scout Ahead\" },\n    [\"4_5\"] = { red = \"Scout Ahead\", blue = \"Hold Fast\" },\n}\n",
+ "ObjectStates": [
+  {
+   "GUID": "109a6b",
+   "Name": "Bag",
+   "Nickname": "Take and Hold vs Reconnaissance",
+   "ContainedObjects": [
+    {
+     "GUID": "c00001",
+     "Name": "CardCustom",
+     "Nickname": "TnH vs Rec 2 - Dawn of War - LCT - Pack 1",
+     "LuaScript": "objectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 0, \"posZ\": 0}}]],\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 1, \"posZ\": -1}}]],\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 2, \"posZ\": -2}}]]\n}\n"
+    },
+    {
+     "GUID": "c00002",
+     "Name": "CardCustom",
+     "Nickname": "TnH vs Rec 1 - Tipping Point - LCT - Pack 1",
+     "LuaScript": "objectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 0, \"posZ\": 0}}]],\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 1, \"posZ\": -1}}]]\n}\n"
+    }
+   ]
+  },
+  {
+   "GUID": "fdf6e7",
+   "Name": "Bag",
+   "Nickname": "Combat Patrol Maps",
+   "ContainedObjects": [
+    {
+     "GUID": "c00003",
+     "Name": "CardCustom",
+     "Nickname": "Combat Patrol 1",
+     "LuaScript": "objectJSONs = {\n[[{\"Name\": \"Custom_Model\", \"Description\": \"Light\", \"Transform\": {\"posX\": 0, \"posZ\": 0}}]]\n}\n"
+    }
+   ]
+  },
+  {
+   "GUID": "738804",
+   "Name": "Custom_Tile",
+   "Nickname": "Start Menu",
+   "LuaScript": "-- menu"
+  }
+ ]
+}

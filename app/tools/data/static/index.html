@@ -29,6 +29,8 @@
   .tts-check { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 0 0 10px; }
   .tts-check a { font-size: 12px; }
   .dot.wait { background: var(--muted); }
+  .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  dd.bad { color: var(--bad); }
   details summary { cursor: pointer; color: var(--muted); font-size: 12px; margin-top: 10px; }
   @media (max-width: 640px) { .fields { grid-template-columns: 1fr; } dl { grid-template-columns: 1fr; } }
 </style>
@@ -45,6 +47,7 @@
     <code>cache/</code> and <code>catalog/</code>. Nothing here needs TTS unless it says so.</p>
   <div id="sources"></div>
   <section id="forceOrg" data-source="force_org"></section>
+  <section id="lct" data-source="lct"></section>
   <div class="msg" id="pageMsg"></div>
 </main>
 
@@ -83,7 +86,7 @@ function sourceHtml(s) {
       <div><label>Link (GitHub repo, git remote or local folder)</label>
         <input class="url" value="${esc(c ? (c.url || c.path) : s.default_url)}" placeholder="${esc(s.default_url)}"></div>
       <div><label>Branch, tag or commit</label><input class="ref" value="${esc(c?.ref || "")}" placeholder="default branch"></div>
-      <button class="primary run">${c ? "Refresh" : "Fetch"}</button>
+      <button class="primary run" data-post="/api/data/fetch">${c ? "Refresh" : "Fetch"}</button>
     </div>
     <p class="hint">Leave the version blank for the latest. <a href="#" class="reset">Use the default link</a></p>
     <pre class="log" hidden></pre>
@@ -95,6 +98,11 @@ function sourceHtml(s) {
 // Whether Force Org is the game loaded in TTS: null while checking, else {loaded} or {error}.
 let forceOrg = null;
 
+function modLine(mod) {
+  return mod.file ? `<dt>Mod file</dt><dd><code>${esc(mod.file.split("/").pop())}</code> (Workshop ${esc(mod.workshop_id)})</dd>`
+    : `<dt>Mod file</dt><dd class="bad">${esc(mod.error)}</dd>`;
+}
+
 function forceOrgHtml(f) {
   const text = forceOrg === null ? "Checking whether Force Org is loaded in TTS…"
     : forceOrg.error ? forceOrg.error
@@ -103,18 +111,45 @@ function forceOrgHtml(f) {
     <div class="section-head"><h2>Models (Force Org)</h2>
       <span class="state ${f.tiles ? "ok" : "missing"}">${f.tiles ? "Cached" : "Missing"}</span></div>
     <p class="about">The 3D models armies are spawned with, copied from the Force Org mod's army tiles.</p>
-    ${f.tiles ? `<dl><dt>Holds</dt><dd>${f.tiles} army tiles</dd><dt>Built</dt><dd>${esc(when(f.built))}</dd></dl>`
-      : `<p class="msg error" style="margin:0 0 10px">Not built yet.</p>`}
+    <dl>
+      ${f.tiles ? `<dt>Holds</dt><dd>${f.tiles} army tiles</dd><dt>Last changed</dt><dd>${esc(when(f.built))}</dd>
+        ${f.source ? `<dt>Checked</dt><dd>${esc(when(f.source.read))} against the mod file (updated ${esc(when(f.source.updated))})</dd>` : ""}` : `<dt>Holds</dt><dd class="bad">Not built yet</dd>`}
+      ${modLine(f.mod)}
+    </dl>
+    <div class="buttons">
+      <button class="primary run" data-post="/api/data/force-org/read-mods" data-needs="mod" ${f.mod.file ? "" : "disabled"}>
+        ${f.tiles ? "Refresh" : "Build"} from mod files</button>
+      <button class="run" data-post="/api/data/force-org/refresh" data-needs="tts" ${forceOrg?.loaded ? "" : "disabled"}>
+        ${f.tiles ? "Refresh" : "Build"} from TTS</button>
+    </div>
+    <p class="hint">The mod files work with TTS closed, once you're subscribed to Force Org. Or load Force Org in TTS
+      and read it from there.</p>
     <div class="tts-check"><span class="dot ${forceOrg === null ? "wait" : forceOrg.loaded ? "on" : ""}"></span><span>${esc(text)}</span>
       <a href="#" class="recheck">Check again</a></div>
-    <button class="primary run" ${forceOrg?.loaded ? "" : "disabled"}>${f.tiles ? "Refresh" : "Build"} from TTS</button>
-    <p class="hint">Load the Force Org mod in TTS to turn this on. It reads each army tile, skipping any that
-      haven't changed; you can load another game afterwards.</p>
     <pre class="log" hidden></pre>
     <div class="msg"></div>`;
 }
 
-let checking = false;
+function lctHtml(l) {
+  return `
+    <div class="section-head"><h2>Layouts (LCT)</h2>
+      <span class="state ${l.layouts ? "ok" : "missing"}">${l.layouts ? "Cached" : "Missing"}</span></div>
+    <p class="about">Every LCT layout's terrain and markers, with each matchup's missions. Read from the LCT mod's file,
+      so TTS can stay closed.</p>
+    <dl>
+      ${l.layouts ? `<dt>Holds</dt><dd>${l.layouts} layouts in ${l.matchups} matchups</dd>
+        <dt>Read</dt><dd>${esc(when(l.source.read))} (mod updated ${esc(when(l.source.updated))})</dd>`
+        : `<dt>Holds</dt><dd class="bad">Not read yet</dd>`}
+      ${modLine(l.mod)}
+    </dl>
+    <div class="buttons">
+      <button class="primary run" data-post="/api/data/lct/read-mods" data-needs="mod" ${l.mod.file ? "" : "disabled"}>
+        ${l.layouts ? "Refresh" : "Read"} from mod files</button>
+    </div>
+    <pre class="log" hidden></pre>
+    <div class="msg"></div>`;
+}
+
 async function checkForceOrg() {
   if (checking) return;   // a check can take TTS's full timeout; don't stack them
   checking = true;
@@ -133,7 +168,10 @@ function showJob(j) {
   log.hidden = !j.log.length;
   log.textContent = j.log.join("\n");
   log.scrollTop = log.scrollHeight;
-  $(".run", sec).disabled = j.running || (j.source === "force_org" && !forceOrg?.loaded);
+  for (const b of $$(".run", sec)) {
+    b.disabled = j.running || (b.dataset.needs === "tts" && !forceOrg?.loaded)
+      || (b.dataset.needs === "mod" && !lastStatus?.[j.source]?.mod?.file);
+  }
   if (j.running) setMsg(msg, "Working…");
   else if (j.error) setMsg(msg, j.error, "error");
   else if (j.finished) setMsg(msg, "Done.", "ok");
@@ -144,6 +182,7 @@ async function load() {
     const s = lastStatus = await api("/api/data/status");
     $("#sources").innerHTML = s.sources.map(sourceHtml).join("");
     $("#forceOrg").innerHTML = forceOrgHtml(s.force_org);
+    $("#lct").innerHTML = lctHtml(s.lct);
     showJob(s.job);
     if (s.job.running) poll();
   } catch (e) { setMsg($("#pageMsg"), "Couldn't read the cache: " + e.message, "error"); }
@@ -186,8 +225,8 @@ $("main").addEventListener("click", async ev => {
   }
   if (!ev.target.matches(".run")) return;
   try {
-    const j = sec.dataset.source === "force_org" ? await api("/api/data/force-org/refresh", {})
-      : await api("/api/data/fetch", {source: sec.dataset.source, url: $(".url", sec).value, ref: $(".ref", sec).value});
+    const body = $(".url", sec) ? {source: sec.dataset.source, url: $(".url", sec).value, ref: $(".ref", sec).value} : {};
+    const j = await api(ev.target.dataset.post, body);
     showJob(j);
     poll();
   } catch (e) { setMsg($(".msg", sec), e.message, "error"); }
