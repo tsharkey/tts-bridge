@@ -1,0 +1,589 @@
+{
+ "catalogue": "Imperium - Adepta Sororitas",
+ "id": "Imperium - Adepta Sororitas",
+ "revision": 1,
+ "library": false,
+ "faction": "Adepta Sororitas",
+ "imports": [],
+ "units": [
+  {
+   "id": "s-dominion",
+   "name": "Dominion Squad",
+   "catalogue": "Imperium - Adepta Sororitas",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    5,
+    10
+   ],
+   "models": [
+    {
+     "id": "m-dominion-superior",
+     "name": "Dominion Superior",
+     "min": 1,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Bolt pistol",
+       "count": 1
+      }
+     ],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Boltgun",
+        "Power weapon"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "m-dominion",
+     "name": "Dominion",
+     "min": 4,
+     "max": 9,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Boltgun",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-dominion-w/-simulacrum-imperialis",
+     "name": "Dominion w/ Simulacrum Imperialis",
+     "min": 0,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Boltgun",
+       "count": 1
+      },
+      {
+       "name": "Simulacrum Imperialis",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-dominion-w/-special-weapon",
+     "name": "Dominion w/ Special Weapon",
+     "min": 0,
+     "max": 4,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Meltagun",
+        "Storm bolter"
+       ]
+      }
+     ]
+    }
+   ],
+   "wargear": {
+    "Bolt pistol": {
+     "id": "w-bolt-pistol",
+     "weapons": [
+      {
+       "name": "Bolt pistol"
+      }
+     ],
+     "abilities": []
+    },
+    "Boltgun": {
+     "id": "w-boltgun",
+     "weapons": [
+      {
+       "name": "Boltgun"
+      }
+     ],
+     "abilities": []
+    },
+    "Power weapon": {
+     "id": "w-power-weapon",
+     "weapons": [
+      {
+       "name": "Power weapon"
+      }
+     ],
+     "abilities": []
+    },
+    "Simulacrum Imperialis": {
+     "id": "w-simulacrum-imperialis",
+     "weapons": [
+      {
+       "name": "Simulacrum Imperialis"
+      }
+     ],
+     "abilities": []
+    },
+    "Meltagun": {
+     "id": "w-meltagun",
+     "weapons": [
+      {
+       "name": "Meltagun"
+      }
+     ],
+     "abilities": []
+    },
+    "Storm bolter": {
+     "id": "w-storm-bolter",
+     "weapons": [
+      {
+       "name": "Storm bolter"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "s-sisters",
+   "name": "Battle Sisters Squad",
+   "catalogue": "Imperium - Adepta Sororitas",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    10,
+    10
+   ],
+   "models": [
+    {
+     "id": "m-sister-superior",
+     "name": "Sister Superior",
+     "min": 1,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "2",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Bolt pistol",
+       "count": 1
+      }
+     ],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Boltgun",
+        "Power weapon"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "m-battle-sister",
+     "name": "Battle Sister",
+     "min": 6,
+     "max": 9,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "2",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Boltgun",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-battle-sister-w/-simulacrum-imperialis",
+     "name": "Battle Sister w/ Simulacrum Imperialis",
+     "min": 0,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "2",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Boltgun",
+       "count": 1
+      },
+      {
+       "name": "Simulacrum Imperialis",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-battle-sister-w/-special-weapon",
+     "name": "Battle Sister w/ Special Weapon",
+     "min": 0,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "2",
+      "InSv": "6+"
+     },
+     "equipped": [],
+     "options": [
+      {
+       "name": "Options",
+       "min": 0,
+       "max": 1,
+       "choices": [
+        "Meltagun",
+        "Storm bolter"
+       ]
+      }
+     ]
+    }
+   ],
+   "wargear": {
+    "Bolt pistol": {
+     "id": "w-bolt-pistol",
+     "weapons": [
+      {
+       "name": "Bolt pistol"
+      }
+     ],
+     "abilities": []
+    },
+    "Boltgun": {
+     "id": "w-boltgun",
+     "weapons": [
+      {
+       "name": "Boltgun"
+      }
+     ],
+     "abilities": []
+    },
+    "Power weapon": {
+     "id": "w-power-weapon",
+     "weapons": [
+      {
+       "name": "Power weapon"
+      }
+     ],
+     "abilities": []
+    },
+    "Simulacrum Imperialis": {
+     "id": "w-simulacrum-imperialis",
+     "weapons": [
+      {
+       "name": "Simulacrum Imperialis"
+      }
+     ],
+     "abilities": []
+    },
+    "Meltagun": {
+     "id": "w-meltagun",
+     "weapons": [
+      {
+       "name": "Meltagun"
+      }
+     ],
+     "abilities": []
+    },
+    "Storm bolter": {
+     "id": "w-storm-bolter",
+     "weapons": [
+      {
+       "name": "Storm bolter"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "s-retributors",
+   "name": "Retributor Squad",
+   "catalogue": "Imperium - Adepta Sororitas",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    5,
+    10
+   ],
+   "models": [
+    {
+     "id": "m-retributor-superior",
+     "name": "Retributor Superior",
+     "min": 1,
+     "max": 1,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Bolt pistol",
+       "count": 1
+      },
+      {
+       "name": "Boltgun",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-retributor",
+     "name": "Retributor",
+     "min": 4,
+     "max": 9,
+     "stats": {
+      "M": "6\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Heavy bolter",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Bolt pistol": {
+     "id": "w-bolt-pistol",
+     "weapons": [
+      {
+       "name": "Bolt pistol"
+      }
+     ],
+     "abilities": []
+    },
+    "Boltgun": {
+     "id": "w-boltgun",
+     "weapons": [
+      {
+       "name": "Boltgun"
+      }
+     ],
+     "abilities": []
+    },
+    "Heavy bolter": {
+     "id": "w-heavy-bolter",
+     "weapons": [
+      {
+       "name": "Heavy bolter"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  },
+  {
+   "id": "s-seraphim",
+   "name": "Seraphim Squad",
+   "catalogue": "Imperium - Adepta Sororitas",
+   "points": null,
+   "keywords": [],
+   "factions": [],
+   "rules": [],
+   "abilities": [],
+   "size": [
+    5,
+    10
+   ],
+   "models": [
+    {
+     "id": "m-seraphim-superior",
+     "name": "Seraphim Superior",
+     "min": 1,
+     "max": 1,
+     "stats": {
+      "M": "12\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Bolt pistol",
+       "count": 1
+      },
+      {
+       "name": "Boltgun",
+       "count": 1
+      },
+      {
+       "name": "Meltagun",
+       "count": 1
+      }
+     ],
+     "options": []
+    },
+    {
+     "id": "m-seraphim",
+     "name": "Seraphim",
+     "min": 4,
+     "max": 9,
+     "stats": {
+      "M": "12\"",
+      "T": "3",
+      "Sv": "3+",
+      "W": "1",
+      "Ld": "7+",
+      "OC": "1",
+      "InSv": "6+"
+     },
+     "equipped": [
+      {
+       "name": "Boltgun",
+       "count": 1
+      },
+      {
+       "name": "Simulacrum Imperialis",
+       "count": 1
+      }
+     ],
+     "options": []
+    }
+   ],
+   "wargear": {
+    "Bolt pistol": {
+     "id": "w-bolt-pistol",
+     "weapons": [
+      {
+       "name": "Bolt pistol"
+      }
+     ],
+     "abilities": []
+    },
+    "Boltgun": {
+     "id": "w-boltgun",
+     "weapons": [
+      {
+       "name": "Boltgun"
+      }
+     ],
+     "abilities": []
+    },
+    "Power weapon": {
+     "id": "w-power-weapon",
+     "weapons": [
+      {
+       "name": "Power weapon"
+      }
+     ],
+     "abilities": []
+    },
+    "Simulacrum Imperialis": {
+     "id": "w-simulacrum-imperialis",
+     "weapons": [
+      {
+       "name": "Simulacrum Imperialis"
+      }
+     ],
+     "abilities": []
+    },
+    "Meltagun": {
+     "id": "w-meltagun",
+     "weapons": [
+      {
+       "name": "Meltagun"
+      }
+     ],
+     "abilities": []
+    },
+    "Storm bolter": {
+     "id": "w-storm-bolter",
+     "weapons": [
+      {
+       "name": "Storm bolter"
+      }
+     ],
+     "abilities": []
+    }
+   }
+  }
+ ]
+}

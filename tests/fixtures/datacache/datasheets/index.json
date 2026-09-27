@@ -13,7 +13,7 @@
    "faction": "T'au Empire",
    "library": false,
    "imports": [],
-   "units": 6
+   "units": 8
   },
   "Imperium - Adeptus Astartes - Space Marines": {
    "file": "Imperium - Adeptus Astartes - Space Marines.json",
@@ -48,6 +48,13 @@
    "library": false,
    "imports": [],
    "units": 1
+  },
+  "Imperium - Adepta Sororitas": {
+   "file": "Imperium - Adepta Sororitas.json",
+   "faction": "Adepta Sororitas",
+   "library": false,
+   "imports": [],
+   "units": 4
   }
  }
 }

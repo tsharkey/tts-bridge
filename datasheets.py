@@ -190,6 +190,162 @@ def attach(parsed, mappings, cache=None, repick=False):
     return sheets
 
 
+def parse(text, mappings, cache=None, repick=False):
+    """Parse a list with everything the data cache knows: model lines told from
+    wargear by the datasheet's model names, datasheets matched (attach), costed
+    options that aren't wargear moved to enhancements, and compositions the list
+    can't give filled in from the datasheet (compose). Without a cache, it's
+    army.parse_list alone."""
+    found = {}
+
+    def model_names(army_, unit):
+        if "sheets" not in found:
+            found["sheets"] = Datasheets(army_["sub"] or army_["faction"], cache)
+        sheet, _ = found["sheets"].find(unit["name"], unit.get("allied"))
+        return [m["name"] for m in sheet["models"]] if sheet else []
+
+    parsed = army.parse_list(text, mappings, model_names)
+    sheets = attach(parsed, mappings, cache, repick)
+    if sheets:
+        for u in parsed["units"]:
+            sheet = sheets.get(u["datasheet"]["id"]) if u.get("datasheet") else None
+            if sheet:
+                move_enhancements(u, sheet)
+                compose(u, sheet)
+    return parsed
+
+
+def move_enhancements(unit, sheet):
+    """New Recruit lists an enhancement among the wargear with its cost
+    ("Starflare Ignition System [20 pts]"); anything costed that isn't the
+    datasheet's wargear is an enhancement."""
+    for name in unit.pop("priced", []):
+        if match_wargear(name, sheet) is not None:
+            continue
+        if name not in unit["enhancements"]:
+            unit["enhancements"].append(name)
+        for m in unit["models"]:
+            if name in m["wargear"]:
+                i = m["wargear"].index(name)
+                del m["wargear"][i]
+                if m.get("sheet_wargear"):
+                    del m["sheet_wargear"][i]
+            m["gear"] = [g for g in m.get("gear", []) if g["name"] != name]
+
+
+def default_loadout(sheet_model):
+    """[(wargear, count)] a datasheet model has before any choices: what it's
+    equipped with, plus each required option's default."""
+    gear = [(e["name"], e["count"]) for e in sheet_model["equipped"]]
+    for opt in sheet_model["options"]:
+        if opt["min"] >= 1 and opt["choices"]:
+            gear.append((opt.get("default") or opt["choices"][0], opt["min"]))
+    return gear
+
+
+def composition(sheet, n, floors=None):
+    """[(datasheet model, count)] for a unit of n models: each at its minimum
+    (or the list's own count), the rest to the models with the most room."""
+    counts = {m["name"]: m["min"] for m in sheet["models"]}
+    for name, c in (floors or {}).items():
+        counts[name] = max(counts.get(name, 0), c)
+
+    def room(m):
+        return (m["max"] if m["max"] is not None else 10 ** 6) - counts[m["name"]]
+    left = n - sum(counts.values())
+    for m in sorted(sheet["models"], key=lambda m: -room(m)):
+        if left <= 0:
+            break
+        add = min(left, room(m))
+        counts[m["name"]] += add
+        left -= add
+    return [(m, counts[m["name"]]) for m in sheet["models"] if counts[m["name"]]]
+
+
+def compose(unit, sheet):
+    """Fill in a unit whose list can't say which models it has: a short or
+    simple export, or a flat list's unit named only by itself. Its models are
+    rebuilt from the datasheet ("composition": "datasheet")."""
+    models = unit["models"]
+    placeholders = all(key(m["name"]) == key(unit["name"]) for m in models)
+    if unit.get("complete", True) and not (placeholders and len(sheet["models"]) > 1):
+        return
+    if placeholders:
+        n, floors = len(models), {}
+    else:  # a simple export names some models: keep them, fill up to the datasheet's size
+        n = max(len(models), (sheet.get("size") or [0])[0] or 0)
+        floors = {}
+        for m in models:
+            if m.get("sheet_model"):
+                floors[m["sheet_model"]] = floors.get(m["sheet_model"], 0) + 1
+    rebuilt = []
+    for sm, count in composition(sheet, n, floors):
+        gear = default_loadout(sm)
+        wargear = sorted(w for w, _ in gear)
+        for _ in range(count):
+            rebuilt.append({"name": army.clean(sm["name"]), "wargear": list(wargear),
+                            "gear": [{"name": w, "count": c} for w, c in sorted(gear)],
+                            "sheet_model": sm["name"], "sheet_wargear": list(wargear)})
+    if rebuilt:
+        unit["models"] = rebuilt
+        unit["composition"] = "datasheet"
+
+
+# --------------------------------------------------------------------------
+# Stand-ins: a model Force Org has no figure for ("Dominion") is shown with a
+# look-alike's figure: the model in another datasheet of the same army with the
+# same body (M, T, Sv, W, Ld) and the most wargear in common (Battle Sister).
+
+BODY = ("M", "T", "Sv", "W", "Ld")
+
+
+def unit_gear(sheet):
+    names = set()
+    for m in sheet["models"]:
+        names |= {e["name"] for e in m["equipped"]}
+        for opt in m["options"]:
+            names |= set(opt["choices"])
+    return names
+
+
+def counterpart(mine, sheet, other):
+    """The model in `other` that plays `mine`'s part in `sheet`: the same
+    loadout ("w/ Simulacrum Imperialis"), the leader, or the rank and file."""
+    def suffix(name):
+        return name.split(" w/ ", 1)[1].casefold() if " w/ " in name else None
+
+    def leader(s):
+        return next((m for m in s["models"] if m["min"] == m["max"] == 1), None)
+    if suffix(mine["name"]):
+        same = next((m for m in other["models"] if suffix(m["name"]) == suffix(mine["name"])), None)
+        if same:
+            return same["name"]
+    if leader(sheet) is mine and leader(other):
+        return leader(other)["name"]
+    plain = [m for m in other["models"] if not suffix(m["name"]) and m is not leader(other)]
+    return max(plain or other["models"], key=lambda m: m["max"] or 10 ** 6)["name"]
+
+
+def stand_in(sheets, sheet, model_name, threshold=0.5):
+    """(look-alike unit name, model name) for one of `sheet`'s models, or None."""
+    mine = next((m for m in sheet["models"] if m["name"] == model_name), None)
+    if not mine or not mine["stats"]:
+        return None
+    body = tuple(mine["stats"].get(k) for k in BODY)
+    gear = unit_gear(sheet)
+    best = None
+    for other in sheets.scope:
+        if other["id"] == sheet["id"]:
+            continue
+        if not any(m["stats"] and tuple(m["stats"].get(k) for k in BODY) == body for m in other["models"]):
+            continue
+        theirs = unit_gear(other)
+        overlap = len(gear & theirs) / len(gear | theirs) if gear | theirs else 0
+        if overlap >= threshold and (best is None or overlap > best[0]):
+            best = (overlap, other)
+    return (best[1]["name"], counterpart(mine, sheet, best[1])) if best else None
+
+
 def unmatched(parsed):
     """What didn't match, for reporting: {"units": [...], "models": [...], "wargear": [...]}."""
     out = {"units": [], "models": [], "wargear": []}

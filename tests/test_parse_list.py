@@ -160,9 +160,11 @@ def test_new_recruit_gear_is_per_model():
     assert len(warriors) == 9
     assert all(m["wargear"] == ["Close combat weapon", "Pulse blaster", "Pulse pistol"] for m in warriors)
     riptide = next(u for u in parsed["units"] if u["name"] == "Riptide Battlesuit")
-    # "[25 pts]" is dropped from the name, and drones aren't models or wargear
-    assert riptide["models"] == [{"name": "Riptide Battlesuit",
-                                  "wargear": ["Ion accelerator", "Riptide fists", "Twin plasma rifle"]}]
+    # "[25 pts]" is dropped from the name; drones aren't models or wargear, but are gear
+    [model] = riptide["models"]
+    assert (model["name"], model["wargear"]) == ("Riptide Battlesuit", ["Ion accelerator", "Riptide fists", "Twin plasma rifle"])
+    assert {g["name"]: g["count"] for g in model["gear"]} == {
+        "Ion accelerator": 1, "Missile Drone": 2, "Riptide fists": 1, "Twin plasma rifle": 1}
 
 
 def test_full_formats_are_complete():
@@ -190,3 +192,58 @@ def test_simple_format():
                                               "Stealth Shas'ui w/ fusion blaster": 2}
     assert units["Crisis Sunforge Battlesuits"] == [{"Crisis Sunforge Shas'vre": 1, "Crisis Sunforge Shas'ui": 2}]
     assert units["Ghostkeel Battlesuit"] == [{"Ghostkeel Battlesuit": 1}]
+
+
+# What the list says beyond models (issue #10).
+
+def parse_file(name):
+    return army.parse_list((FIXTURES / name).read_text(), {})
+
+
+def test_attached_units_and_roles():
+    parsed = parse_file("gw_app_raven_guard.txt")
+    librarian, terminators, shaan = parsed["units"][:3]
+    assert (librarian["role"], librarian["attached_to"]) == ("leader", 1)
+    assert (terminators["role"], terminators["attached_to"]) == ("bodyguard", None)
+    assert (shaan["role"], shaan["attached_to"]) == (None, None)
+    plus = parse_file("plus_format_tau.txt")
+    farsight, fireknives, lance = plus["units"][:3]
+    assert (farsight["role"], farsight["attached_to"], fireknives["role"]) == ("leader", 1, "bodyguard")
+    # under the "Attached Unit 1" heading, but not attached: it says nothing about it
+    assert (lance["name"], lance["role"], lance["attached_to"]) == ("The Twin Lance", None, None)
+
+
+def test_enhancements_and_warlord():
+    raven = parse_file("gw_app_raven_guard.txt")
+    assert raven["units"][0]["enhancements"] == ["Temporal Corridor"]
+    assert [u["name"] for u in raven["units"] if u["warlord"]] == ["Aethon Shaan"]
+    assert [u["name"] for u in parse_file("plus_format_tau.txt")["units"] if u["warlord"]] == ["Commander Farsight"]
+    for name in ("tau_tournament.txt", "tau_gw.txt"):
+        # tournament: the header's "(on Char5: ...)" and the line under the unit, once
+        with_enhancement = [(i, u["enhancements"]) for i, u in enumerate(parse_file(name)["units"]) if u["enhancements"]]
+        assert with_enhancement == [(2, ["Starflare Ignition System"])], name
+    # New Recruit's full export lists it with the wargear; datasheets tell them apart
+    nr = parse_file("tau_nr.txt")
+    assert nr["units"][4]["priced"] == ["Starflare Ignition System"]
+    assert nr["units"][4]["enhancements"] == []
+
+
+def test_weapon_counts():
+    parsed = parse_file("tau_gw.txt")
+    coldstar = parsed["units"][1]["models"][0]
+    assert {g["name"]: g["count"] for g in coldstar["gear"]}["Missile pod"] == 2
+    assert coldstar["wargear"].count("Missile pod") == 1  # wargear (pin keys) as before
+    starscythe = next(u for u in parsed["units"] if u["name"] == "Crisis Starscythe Battlesuits")
+    # "◦ 4x Burst cannon" across 2 Shas'ui is 2 each
+    assert [{g["name"]: g["count"] for g in m["gear"]}["Burst cannon"] for m in starscythe["models"]] == [2, 2, 2]
+
+
+def test_drones_and_uncounted_gear():
+    parsed = parse_file("plus_format_tau.txt")
+    fireknives = parsed["units"][1]["models"]
+    counts = [{g["name"]: g["count"] for g in m["gear"]} for m in fireknives]
+    assert (counts[0]["Marker Drone"], counts[0]["Shield Drone"]) == (1, 1)  # "• Marker Drone, Shield Drone"
+    assert [c["Gun Drone"] for c in counts[1:]] == [1, 1]                    # "• 2x Gun Drone, 2x Shield Drone"
+    assert not any("Drone" in w for m in fireknives for w in m["wargear"])
+    stealth = next(u for u in parsed["units"] if u["name"] == "Stealth Battlesuits")
+    assert sum(g["count"] for m in stealth["models"] for g in m["gear"] if g["name"] == "Homing beacon") == 1

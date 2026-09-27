@@ -23,10 +23,9 @@ def parse(text):
     catalog = army.load_catalog()
     mappings = army.load_mappings()
     try:
-        parsed = army.parse_list(text, mappings)
+        parsed = datasheets.parse(text, mappings)
     except SystemExit as e:
         raise ValueError(str(e))
-    datasheets.attach(parsed, mappings)
     bases.attach(parsed, mappings)
     army.resolve(parsed, catalog, mappings)
     return parsed
@@ -76,7 +75,7 @@ def army_models(text, prefer_static=False, repick=False):
     catalog = army.load_catalog()
     mappings = army.load_mappings()
     try:
-        parsed = army.parse_list(text, mappings)
+        parsed = datasheets.parse(text, mappings)
     except SystemExit as e:
         raise ValueError(str(e))
     army.resolve(parsed, catalog, mappings, prefer_static=prefer_static, repick=repick)

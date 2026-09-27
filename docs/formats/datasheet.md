@@ -88,6 +88,8 @@ format; nothing downstream reads a source's own files.
 
 ## On a parsed list
 
+(The whole parsed list is in [parsed-list.md](parsed-list.md).)
+
 `datasheets.attach(parsed, mappings)` adds to what `army.parse_list` returns (only when datasheets are cached):
 
 ```jsonc

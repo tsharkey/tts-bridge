@@ -186,11 +186,15 @@ def load_catalog():
 
 # "Unit (80 Points)", NewRecruit's compact "Char1: 10x Unit (50 pts): wargear",
 # and its full export's "Unit [50 pts]: wargear" (or "Unit [50 pts]:" over • lines).
-UNIT_RE = re.compile(r"^(?:Char\d+:\s*)?(?:(?P<count>\d+)x\s+)?(?P<name>.+?)\s*"
+UNIT_RE = re.compile(r"^(?:(?P<label>Char\d+):\s*)?(?:(?P<count>\d+)x\s+)?(?P<name>.+?)\s*"
                      r"[(\[](?P<pts>[\d,\s]+?)\s*(?:pts|points)[)\]]\s*(?::\s*(?P<gear>.*))?$", re.I)
 BATTLE_SIZE_RE = re.compile(r"^(?:Combat Patrol|Incursion|Strike Force|Onslaught)\b", re.I)
 # "[20 pts]" after a paid option in New Recruit's full export
 COST_RE = re.compile(r"\s*\[[\d,\s]+pts\]", re.I)
+# Drones are wargear with no model of their own. They go in a model's "gear"
+# (with counts) but not its "wargear", which pins are keyed on.
+DRONE_RE = re.compile(r"\bdrones?\b", re.I)
+ENHANCEMENT_RE = re.compile(r"^enhancements?:\s*(.+)$", re.I)
 LOADOUT_RE = re.compile(r"^(\d+) with (.+)$")
 COUNT_RE = re.compile(r"^(\d+)x\s+(.+)$")
 # Titles that mark a line as a model rather than wargear in the flat "+++" format.
@@ -324,20 +328,33 @@ STOP = {"with", "and", "the", "of", "in", "a", "on", "x", "w", "or"}
 
 def split_wargear(n, gear):
     """Hand each of n models its own wargear set: gear everyone has goes to
-    everyone, rarer gear to the least-equipped models first."""
+    everyone, rarer gear to the least-equipped models first.
+    gear: [(name, count)] or [(name, count, gear_only)]. -> [(wargear names,
+    {name: count})] per model; gear_only items (drones) are only counted."""
     loadouts = [[] for _ in range(n)]
-    for name, count in sorted(gear, key=lambda g: -g[1]):
+    counts = [{} for _ in range(n)]
+    for name, count, *only in sorted(gear, key=lambda g: -g[1]):
+        gear_only = bool(only and only[0])
         if count >= n:
-            for lo in loadouts:
-                lo.append(name)
+            each, extra = divmod(count, n)
+            for i in range(n):
+                if not gear_only:
+                    loadouts[i].append(name)
+                counts[i][name] = counts[i].get(name, 0) + each + (i < extra)
             continue
         order = sorted(range(n), key=lambda i: len(loadouts[i]))
         for i in order[:count]:
-            loadouts[i].append(name)
-    return loadouts
+            if not gear_only:
+                loadouts[i].append(name)
+            counts[i][name] = counts[i].get(name, 0) + 1
+    return list(zip(loadouts, counts))
 
 
-def parse_list(text, mappings):
+def parse_list(text, mappings, model_names=None):
+    """Parse an army list export. model_names(army, unit) -> names the unit's
+    datasheet gives its models, so a flat list's model lines can be told from
+    its wargear (datasheets.parse passes it; without it, rank titles and the
+    unit's name decide)."""
     raw = [(len(ln) - len(ln.lstrip()), clean(ln)) for ln in text.splitlines() if clean(ln)]
     lines = [ln for _, ln in raw]
     fmt = list_format(lines)
@@ -348,39 +365,67 @@ def parse_list(text, mappings):
     per_model = fmt == "nr"
     allied = False
     unit = None
+    group = None  # the "Attached unit N" heading we're under
     for indent, ln in raw[1:]:  # the first line is always the title
         if ln.startswith(("+", "#")):
             continue
         if ln.upper() == "ALLIED UNITS":
             allied = True
             continue
+        gm = re.match(r"^attached unit (\d+)$", ln, re.I)
+        if gm:
+            group = int(gm.group(1))
+            continue
+        if ln.isupper() and ln.upper() != "ATTACHED UNITS":  # another heading: CHARACTERS, OTHER DATASHEETS...
+            group = None
         m = UNIT_RE.match(ln)
         if m and not ln.startswith(("•", "◦")):
             unit = {"name": m.group("name").strip(), "allied": allied, "lines": [],
-                    "count": int(m.group("count") or 1), "points": number(m.group("pts"))}
+                    "count": int(m.group("count") or 1), "points": number(m.group("pts")),
+                    "label": m.group("label"), "group": group, "role": None,
+                    "enhancements": [], "warlord": False, "priced": []}
             army["units"].append(unit)
             if m.group("gear"):  # compact single-line unit: every model carries this
                 unit["lines"].append((0, MODEL, unit["count"], unit["name"]))
-                unit["lines"] += compact_gear(m.group("gear"), unit["count"] if per_model else 1)
+                unit["lines"] += compact_gear(m.group("gear"), unit["count"] if per_model else 1, unit)
             continue
         if unit is None:
             continue
         if LOADOUT_RE.match(ln):  # compact "1 with Chaos icon, Meltagun" under a model line
-            unit["lines"] += compact_gear(ln)
+            unit["lines"] += compact_gear(ln, unit=unit)
             continue
         bullet = ln[0] if ln.startswith(("•", "◦")) else None
         body = ln[1:].strip() if bullet else ln
+        if body.lower().startswith("attached as:"):  # "Leader (Character)", "Bodyguard"
+            unit["role"] = body.split(":", 1)[1].split("(")[0].strip().lower() or None
+            continue
+        if body.lower() == "warlord":
+            unit["warlord"] = True
+            continue
+        em = ENHANCEMENT_RE.match(body)
+        if em:  # "Enhancements: Temporal Corridor", "Enhancement: Starflare Ignition System (+20 pts)"
+            for name in em.group(1).split(", "):
+                add_enhancement(unit, name)
+            continue
         cm = COUNT_RE.match(body)
         if cm and bullet == "•" and ": " in cm.group(2):  # compact "• 9x Cultist: 9 with Autopistol, ..."
             name, gear = cm.group(2).split(": ", 1)
             unit["lines"].append((indent, MODEL, int(cm.group(1)), name.strip()))
-            unit["lines"] += compact_gear(gear, int(cm.group(1)) if per_model else 1)
+            unit["lines"] += compact_gear(gear, int(cm.group(1)) if per_model else 1, unit)
             continue
         if cm and bullet == "•" and fmt in ("nr", "simple"):  # a model with no gear listed
             unit["lines"].append((indent, MODEL, int(cm.group(1)), cm.group(2).strip()))
             continue
-        # drones are wargear with no model of their own in 10th edition
-        if cm and not re.search(r"\bdrone\b|,", cm.group(2), re.I):
+        if bullet and (DRONE_RE.search(body) or "," in body or not cm):
+            # drones ("• 2x Gun Drone, 2x Shield Drone") and gear without a count
+            # ("• Homing beacon"): counted in the model's gear, not its wargear
+            for piece in re.split(r",(?![^()]*\))", body):
+                pm = COUNT_RE.match(piece.strip())
+                n, name = (int(pm.group(1)), pm.group(2)) if pm else (1, piece.strip())
+                if name:
+                    unit["lines"].append((indent, GEAR, n, re.sub(r"\s*\([^)]*\)$", "", name.strip())))
+            continue
+        if cm:
             unit["lines"].append((indent, bullet, int(cm.group(1)), cm.group(2).strip()))
 
     # Short and simple exports leave models out; stand the unit's own name in
@@ -392,18 +437,61 @@ def parse_list(text, mappings):
         u["items"] = nest_lines(u.pop("lines"))
     army["units"] = [u for u in army["units"] if u["items"]]
     for u in army["units"]:
-        u["models"] = unit_models(u, faction, mappings)
+        u["models"] = unit_models(u, faction, mappings, model_names(army, u) if model_names else ())
         u["complete"] = complete
         del u["items"], u["count"]
     army["points"] = army["points"] or sum(u["points"] or 0 for u in army["units"]) or None
+    header_extras(army, lines)
+    link_attachments(army["units"])
     return army
 
 
+def add_enhancement(unit, name):
+    name = re.sub(r"\s*\([+\d\s]*pts\)\s*$", "", name, flags=re.I).strip()
+    if name and name not in unit["enhancements"]:
+        unit["enhancements"].append(name)
+
+
+def header_extras(army, lines):
+    """The "+++" header's WARLORD and ENHANCEMENT lines, onto their units: by
+    "CharN" label, else by name."""
+    def find(label, name):
+        units = army["units"]
+        return (next((u for u in units if label and u["label"] == label), None)
+                or next((u for u in units if u["name"] == (name or "").strip()), None))
+    for ln in lines:
+        wm = re.match(r"\+\s*WARLORD:\s*(?:(Char\d+):\s*)?(.+)$", ln)
+        if wm and find(wm.group(1), wm.group(2)):
+            find(wm.group(1), wm.group(2))["warlord"] = True
+        em = re.match(r"\+\s*ENHANCEMENTS?:\s*(.+?)\s*\(on\s+(?:(Char\d+):\s*)?(.+)\)\s*$", ln)
+        if em and find(em.group(2), em.group(3)):
+            add_enhancement(find(em.group(2), em.group(3)), em.group(1))
+
+
+def link_attachments(units):
+    """Each unit under an "Attached unit N" heading that says how it's
+    attached gets its role; leaders (and supports) get the index of the
+    bodyguard they're attached to."""
+    for u in units:
+        if u["role"] is None:
+            u["group"] = None
+    for u in units:
+        if u["role"] and u["role"] != "bodyguard" and u["group"] is not None:
+            u["attached_to"] = next((i for i, b in enumerate(units)
+                                     if b["group"] == u["group"] and b["role"] == "bodyguard"), None)
+        else:
+            u["attached_to"] = None
+    for u in units:
+        del u["group"]
+
+
 MODEL = "model"   # a line already known to be a model (NewRecruit compact)
+GEAR = "gear"     # gear that isn't wargear: drones, and lines without a count
 
 
 def nest_lines(lines):
-    """(level, count, name, known model) for a unit's "Nx ..." lines. "◦" is always wargear.
+    """(level, count, name, kind) for a unit's "Nx ..." lines: kind True for a
+    line known to be a model, GEAR for gear-only lines, else False. "◦" is always wargear.
     Newer GW app exports nest everything under "•" and show it by indentation
     (model at one depth, its wargear deeper); the shallowest bulleted depth is
     the model level. An indented unbulleted line continues the bullet above it,
@@ -414,6 +502,9 @@ def nest_lines(lines):
     base = min(bulleted) if bulleted else 0
     out, level = [], 1
     for indent, bullet, n, name in lines:
+        if bullet == GEAR:
+            out.append((2, n, name, GEAR))
+            continue
         if bullet == MODEL:
             level = 1
         elif bullet == "◦":
@@ -426,7 +517,7 @@ def nest_lines(lines):
     return out
 
 
-def compact_gear(text, n=1):
+def compact_gear(text, n=1, unit=None):
     """NewRecruit compact wargear ("3 with Blastmaster, 2x Heavy bolter") as
     ◦ lines, so it groups under its model like the GW app's wargear does.
     n is how many models carry it when the text doesn't say ("3 with")."""
@@ -437,43 +528,59 @@ def compact_gear(text, n=1):
     out = []
     # commas inside brackets belong to one piece: "Gun Drone (Twin pulse carbine)"
     for piece in re.split(r",(?![^()]*\))", rest):
+        priced = bool(COST_RE.search(piece))
         piece = COST_RE.sub("", piece).strip()
-        if not piece or re.search(r"\bdrone\b", piece, re.I):
+        if not piece:
             continue
         cm = COUNT_RE.match(piece)
-        out.append((0, "◦", n * int(cm.group(1)), cm.group(2).strip()) if cm else (0, "◦", n, piece))
+        count, name = (n * int(cm.group(1)), cm.group(2).strip()) if cm else (n, piece)
+        if DRONE_RE.search(name):  # "Gun Drone (Twin pulse carbine)": the drone, not its weapon
+            out.append((0, GEAR, count, re.sub(r"\s*\([^)]*\)$", "", name)))
+            continue
+        if priced and unit is not None:  # maybe an enhancement; datasheets can tell (datasheets.py)
+            unit["priced"].append(name)
+        out.append((0, "◦", count, name))
     return out
 
 
-def unit_models(unit, faction, mappings):
-    """-> [{"name", "wargear"}] with one entry per physical model."""
+def unit_models(unit, faction, mappings, model_names=()):
+    """-> [{"name", "wargear", "gear"}] with one entry per physical model.
+    "gear" counts everything the model carries, drones included; "wargear" is
+    the names alone, without drones (pins are keyed on it). model_names are
+    names known to be models (from the unit's datasheet, when it's cached)."""
     items = unit["items"]
     override = mappings.get("units", {}).get(f"{faction}|{unit['name']}")
     unit_tokens = tokens_of(unit["name"])
 
-    if any(lvl == 2 or known for lvl, _, _, known in items):
+    if any((lvl == 2 and kind is not GEAR) or kind is True for lvl, _, _, kind in items):
         # GW app export: model lines are the • lines that own ◦ wargear lines,
         # plus lines already known to be models.
         groups = []
-        for lvl, n, name, known in items:
+        for lvl, n, name, kind in items:
             if lvl == 1:
-                groups.append([n, name, [], known])
+                groups.append([n, name, [], kind is True])
             elif groups:
-                groups[-1][2].append((name, n))
+                groups[-1][2].append((name, n, kind is GEAR))
         groups = [g[:3] for g in groups if g[2] or g[3]]
     else:
         # Flat format: model lines are recognised by rank titles or by
         # ending in a word from the unit's name ("9x Pathfinders").
         groups = []
-        known = {m for m, _ in override} if override else set()
-        for _, n, name, _ in items:
+        known = ({m for m, _ in override} if override else set()) | {clean(m).casefold() for m in model_names}
+        for _, n, name, kind in items:
+            if kind is GEAR:
+                if groups:
+                    groups[-1][2].append((name, n, True))
+                else:
+                    groups.append([1, unit["name"], [(name, n, True)], "single"])
+                continue
             toks = [t for t in re.findall(r"[a-z0-9]+", clean(name).lower().replace("'", ""))]
             last = tokens_of(toks[-1]) if toks else set()
             # a rank titles a model when it ends the line ("Ravener Prime",
             # "Stealth Shas'vre"), not when it starts a weapon ("Prime claws")
             joined = re.findall(r"[a-z]+", clean(name).lower().replace("'", ""))
-            is_model = (name in known or bool(joined and joined[-1] in RANKS)
-                        or bool(last & unit_tokens))
+            is_model = (name in known or clean(name).casefold() in known
+                        or bool(joined and joined[-1] in RANKS) or bool(last & unit_tokens))
             if is_model:
                 groups.append([n, name, []])
             elif groups:
@@ -485,12 +592,13 @@ def unit_models(unit, faction, mappings):
         groups = [g[:3] for g in groups]
 
     if not groups:
-        groups = [[1, unit["name"], [(name, n) for _, n, name, _ in items]]]
+        groups = [[1, unit["name"], [(name, n, kind is GEAR) for _, n, name, kind in items]]]
 
     models = []
     for n, name, gear in groups:
-        for lo in split_wargear(n, gear):
-            models.append({"name": name, "wargear": sorted(lo)})
+        for wargear, counts in split_wargear(n, gear):
+            models.append({"name": name, "wargear": sorted(wargear),
+                           "gear": [{"name": k, "count": v} for k, v in sorted(counts.items())]})
     return models
 
 
@@ -602,10 +710,20 @@ def model_key(faction, unit, model):
     return f"{faction}|{unit['name']}|{model['name']}|{', '.join(model['wargear'])}"
 
 
-def resolve(army, catalog, mappings, prefer_static=False, repick=False):
+def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_cache=None):
     """Attach catalogue picks to every model. Returns rows for reporting.
-    repick ignores (and overwrites) this list's existing pins."""
+    repick ignores (and overwrites) this list's existing pins. A model the
+    catalogue has no figure for, on a matched datasheet, tries a look-alike's
+    (datasheets.stand_in: "Dominion" -> "Battle Sister")."""
     matcher = Matcher(catalog, army, mappings.get("aliases", {}).get(army["faction"]))
+    looks = {}
+
+    def look_alike(u, m):
+        import datasheets
+        if "sheets" not in looks:
+            looks["sheets"] = datasheets.Datasheets(army["sub"] or army["faction"], sheet_cache)
+        sheet = looks["sheets"].get(u["datasheet"]["id"])
+        return datasheets.stand_in(looks["sheets"], sheet, m["sheet_model"]) if sheet else None
     pinned = mappings.setdefault("models", {})
     rows = []
     redone = set()
@@ -618,8 +736,18 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False):
             else:
                 redone.add(key)
                 cands, best = matcher.candidates(u, m, u["allied"], prefer_static)
+                via = ""
+                if not cands and u.get("datasheet") and m.get("sheet_model"):
+                    alt = look_alike(u, m)
+                    # the look-alike's own name, and without its loadout ("Battle Sister w/ Special
+                    # Weapon" -> "Battle Sister", leaving the model's wargear to pick the figure):
+                    # whichever matches better
+                    for name in dict.fromkeys([alt[1], alt[1].split(" w/ ")[0]]) if alt else []:
+                        c, b = matcher.candidates({**u, "name": alt[0]}, {**m, "name": name}, u["allied"], prefer_static)
+                        if c and (not cands or b > best):
+                            cands, best, via = c, b, f" via {name}"
                 picks = [f"{g}:{i}" for _, g, i, _ in cands]
-                how = (f"auto cover={best[0]:.0%}" + (" static" if prefer_static else "")) if picks else "NO MATCH"
+                how = (f"auto cover={best[0]:.0%}" + (" static" if prefer_static else "") + via) if picks else "NO MATCH"
                 if picks:
                     pinned[key] = picks
             n = variant.get(key, 0)
@@ -825,8 +953,8 @@ def main():
     import datasheets
 
     mappings = load_mappings()
-    army = parse_list(Path(args[1]).read_text(), mappings)
-    if not datasheets.attach(army, mappings):
+    army = datasheets.parse(Path(args[1]).read_text(), mappings)
+    if not any("datasheet" in u for u in army["units"]):
         print("(No datasheets cached. Run `python3 data.py fetch bsdata` to match units to them.)\n")
     bases.attach(army, mappings)
     if args[0] == "plan" and not CATALOG.exists():  # datasheets only
