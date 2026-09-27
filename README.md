@@ -173,6 +173,17 @@ python3 board.py undo                                  # put it back
 Units are recognised by the `[<unit name>]` line `army.py` and `recreate.py` put in each model's description.
 `place` won't move a unit off the table, onto other models, or within 2" of an enemy unless you add `--force`.
 
+**Layout terrain:** `layouts/` has the exact terrain of every LCT layout: each terrain area and feature as a
+rotated footprint, whether it's dense or light, its height and floors, the objectives and the deployment zones
+([format](docs/formats/layout-terrain.md)). It's committed, so you don't need to build it. To rebuild it after LCT
+updates (with TTS closed; needs `requirements-dev.txt` for LCT's asset bundles):
+
+```bash
+python3 data.py mods lct                   # read LCT's layouts from its mod file
+python3 layouts.py build --download        # rebuild layouts/, fetching any terrain mesh TTS hasn't downloaded
+python3 layouts.py check                   # with a layout loaded in TTS: compare it with its file
+```
+
 **Talk to TTS directly:**
 
 ```bash

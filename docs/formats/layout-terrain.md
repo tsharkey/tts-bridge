@@ -1,18 +1,17 @@
-# Layout terrain format (draft)
-
-**Draft:** nothing produces this yet. #20 will generate one file per LCT layout and may refine the shape; until
-then, build against the sample.
+# Layout terrain format
 
 Where terrain is and what kind it is, for one layout, exactly and offline: rotated footprints instead of the
 axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
 
-- **Produced by** (planned, #20) a script that reads LCT's layouts from the data cache (`cache/lct/layouts/`,
-  written by `python3 data.py mods lct`). The output is our own derived geometry, so it's committed as
-  `layouts/<id>.json`; LCT's raw data isn't.
+- **Produced by** `python3 layouts.py build` ([`layouts.py`](../../layouts.py)), from LCT's layouts in the data
+  cache (`cache/lct/layouts/`, written by `python3 data.py mods lct`) and the terrain meshes in TTS's download
+  cache. The output is our own derived geometry, so it's committed as `layouts/<id>.json`, one per layout LCT
+  offers for a matchup, with `layouts/index.json` listing them; LCT's raw data isn't. Read one with
+  `layouts.load(id)`. `python3 layouts.py check` compares the layout loaded in TTS with its file.
 - **Read by** (planned) the LOS engine (#24), threat ranges (#25), the vision phantom checks (#5), the board
   view (#26) and the deployment skill.
 - **Sample:** [`tests/fixtures/formats/layout.json`](../../tests/fixtures/formats/layout.json), checked by
-  `tests/test_formats.py`.
+  `tests/test_formats.py`; `tests/test_layouts.py` checks every file in `layouts/` the same way.
 
 ```jsonc
 {
@@ -28,19 +27,20 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
       "features": [
         {
           "id": "A1a",
-          "name": "Ruin (large)",   // what the piece is, for people; not used by the rules
+          "name": "Ruin (large)",   // LCT's name for the piece (its nickname or tags), for people; not used by the rules
           "category": "dense",      // dense | light | exposed
           "polygon": [[-3.28, 0.95], [2.78, -2.55], [4.28, 0.05], [-1.78, 3.55]],
           "height": 5.5,            // top of the feature above the table
-          "floors": [3.2]           // heights of floors models can stand on, above the ground floor; [] for none
+          "floors": [3.2]           // heights of level surfaces models can stand on, 1" or more up; [] for none
         }
       ]
     }
   ],
   "objectives": [
     {"id": "central", "kind": "central", "side": null, "x": 0, "z": 0, "area": "A1"}
-    // kind: home | expansion | central; side: red | blue (whose home or expansion), null for central
-    // area: the terrain area the objective is, or null for a marker on open ground
+    // id: kind and side, numbered when there are several (central-1, central-2)
+    // kind: home | expansion | central; side: red | blue (whose home, or the home an expansion is nearer), null for central
+    // x, z: the middle of the objective's area; area: the terrain area the objective is (null for a marker on open ground)
   ],
   "zones": [
     {"side": "red", "polygon": [[-30, 10], [30, 10], [30, 22], [-30, 22]]}   // deployment zones
@@ -54,10 +54,17 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
   (−22…22). Heights are inches above the table surface.
 - A polygon is its corners in order, counter-clockwise seen from above (+x right, +z up), without repeating
   the first corner. Rectangles turned in TTS are four rotated corners, not a box and an angle, so any shape fits.
-- Everything is inside the table. A feature's polygon is inside its area's.
-- Categories drive the rules (see the terrain table in the deployment skill): an area with a light or dense
+- Everything is inside the table. A feature belongs to the area its middle is in, but can overhang it (LCT's
+  barriers and pipes often do); the rules use the area. A feature in no area gets an area of its own.
+- A feature's polygon is its **convex outline** seen from above, so an L-shaped ruin comes out as a triangle.
+  Areas are LCT's mats, whose rugged edges are smoothed to within about 0.05 square inches.
+- A feature is the whole piece, including the parts TTS holds as its child objects. `floors` are read from its
+  meshes: level surfaces of 2 square inches or more, 1" or more up.
+- Categories are LCT's: each feature's description says Dense or Light (a piece that is both, like T5S2's tower
+  with walls, counts as dense). Categories drive the rules (see the terrain table in the deployment skill): an area with a light or dense
   feature is **Obscuring** and gives **Hidden**; a dense feature is **Solid**; a floor above 3" gives
   **Plunging Fire**. The maintainer's games treat every area as Obscuring, so the LOS engine should offer that
   as an option rather than the file saying so.
 - Red is the player whose deployment zone is `side: "red"`; which edge that is comes from the deployment
-  (`DEPLOYMENT_SIDES` in `app/tools/board_replay/vision.py`).
+  (`DEPLOYMENT_SIDES` in `app/tools/board_replay/vision.py`). The zones are LCT's 11th edition ones
+  (`layouts.DEPLOYMENTS`).

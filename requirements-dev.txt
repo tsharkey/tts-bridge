@@ -2,3 +2,4 @@
 pytest
 httpx   # FastAPI's test client
 ruff
+UnityPy   # layouts.py: reads LCT's terrain-area meshes from asset bundles

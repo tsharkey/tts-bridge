@@ -1,0 +1,2034 @@
+{
+ "source": {
+  "from": "lct",
+  "lct_updated": "2026-09-17T16:29:16+00:00"
+ },
+ "layouts": [
+  {
+   "id": "eacbac",
+   "name": "Dis vs Dis 1 - Crucible of Battle - BTTF",
+   "map": "Dis vs Dis 1",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d690ad",
+   "name": "Dis vs Dis 2 - Tipping Point - BTTF",
+   "map": "Dis vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "857b72",
+   "name": "Dis vs Dis 3 - Sweeping Engagement - BTTF",
+   "map": "Dis vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0f3d4a",
+   "name": "Dis vs PA 1 - Sweeping Engagement - BTTF",
+   "map": "Dis vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "174c90",
+   "name": "Dis vs PA 2 - Tipping Point - BTTF",
+   "map": "Dis vs PA 2",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "b82639",
+   "name": "Dis vs PA 3 - Search and Destroy - BTTF",
+   "map": "Dis vs PA 3",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "5f6816",
+   "name": "Dis vs Rec 1 - Tipping Point - BTTF",
+   "map": "Dis vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "41df0f",
+   "name": "Dis vs Rec 2 - Dawn of War - BTTF",
+   "map": "Dis vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ea6cfb",
+   "name": "Dis vs Rec 3 - Search and Destroy - BTTF",
+   "map": "Dis vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fc7074",
+   "name": "PA vs PA 1 - Sweeping Engagement - BTTF",
+   "map": "PA vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "60d791",
+   "name": "PA vs PA 2 - Crucible of Battle - BTTF",
+   "map": "PA vs PA 2",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f7a150",
+   "name": "PA vs PA 3 - Tipping Point - BTTF",
+   "map": "PA vs PA 3",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c0171d",
+   "name": "PA vs Rec 1 - Crucible of Battle - BTTF",
+   "map": "PA vs Rec 1",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "2021ea",
+   "name": "PA vs Rec 2 - Tipping Point - BTTF",
+   "map": "PA vs Rec 2",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "24309e",
+   "name": "PA vs Rec 3 - Sweeping Engagement - BTTF",
+   "map": "PA vs Rec 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "37d144",
+   "name": "PtF vs Dis 1 - Search and Destroy - BTTF",
+   "map": "PtF vs Dis 1",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7c1b77",
+   "name": "PtF vs Dis 2 - Tipping Point - BTTF",
+   "map": "PtF vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d91485",
+   "name": "PtF vs Dis 3 - Sweeping Engagement - BTTF",
+   "map": "PtF vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7d235e",
+   "name": "PtF vs PA 1 - Dawn of War - BTTF",
+   "map": "PtF vs PA 1",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "8f1039",
+   "name": "PtF vs PA 2 - Search and Destroy - BTTF",
+   "map": "PtF vs PA 2",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ef3030",
+   "name": "PtF vs PA 3 - Hammer and Anvil - BTTF",
+   "map": "PtF vs PA 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "dc8ec6",
+   "name": "PtF vs PtF 1 - Search and Destroy - BTTF",
+   "map": "PtF vs PtF 1",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "93e488",
+   "name": "PtF vs PtF 2 - Tipping Point - BTTF",
+   "map": "PtF vs PtF 2",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "913abf",
+   "name": "PtF vs PtF 3 - Sweeping Engagement - BTTF",
+   "map": "PtF vs PtF 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "770e2b",
+   "name": "PtF vs Recon 1 - Hammer and Anvil - BTTF",
+   "map": "PtF vs Recon 1",
+   "deployment": "Hammer and Anvil",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6f0265",
+   "name": "PtF vs Recon 2 - Dawn of War - BTTF",
+   "map": "PtF vs Recon 2",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fe8650",
+   "name": "PtF vs Recon 3 - Crucible of Battle - BTTF",
+   "map": "PtF vs Recon 3",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "4803a1",
+   "name": "Rec vs Rec 1 - Sweeping Engagement - BTTF",
+   "map": "Rec vs Rec 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "aea5e7",
+   "name": "Rec vs Rec 2 - Crucible of Battle - BTTF",
+   "map": "Rec vs Rec 2",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f3f2f7",
+   "name": "Rec vs Rec 3 - Tipping Point - BTTF",
+   "map": "Rec vs Rec 3",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "69c0c0",
+   "name": "TnH vs Dis 1 - Sweeping Engagement - BTTF",
+   "map": "TnH vs Dis 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "84bc11",
+   "name": "TnH vs Dis 2 - Crucible of Battle - BTTF",
+   "map": "TnH vs Dis 2",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "428dca",
+   "name": "TnH vs Dis 3 - Hammer and Anvil - BTTF",
+   "map": "TnH vs Dis 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c3c6e1",
+   "name": "TnH vs PA 1 - Crucible of Battle - BTTF",
+   "map": "TnH vs PA 1",
+   "deployment": "Crucible of Battle",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "dbbac5",
+   "name": "TnH vs PA 2 - Hammer and Anvil - BTTF",
+   "map": "TnH vs PA 2",
+   "deployment": "Hammer and Anvil",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "714139",
+   "name": "TnH vs PA 3 - Dawn of War - BTTF",
+   "map": "TnH vs PA 3",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "8111ef",
+   "name": "TnH vs PtF 1 - Sweeping Engagement - BTTF",
+   "map": "TnH vs PtF 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "4dae86",
+   "name": "TnH vs PtF 2 - Search and Destroy - BTTF",
+   "map": "TnH vs PtF 2",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "607453",
+   "name": "TnH vs PtF 3 - Hammer and Anvil - BTTF",
+   "map": "TnH vs PtF 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "92f4fb",
+   "name": "TnH vs Rec 1 - Tipping Point - BTTF",
+   "map": "TnH vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "8524c6",
+   "name": "TnH vs Rec 2 - Dawn of War - BTTF",
+   "map": "TnH vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fffb02",
+   "name": "TnH vs Rec 3 - Search and Destroy - BTTF",
+   "map": "TnH vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e8556e",
+   "name": "TnH vs TnH 1 - Tipping Point - BTTF",
+   "map": "TnH vs TnH 1",
+   "deployment": "Tipping Point",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0c4960",
+   "name": "TnH vs TnH 2 - Dawn of War - BTTF",
+   "map": "TnH vs TnH 2",
+   "deployment": "Dawn of War",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6be807",
+   "name": "TnH vs TnH 3 - Search and Destroy - BTTF",
+   "map": "TnH vs TnH 3",
+   "deployment": "Search and Destroy",
+   "pack": "BTTF",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f0db25",
+   "name": "Dis vs Dis 1 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Dis 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "2ce9c8",
+   "name": "Dis vs Dis 2 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "85cf99",
+   "name": "Dis vs Dis 3 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c40c02",
+   "name": "Dis vs PA 1 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "a9e5eb",
+   "name": "Dis vs PA 2 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs PA 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "101a73",
+   "name": "Dis vs PA 3 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs PA 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fb1dee",
+   "name": "Dis vs Rec 1 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "997f09",
+   "name": "Dis vs Rec 2 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "add9a2",
+   "name": "Dis vs Rec 3 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "Dis vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1a81cf",
+   "name": "PA vs PA 1 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "PA vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "50834d",
+   "name": "PA vs PA 2 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "PA vs PA 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "9a389b",
+   "name": "PA vs PA 3 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "PA vs PA 3",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "65b06b",
+   "name": "PA vs Rec 1 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "PA vs Rec 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0479a2",
+   "name": "PA vs Rec 2 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "PA vs Rec 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fb17d7",
+   "name": "PA vs Rec 3 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "PA vs Rec 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "196364",
+   "name": "PtF vs Dis 1 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Dis 1",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "eecf47",
+   "name": "PtF vs Dis 2 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c34d77",
+   "name": "PtF vs Dis 3 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "300994",
+   "name": "PtF vs PA 1 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PA 1",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "243854",
+   "name": "PtF vs PA 2 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PA 2",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3d614d",
+   "name": "PtF vs PA 3 - Hammer and Anvil - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PA 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "155a6b",
+   "name": "PtF vs PtF 1 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PtF 1",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "4f1e47",
+   "name": "PtF vs PtF 2 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PtF 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0fd512",
+   "name": "PtF vs PtF 3 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs PtF 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e2e756",
+   "name": "PtF vs Recon 1 - Hammer and Anvil - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Recon 1",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "916039",
+   "name": "PtF vs Recon 2 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Recon 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "33ce09",
+   "name": "PtF vs Recon 3 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "PtF vs Recon 3",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "471f09",
+   "name": "Rec vs Rec 1 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "Rec vs Rec 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "01acd5",
+   "name": "Rec vs Rec 2 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "Rec vs Rec 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "b89027",
+   "name": "Rec vs Rec 3 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "Rec vs Rec 3",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "2e846a",
+   "name": "TnH vs Dis 1 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Dis 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "bf3797",
+   "name": "TnH vs Dis 2 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Dis 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "016959",
+   "name": "TnH vs Dis 3 - Hammer and Anvil - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Dis 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "925f10",
+   "name": "TnH vs PA 1 - Crucible of Battle - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PA 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "710198",
+   "name": "TnH vs PA 2 - Hammer and Anvil - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PA 2",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "38cb37",
+   "name": "TnH vs PA 3 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PA 3",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "740bc4",
+   "name": "TnH vs PtF 1 - Sweeping Engagement - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PtF 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6421ee",
+   "name": "TnH vs PtF 2 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PtF 2",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "2eba1b",
+   "name": "TnH vs PtF 3 - Hammer and Anvil - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs PtF 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1afea4",
+   "name": "TnH vs Rec 1 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "afa762",
+   "name": "TnH vs Rec 2 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0134c5",
+   "name": "TnH vs Rec 3 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e26240",
+   "name": "TnH vs TnH 1 - Tipping Point - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs TnH 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c2fd55",
+   "name": "TnH vs TnH 2 - Dawn of War - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs TnH 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "606a88",
+   "name": "TnH vs TnH 3 - Search and Destroy - Battlemaster - Armageddon Ruins",
+   "map": "TnH vs TnH 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - Armageddon Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "afd0ae",
+   "name": "Dis vs Dis 1 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Dis 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "99f29d",
+   "name": "Dis vs Dis 2 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "9e4428",
+   "name": "Dis vs Dis 3 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "727ff9",
+   "name": "Dis vs PA 1 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "Dis vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1e15ec",
+   "name": "Dis vs PA 2 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "Dis vs PA 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "017775",
+   "name": "Dis vs PA 3 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "Dis vs PA 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fb6448",
+   "name": "Dis vs Rec 1 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "866582",
+   "name": "Dis vs Rec 2 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "cdf0b1",
+   "name": "Dis vs Rec 3 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "Dis vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "869037",
+   "name": "PA vs PA 1 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "PA vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ec2fb5",
+   "name": "PA vs PA 2 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "PA vs PA 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "14f173",
+   "name": "PA vs PA 3 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "PA vs PA 3",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "03c892",
+   "name": "PA vs Rec 1 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "PA vs Rec 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "810928",
+   "name": "PA vs Rec 2 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "PA vs Rec 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1db010",
+   "name": "PA vs Rec 3 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "PA vs Rec 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "8edd32",
+   "name": "PtF vs Dis 1 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Dis 1",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "654842",
+   "name": "PtF vs Dis 2 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f9fd85",
+   "name": "PtF vs Dis 3 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d8ead0",
+   "name": "PtF vs PA 1 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PA 1",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d28134",
+   "name": "PtF vs PA 2 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PA 2",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "679c56",
+   "name": "PtF vs PA 3 - Hammer and Anvil - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PA 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f9336b",
+   "name": "PtF vs PtF 1 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PtF 1",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f5113e",
+   "name": "PtF vs PtF 2 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PtF 2",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "aae3f2",
+   "name": "PtF vs PtF 3 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "PtF vs PtF 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e4913e",
+   "name": "PtF vs Recon 1 - Hammer and Anvil - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Recon 1",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "b45103",
+   "name": "PtF vs Recon 2 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Recon 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "032b9f",
+   "name": "PtF vs Recon 3 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "PtF vs Recon 3",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ad40c2",
+   "name": "Rec vs Rec 1 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "Rec vs Rec 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6d203f",
+   "name": "Rec vs Rec 2 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "Rec vs Rec 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3305e3",
+   "name": "Rec vs Rec 3 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "Rec vs Rec 3",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ae4052",
+   "name": "TnH vs Dis 1 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Dis 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "13ef3b",
+   "name": "TnH vs Dis 2 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Dis 2",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "037af4",
+   "name": "TnH vs Dis 3 - Hammer and Anvil - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Dis 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ce901c",
+   "name": "TnH vs PA 1 - Crucible of Battle - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PA 1",
+   "deployment": "Crucible of Battle",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "5b6165",
+   "name": "TnH vs PA 2 - Hammer and Anvil - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PA 2",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "81d573",
+   "name": "TnH vs PA 3 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PA 3",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "14d404",
+   "name": "TnH vs PtF 1 - Sweeping Engagement - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PtF 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "cfb5a3",
+   "name": "TnH vs PtF 2 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PtF 2",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "97f31d",
+   "name": "TnH vs PtF 3 - Hammer and Anvil - Battlemaster - BTTF Ruins",
+   "map": "TnH vs PtF 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d152b4",
+   "name": "TnH vs Rec 1 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "41ba97",
+   "name": "TnH vs Rec 2 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "43d52e",
+   "name": "TnH vs Rec 3 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "TnH vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "bcce50",
+   "name": "TnH vs TnH 1 - Tipping Point - Battlemaster - BTTF Ruins",
+   "map": "TnH vs TnH 1",
+   "deployment": "Tipping Point",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "50c7d0",
+   "name": "TnH vs TnH 2 - Dawn of War - Battlemaster - BTTF Ruins",
+   "map": "TnH vs TnH 2",
+   "deployment": "Dawn of War",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "8617fa",
+   "name": "TnH vs TnH 3 - Search and Destroy - Battlemaster - BTTF Ruins",
+   "map": "TnH vs TnH 3",
+   "deployment": "Search and Destroy",
+   "pack": "Battlemaster - BTTF Ruins",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f379a9",
+   "name": "Dis vs Dis 1 - Crucible of Battle - LCT - Pack 1",
+   "map": "Dis vs Dis 1",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d1b1e9",
+   "name": "Dis vs Dis 2 - Tipping Point - LCT - Pack 1",
+   "map": "Dis vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3ccf60",
+   "name": "Dis vs Dis 3 - Sweeping Engagement - LCT - Pack 1",
+   "map": "Dis vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e1d932",
+   "name": "Dis vs PA 1 - Sweeping Engagement - LCT - Pack 1",
+   "map": "Dis vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "74e6c5",
+   "name": "Dis vs PA 2 - Tipping Point - LCT - Pack 1",
+   "map": "Dis vs PA 2",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "a669e5",
+   "name": "Dis vs PA 3 - Search and Destroy - LCT - Pack 1",
+   "map": "Dis vs PA 3",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3f4d6c",
+   "name": "Dis vs Rec 1 - Tipping Point - LCT - Pack 1",
+   "map": "Dis vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "4bea6a",
+   "name": "Dis vs Rec 2 - Dawn of War - LCT - Pack 1",
+   "map": "Dis vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7970fd",
+   "name": "Dis vs Rec 3 - Search and Destroy - LCT - Pack 1",
+   "map": "Dis vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6538ff",
+   "name": "PA vs PA 1 - Sweeping Engagement - LCT - Pack 1",
+   "map": "PA vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7561ca",
+   "name": "PA vs PA 2 - Crucible of Battle - LCT - Pack 1",
+   "map": "PA vs PA 2",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3a0d17",
+   "name": "PA vs PA 3 - Tipping Point - LCT - Pack 1",
+   "map": "PA vs PA 3",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "204955",
+   "name": "PA vs Rec 1 - Crucible of Battle - LCT - Pack 1",
+   "map": "PA vs Rec 1",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "53ac8a",
+   "name": "PA vs Rec 2 - Tipping Point - LCT - Pack 1",
+   "map": "PA vs Rec 2",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1ae47e",
+   "name": "PA vs Rec 3 - Sweeping Engagement - LCT - Pack 1",
+   "map": "PA vs Rec 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e9851e",
+   "name": "PtF vs Dis 1 - Search and Destroy - LCT - Pack 1",
+   "map": "PtF vs Dis 1",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "36460b",
+   "name": "PtF vs Dis 2 - Tipping Point - LCT - Pack 1",
+   "map": "PtF vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f21c15",
+   "name": "PtF vs Dis 3 - Sweeping Engagement - LCT - Pack 1",
+   "map": "PtF vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "2960bb",
+   "name": "PtF vs PA 1 - Dawn of War - LCT - Pack 1",
+   "map": "PtF vs PA 1",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7edf6f",
+   "name": "PtF vs PA 2 - Search and Destroy - LCT - Pack 1",
+   "map": "PtF vs PA 2",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "090f59",
+   "name": "PtF vs PA 3 - Hammer and Anvil - LCT - Pack 1",
+   "map": "PtF vs PA 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c522db",
+   "name": "PtF vs PtF 1 - Search and Destroy - LCT - Pack 1",
+   "map": "PtF vs PtF 1",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "53443e",
+   "name": "PtF vs PtF 2 - Tipping Point - LCT - Pack 1",
+   "map": "PtF vs PtF 2",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f9a44b",
+   "name": "PtF vs PtF 3 - Sweeping Engagement - LCT - Pack 1",
+   "map": "PtF vs PtF 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "58167e",
+   "name": "PtF vs Recon 1 - Hammer and Anvil - LCT - Pack 1",
+   "map": "PtF vs Recon 1",
+   "deployment": "Hammer and Anvil",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "4da15d",
+   "name": "PtF vs Recon 2 - Dawn of War - LCT - Pack 1",
+   "map": "PtF vs Recon 2",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3edf8d",
+   "name": "PtF vs Recon 3 - Crucible of Battle - LCT - Pack 1",
+   "map": "PtF vs Recon 3",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "15e4be",
+   "name": "Rec vs Rec 1 - Sweeping Engagement - LCT - Pack 1",
+   "map": "Rec vs Rec 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1f821a",
+   "name": "Rec vs Rec 2 - Crucible of Battle - LCT - Pack 1",
+   "map": "Rec vs Rec 2",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "75878a",
+   "name": "Rec vs Rec 3 - Tipping Point - LCT - Pack 1",
+   "map": "Rec vs Rec 3",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "163d61",
+   "name": "TnH vs Dis 1 - Sweeping Engagement - LCT - Pack 1",
+   "map": "TnH vs Dis 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f9ff6c",
+   "name": "TnH vs Dis 2 - Crucible of Battle - LCT - Pack 1",
+   "map": "TnH vs Dis 2",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "aac809",
+   "name": "TnH vs Dis 3 - Hammer and Anvil - LCT - Pack 1",
+   "map": "TnH vs Dis 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "41613a",
+   "name": "TnH vs PA 1 - Crucible of Battle - LCT - Pack 1",
+   "map": "TnH vs PA 1",
+   "deployment": "Crucible of Battle",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "01f04f",
+   "name": "TnH vs PA 2 - Hammer and Anvil - LCT - Pack 1",
+   "map": "TnH vs PA 2",
+   "deployment": "Hammer and Anvil",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e563ee",
+   "name": "TnH vs PA 3 - Dawn of War - LCT - Pack 1",
+   "map": "TnH vs PA 3",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "aaff6f",
+   "name": "TnH vs PtF 1 - Sweeping Engagement - LCT - Pack 1",
+   "map": "TnH vs PtF 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "1b5488",
+   "name": "TnH vs PtF 2 - Search and Destroy - LCT - Pack 1",
+   "map": "TnH vs PtF 2",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "5d62d3",
+   "name": "TnH vs PtF 3 - Hammer and Anvil - LCT - Pack 1",
+   "map": "TnH vs PtF 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fe23cc",
+   "name": "TnH vs Rec 1 - Tipping Point - LCT - Pack 1",
+   "map": "TnH vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "b7f2e0",
+   "name": "TnH vs Rec 2 - Dawn of War - LCT - Pack 1",
+   "map": "TnH vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "24d0d8",
+   "name": "TnH vs Rec 3 - Search and Destroy - LCT - Pack 1",
+   "map": "TnH vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0d8ed4",
+   "name": "TnH vs TnH 1 - Tipping Point - LCT - Pack 1",
+   "map": "TnH vs TnH 1",
+   "deployment": "Tipping Point",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "d30aa9",
+   "name": "TnH vs TnH 2 - Dawn of War - LCT - Pack 1",
+   "map": "TnH vs TnH 2",
+   "deployment": "Dawn of War",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "594bb2",
+   "name": "TnH vs TnH 3 - Search and Destroy - LCT - Pack 1",
+   "map": "TnH vs TnH 3",
+   "deployment": "Search and Destroy",
+   "pack": "LCT - Pack 1",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "bba0b7",
+   "name": "Dis vs Dis 1 - Crucible of Battle - T5S2",
+   "map": "Dis vs Dis 1",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "1f97e2",
+   "name": "Dis vs Dis 2 - Tipping Point - T5S2",
+   "map": "Dis vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "6f2518",
+   "name": "Dis vs Dis 3 - Sweeping Engagement - T5S2",
+   "map": "Dis vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "ef1b89",
+   "name": "Dis vs PA 1 - Sweeping Engagement - T5S2",
+   "map": "Dis vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e40491",
+   "name": "Dis vs PA 2 - Tipping Point - T5S2",
+   "map": "Dis vs PA 2",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "b1073f",
+   "name": "Dis vs PA 3 - Search and Destroy - T5S2",
+   "map": "Dis vs PA 3",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3009f9",
+   "name": "Dis vs Rec 1 - Tipping Point - T5S2",
+   "map": "Dis vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7c89be",
+   "name": "Dis vs Rec 2 - Dawn of War - T5S2",
+   "map": "Dis vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3cfaa1",
+   "name": "Dis vs Rec 3 - Search and Destroy - T5S2",
+   "map": "Dis vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6e52ef",
+   "name": "PA vs PA 1 - Sweeping Engagement - T5S2",
+   "map": "PA vs PA 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "83314d",
+   "name": "PA vs PA 2 - Crucible of Battle - T5S2",
+   "map": "PA vs PA 2",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6a9d75",
+   "name": "PA vs PA 3 - Tipping Point - T5S2",
+   "map": "PA vs PA 3",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0d4f55",
+   "name": "PA vs Rec 1 - Crucible of Battle - T5S2",
+   "map": "PA vs Rec 1",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "e34918",
+   "name": "PA vs Rec 2 - Tipping Point - T5S2",
+   "map": "PA vs Rec 2",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "5d905e",
+   "name": "PA vs Rec 3 - Sweeping Engagement - T5S2",
+   "map": "PA vs Rec 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "145490",
+   "name": "PtF vs Dis 1 - Search and Destroy - T5S2",
+   "map": "PtF vs Dis 1",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "ff5fec",
+   "name": "PtF vs Dis 2 - Tipping Point - T5S2",
+   "map": "PtF vs Dis 2",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "630339",
+   "name": "PtF vs Dis 3 - Sweeping Engagement - T5S2",
+   "map": "PtF vs Dis 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "3eb346",
+   "name": "PtF vs PA 1 - Dawn of War - T5S2",
+   "map": "PtF vs PA 1",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "bd56b3",
+   "name": "PtF vs PA 2 - Search and Destroy - T5S2",
+   "map": "PtF vs PA 2",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "728ceb",
+   "name": "PtF vs PA 3 - Hammer and Anvil - T5S2",
+   "map": "PtF vs PA 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "6d2b99",
+   "name": "PtF vs PtF 1 - Search and Destroy - T5S2",
+   "map": "PtF vs PtF 1",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c20b72",
+   "name": "PtF vs PtF 2 - Tipping Point - T5S2",
+   "map": "PtF vs PtF 2",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f11470",
+   "name": "PtF vs PtF 3 - Sweeping Engagement - T5S2",
+   "map": "PtF vs PtF 3",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "f93cc0",
+   "name": "PtF vs Recon 1 - Hammer and Anvil - T5S2",
+   "map": "PtF vs Recon 1",
+   "deployment": "Hammer and Anvil",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e02c82",
+   "name": "PtF vs Recon 2 - Dawn of War - T5S2",
+   "map": "PtF vs Recon 2",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "7e2c7f",
+   "name": "PtF vs Recon 3 - Crucible of Battle - T5S2",
+   "map": "PtF vs Recon 3",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "736799",
+   "name": "Rec vs Rec 1 - Sweeping Engagement - T5S2",
+   "map": "Rec vs Rec 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "32423f",
+   "name": "Rec vs Rec 2 - Crucible of Battle - T5S2",
+   "map": "Rec vs Rec 2",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "413eff",
+   "name": "Rec vs Rec 3 - Tipping Point - T5S2",
+   "map": "Rec vs Rec 3",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fd109d",
+   "name": "TnH vs Dis 1 - Sweeping Engagement - T5S2",
+   "map": "TnH vs Dis 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "49f0ee",
+   "name": "TnH vs Dis 2 - Crucible of Battle - T5S2",
+   "map": "TnH vs Dis 2",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "090279",
+   "name": "TnH vs Dis 3 - Hammer and Anvil - T5S2",
+   "map": "TnH vs Dis 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "1518b6",
+   "name": "TnH vs PA 1 - Crucible of Battle - T5S2",
+   "map": "TnH vs PA 1",
+   "deployment": "Crucible of Battle",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c7a443",
+   "name": "TnH vs PA 2 - Hammer and Anvil - T5S2",
+   "map": "TnH vs PA 2",
+   "deployment": "Hammer and Anvil",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "51f916",
+   "name": "TnH vs PA 3 - Dawn of War - T5S2",
+   "map": "TnH vs PA 3",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "0c3db6",
+   "name": "TnH vs PtF 1 - Sweeping Engagement - T5S2",
+   "map": "TnH vs PtF 1",
+   "deployment": "Sweeping Engagement",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "5e599f",
+   "name": "TnH vs PtF 2 - Search and Destroy - T5S2",
+   "map": "TnH vs PtF 2",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "c2a804",
+   "name": "TnH vs PtF 3 - Hammer and Anvil - T5S2",
+   "map": "TnH vs PtF 3",
+   "deployment": "Hammer and Anvil",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "fd3d94",
+   "name": "TnH vs Rec 1 - Tipping Point - T5S2",
+   "map": "TnH vs Rec 1",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "e69b2b",
+   "name": "TnH vs Rec 2 - Dawn of War - T5S2",
+   "map": "TnH vs Rec 2",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "0b3687",
+   "name": "TnH vs Rec 3 - Search and Destroy - T5S2",
+   "map": "TnH vs Rec 3",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "0c8d39",
+   "name": "TnH vs TnH 1 - Tipping Point - T5S2",
+   "map": "TnH vs TnH 1",
+   "deployment": "Tipping Point",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  },
+  {
+   "id": "c77fbd",
+   "name": "TnH vs TnH 2 - Dawn of War - T5S2",
+   "map": "TnH vs TnH 2",
+   "deployment": "Dawn of War",
+   "pack": "T5S2",
+   "areas": 16,
+   "problems": 0
+  },
+  {
+   "id": "e76af7",
+   "name": "TnH vs TnH 3 - Search and Destroy - T5S2",
+   "map": "TnH vs TnH 3",
+   "deployment": "Search and Destroy",
+   "pack": "T5S2",
+   "areas": 15,
+   "problems": 0
+  }
+ ],
+ "problems": {}
+}
