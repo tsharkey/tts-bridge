@@ -18,6 +18,7 @@ it, the tools here send their Lua through the app instead (its
 """
 
 import json
+import math
 import queue
 import socket
 import sys
@@ -163,6 +164,8 @@ NO_RESPONSE = ("No response from TTS. Is it running with a game loaded, "
 def execute(script: str, timeout=10):
     """Run Lua in the game -> {"ok": True, "result": ...} or {"ok": False, "error": ...}.
     Exits (SystemExit) if TTS isn't reachable. Safe to call from several threads at once."""
+    if not math.isfinite(timeout):   # NaN or inf would wait for ever
+        raise ValueError(f"timeout must be a number of seconds, not {timeout}")
     if hub:
         return forward(script, timeout)
     reply_id = uuid.uuid4().hex
