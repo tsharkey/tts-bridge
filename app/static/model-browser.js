@@ -89,7 +89,7 @@ export function modelBrowser(root, options = {}) {
     const params = new URLSearchParams({q: $(".mb-q").value, static: $(".mb-static").checked,
       tiles: tileValue === "@army" ? tiles.filter(t => t.army).map(t => t.tile).join(",") : tileValue === "@all" ? "" : tileValue});
     try {
-      const r = await api(`/api/models?${params}`);
+      const r = await api(`/api/catalog?${params}`);
       found = r.models;
       $(".mb-count").textContent = r.total > r.models.length ? `Showing ${r.models.length} of ${r.total}; search to narrow it.`
         : `${r.total} model${r.total === 1 ? "" : "s"}`;
@@ -103,7 +103,7 @@ export function modelBrowser(root, options = {}) {
     showStar();
     $(".mb-name").textContent = m.name;
     $(".mb-msg").textContent = "";
-    const info = m.preview !== undefined ? m : await api(`/api/models/entry?pick=${encodeURIComponent(m.pick)}`);
+    const info = m.preview !== undefined ? m : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
     if (selected !== m) return;
     const status = t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`;
     view.show(info, status);
@@ -142,7 +142,7 @@ export function modelBrowser(root, options = {}) {
     $(".mb-q").value = o.query || "";
     try {
       await loadFavourites();
-      tiles = await api(`/api/models/tiles?${new URLSearchParams({faction: o.faction || "", sub: o.sub || ""})}`);
+      tiles = await api(`/api/catalog/tiles?${new URLSearchParams({faction: o.faction || "", sub: o.sub || ""})}`);
     } catch (e) { $(".mb-list").innerHTML = `<p class="msg error">${esc(e.message)}</p>`; return; }
     const mine = tiles.filter(t => t.army);
     $(".mb-tiles").innerHTML =

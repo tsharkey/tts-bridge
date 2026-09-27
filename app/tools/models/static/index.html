@@ -70,7 +70,7 @@ const browser = modelBrowser($("#browser"), {
 
 // "Favorites for": the army's own (chapter) name is the key's first part, as Scribe keys it
 async function loadArmies() {
-  const armies = await api("/api/models/armies").catch(() => []);
+  const armies = await api("/api/catalog/armies").catch(() => []);
   $("#favArmy").innerHTML += armies.map(a => `<option>${a.replace(/[<&]/g, "")}</option>`).join("");
   const fav = p.get("fav");
   if (fav) {
