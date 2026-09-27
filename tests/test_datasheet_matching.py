@@ -245,3 +245,12 @@ def test_dominion_gets_battle_sister_figures():
         "Dominion": ("Battle Sister", "auto cover=100% via Battle Sister"),
     }
     assert "aliases" not in mappings and "units" not in mappings
+
+
+def test_mapped_placeholder_keeps_its_gear():
+    """A full export's Broadside has one model named for its unit, which is the
+    datasheet's required Shas'vre: the list's gear stays (not the default loadout)."""
+    [broadside] = unit(read("tau_tournament.txt"), "Broadside Battlesuits")["models"]
+    assert broadside["sheet_model"] == "Broadside Shas’vre"
+    assert "Seeker missile" in broadside["wargear"]  # from the list; not in the datasheet's defaults
+    assert unit(read("tau_tournament.txt"), "Broadside Battlesuits").get("composition") is None

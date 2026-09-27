@@ -268,7 +268,10 @@ def compose(unit, sheet):
     rebuilt from the datasheet ("composition": "datasheet")."""
     models = unit["models"]
     placeholders = all(key(m["name"]) == key(unit["name"]) for m in models)
-    if unit.get("complete", True) and not (placeholders and len(sheet["models"]) > 1):
+    # a complete list's placeholder that matching already mapped (a Broadside's one
+    # model is its Shas'vre) keeps the list's own gear
+    unmapped = placeholders and not all(m.get("sheet_model") for m in models)
+    if unit.get("complete", True) and not (unmapped and len(sheet["models"]) > 1):
         return
     if placeholders:
         n, floors = len(models), {}

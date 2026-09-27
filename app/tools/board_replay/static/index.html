@@ -34,6 +34,8 @@
   .collapsed-line { display: flex; align-items: center; gap: 12px; }
   .collapsed-line img { height: 56px; border-radius: 4px; }
   .collapsed-line .summary { flex: 1; margin: 0; }
+  .army .summary a { color: var(--accent); }
+  .muted-note { color: var(--muted); font-size: 11px; }
   .layout-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .layout-card { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 6px; border-radius: 6px;
                  border: 2px solid var(--line); background: var(--panel2); color: var(--text); font-size: 12px; cursor: pointer; }
@@ -67,6 +69,10 @@
               padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
   .mm-group small { display: block; color: var(--muted); }
   .mm-group select { font-size: 12px; }
+  .mm-pick { display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .mmStar { border: 0; background: none; padding: 0 2px; font-size: 16px; line-height: 1; color: var(--muted); }
+  .mmStar.on, .mmStar:hover { color: var(--accent); }
+  #browseModal .modal-box { width: min(1100px, 100%); }
   .mm-group.active { background: rgba(232,181,62,.08); }
   .badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; }
   .badge.static { background: rgba(79,196,123,.15); color: var(--ok); }
@@ -241,86 +247,31 @@
   </div>
 </div>
 
+<div id="browseModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="browseTitle">All models</h2>
+      <button id="browseClose">Close</button>
+    </div>
+    <div id="browseBody" style="flex:1; min-height:0; padding:12px 16px"></div>
+  </div>
+</div>
+
 <script type="importmap">
 {"imports": {"three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
              "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
 </script>
 <script type="module">
-// 3D preview of a static (OBJ) model, straight from Steam's CDN.
-import * as THREE from "three";
-import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
-import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-
-let renderer, scene, camera, controls, current = null, token = 0;
-function init() {
-  const canvas = document.getElementById("mmCanvas");
-  renderer = new THREE.WebGLRenderer({canvas, antialias: true});
-  renderer.setPixelRatio(window.devicePixelRatio);
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0d0e10);
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x333344, 2.2));
-  const sun = new THREE.DirectionalLight(0xffffff, 2);
-  sun.position.set(3, 5, 4);
-  scene.add(sun);
-  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
-  controls = new OrbitControls(camera, canvas);
-  controls.autoRotate = true;
-  controls.autoRotateSpeed = 2;
-  (function loop() {
-    requestAnimationFrame(loop);
-    const w = canvas.clientWidth;
-    if (w && (canvas.width !== Math.round(w * devicePixelRatio))) {
-      renderer.setSize(w, w, false); camera.aspect = 1; camera.updateProjectionMatrix();
-    }
-    if (!document.getElementById("modelsModal").hidden) { controls.update(); renderer.render(scene, camera); }
-  })();
-}
-window.previewModel = async (info, status) => {
-  if (!renderer) init();
-  const mine = ++token;
-  if (current) { scene.remove(current); current = null; }
-  if (!info || !info.preview) return;
-  status("Loading model…");
-  try {
-    const loader = new OBJLoader(), textures = new THREE.TextureLoader();
-    // One group per TTS part: its own mesh plus its attached children, with the
-    // part's local transform (Unity Euler angles apply Z, then X, then Y).
-    async function build(part) {
-      const group = new THREE.Group();
-      group.position.set(...part.pos);
-      group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
-      group.scale.set(...part.scale);
-      if (part.mesh) {
-        const mesh = await loader.loadAsync(part.mesh);
-        let map = null;
-        if (part.diffuse) {
-          map = await textures.loadAsync(part.diffuse).catch(() => null);
-          if (map) map.colorSpace = THREE.SRGBColorSpace;
-        }
-        const c = part.color, tint = c[0] + c[1] + c[2] < 0.05 ? [0.55, 0.55, 0.58] : c;  // untinted black reads as nothing
-        const material = new THREE.MeshStandardMaterial({map, color: map ? 0xffffff : new THREE.Color(...tint),
-                                                         roughness: 0.75, metalness: 0.1, side: THREE.DoubleSide});
-        mesh.traverse(m => { if (m.isMesh) m.material = material; });
-        group.add(mesh);
-      }
-      for (const child of await Promise.all(part.children.map(build))) group.add(child);
-      return group;
-    }
-    const model = await build(info.preview);
-    if (mine !== token) return;
-    const obj = new THREE.Group();
-    obj.add(model);
-    obj.scale.x = -1;  // Unity (TTS) meshes are mirrored relative to three.js
-    const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
-    obj.position.sub(box.getCenter(new THREE.Vector3()));
-    const r = Math.max(size.x, size.y, size.z);
-    camera.position.set(r * 1.1, r * 0.8, r * 1.4);
-    camera.near = r / 100; camera.far = r * 20; camera.updateProjectionMatrix();
-    controls.target.set(0, 0, 0);
-    scene.add(obj);
-    current = obj;
-    status(null);
-  } catch (e) { if (mine === token) status("Couldn't load this model: " + e.message); }
+// 3D preview (shared with Scribe and Models), and the shared model browser for "Browse all models…"
+import {viewer} from "/viewer3d.js";
+import {modelBrowser} from "/model-browser.js";
+const v = viewer(document.getElementById("mmCanvas"));
+window.previewModel = (info, status) => v.show(info, status);
+let browser = null;
+window.browseModels = opts => {
+  document.getElementById("browseModal").hidden = false;
+  if (!browser) browser = modelBrowser(document.getElementById("browseBody"), opts);
+  else browser.open(opts);
 };
 </script>
 
@@ -385,8 +336,17 @@ async function checkArmy(i) {
     const s = await api("/api/parse", {text});
     state.armies[i].summary = s;
     const missing = s.units.reduce((a, u) => a + u.unmatched, 0);
-    out.innerHTML = `<b>${s.title}</b><br>${s.faction}${s.sub ? " / " + s.sub : ""} · ${s.units.length} units · `
-      + `${s.models} models${missing ? ` · <span style="color:var(--bad)">${missing} without a model</span>` : ""}`;
+    const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+    const notes = [];
+    if (!s.datasheets_cached) notes.push(`No datasheets cached: <a href="/tools/data/">fetch them</a> to check units against them.`);
+    if (s.no_datasheet?.length) notes.push(`<span style="color:var(--bad)">No datasheet:</span> ${s.no_datasheet.map(esc).join(", ")}`);
+    if (s.guessed?.length) notes.push(`<span style="color:var(--warn)">Models filled in from the datasheet:</span> ${[...new Set(s.guessed)].map(esc).join(", ")}`);
+    out.innerHTML = `<b>${esc(s.title)}</b><br>${esc(s.faction)}${s.sub ? " / " + esc(s.sub) : ""} · ${s.units.length} units · `
+      + `${s.models} models${missing ? ` · <span style="color:var(--bad)">${missing} without a model</span>` : ""}`
+      + (notes.length ? "<br>" + notes.join("<br>") : "")
+      + `<br><a href="/tools/scribe/" class="toScribe" target="_blank" rel="noopener">Open in Scribe</a>`
+      + ` <span class="muted-note">(datasheets, tooltips, favourites)</span>`;
+    $(".toScribe", out).addEventListener("click", () => store.set("scribe.text", text));
   } catch (e) { out.innerHTML = `<span style="color:var(--bad)">${e.message}</span>`; state.armies[i].summary = null; }
   renderResults();
   autoDispositions();
@@ -424,24 +384,34 @@ async function openModels(side, opts = {}) {
   $("#modelsModal").hidden = false;
   $("#mmList").innerHTML = '<p class="summary">Loading…</p>';
   try {
-    const data = await api("/api/army_models", {text, ...opts});
+    // the same read as Scribe: datasheets, favourites and suggestions per model
+    const data = await api("/api/scribe/read", {text, ...opts});
+    if (!data.cached.catalog) throw new Error("The Force Org model catalogue isn't built yet. Build it on the Data cache page.");
     mm = {side, data};
-    $("#mmTitle").textContent = `${side === 0 ? "Red" : "Blue"} · ${data.title}`;
+    $("#mmTitle").textContent = `${side === 0 ? "Red" : "Blue"} · ${data.army.title}`;
     renderModels_();
   } catch (e) { $("#mmList").innerHTML = `<p class="msg error">${e.message}</p>`; }
 }
 function renderModels_() {
+  const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
   const units = mm.data.units;
   $("#mmList").innerHTML = units.map((u, ui) => `
-    <div class="mm-unit"><h4>${u.name}${u.n > 1 ? " #" + u.n : ""}</h4>
+    <div class="mm-unit"><h4>${esc(u.name)}${u.n > 1 ? " #" + u.n : ""}${u.datasheet ? ""
+      : ' <span class="badge animated" title="No datasheet matched">no datasheet</span>'}</h4>
       ${u.groups.map((g, gi) => {
         const cur = g.picks[0] || {};
-        const opts = g.options.map(o => `<option value="${o.pick}" ${o.pick === cur.pick ? "selected" : ""}>`
-          + `${o.name} · ${o.static ? "static" : "animated"} · ${o.tile}</option>`).join("");
+        const liked = new Set((u.favorites || []).map(f => f.pick));
+        const option = o => `<option value="${esc(o.pick)}" ${o.pick === cur.pick ? "selected" : ""}>`
+          + `${esc(o.name)} · ${o.static ? "static" : "animated"} · ${esc(o.tile)}</option>`;
+        const favs = (u.favorites || []).length ? `<optgroup label="Favorites">${u.favorites.map(option).join("")}</optgroup>` : "";
+        const suggested = g.options.filter(o => !liked.has(o.pick));
         return `<div class="mm-group" data-u="${ui}" data-g="${gi}">
-          <div>${g.model} ×${g.count}${g.wargear.length ? `<small>${g.wargear.join(", ")}</small>` : ""}
-            ${g.picks.length > 1 ? `<small>Currently alternates between ${g.picks.length} sculpts</small>` : ""}</div>
-          <select class="mmSel">${opts}</select>
+          <div>${esc(g.model)} ×${g.count}${g.wargear.length ? `<small>${esc(g.wargear.join(", "))}</small>` : ""}</div>
+          <div class="mm-pick">${cur.pick ? `<button class="mmStar ${liked.has(cur.pick) ? "on" : ""}"
+              title="${liked.has(cur.pick) ? "Remove from" : "Add to"} ${esc(u.name)}'s favourites">${liked.has(cur.pick) ? "★" : "☆"}</button>` : ""}
+            <select class="mmSel">${cur.pick ? "" : '<option value="">No match: pick one…</option>'}${favs}
+              ${suggested.length ? `<optgroup label="Suggested">${suggested.map(option).join("")}</optgroup>` : ""}
+              <option value="@browse">Browse all models…</option></select></div>
           ${cur.name ? typeBadge(cur) : '<span class="badge animated">No match</span>'}
           <button class="mmPrev" ${cur.preview ? "" : "disabled"} title="${cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">Preview</button>
         </div>`;
@@ -456,20 +426,42 @@ function preview(info, row) {
   window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
 }
 $("#mmList").addEventListener("change", async e => {
-  if (!e.target.classList.contains("mmSel")) return;
-  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
-  const info = g.options.find(o => o.pick === e.target.value);
+  if (!e.target.classList.contains("mmSel") || !e.target.value) return;
+  const row = e.target.closest(".mm-group"), u = mm.data.units[row.dataset.u], g = u.groups[row.dataset.g];
+  if (e.target.value === "@browse") {
+    e.target.value = g.picks[0]?.pick || "";
+    $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
+    favouritesChanged = false;
+    window.browseModels({faction: mm.data.army.faction, sub: mm.data.army.sub || "", suggested: g.options,
+      favoriteKey: u.pin_key, onFavorite: () => { favouritesChanged = true; },
+      onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); closeBrowse(true); }});
+    return;
+  }
+  const info = [...(u.favorites || []), ...g.options].find(o => o.pick === e.target.value);
   await api("/api/pin", {key: g.key, pick: info.pick});
   g.picks = [info];
   renderModels_();
   const fresh = $(`.mm-group[data-u="${row.dataset.u}"][data-g="${row.dataset.g}"]`);
   preview(info, fresh);
 });
-$("#mmList").addEventListener("click", e => {
-  if (!e.target.classList.contains("mmPrev")) return;
-  const row = e.target.closest(".mm-group"), g = mm.data.units[row.dataset.u].groups[row.dataset.g];
-  preview(g.picks[0], row);
+$("#mmList").addEventListener("click", async e => {
+  const row = e.target.closest(".mm-group");
+  if (!row) return;
+  const u = mm.data.units[row.dataset.u], g = u.groups[row.dataset.g];
+  if (e.target.classList.contains("mmPrev")) preview(g.picks[0], row);
+  if (e.target.classList.contains("mmStar")) {
+    await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
+    openModels(mm.side);
+  }
 });
+let favouritesChanged = false;
+function closeBrowse(reread) {
+  if ($("#browseModal").hidden) return;
+  $("#browseModal").hidden = true;
+  if (reread || favouritesChanged) { favouritesChanged = false; openModels(mm.side); }
+}
+$("#browseClose").addEventListener("click", () => closeBrowse(false));
+$("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") closeBrowse(false); });
 $("#mmStatic").addEventListener("click", () => {
   if (!mm) return;
   if (!confirm("Re-pick every model in this list, favouring static meshes? Models you picked by hand in this list will be re-picked too.")) return;

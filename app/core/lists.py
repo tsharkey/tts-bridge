@@ -125,48 +125,19 @@ def find_models(tiles=None, query="", static_only=False, limit=2000):
     return {"models": out[:limit], "total": len(out)}
 
 
-def army_models(text, prefer_static=False, repick=False):
-    """Every model entry in a list, grouped per unit, with the current pick and
-    the closest alternatives."""
-    catalog = army.load_catalog()
-    mappings = army.load_mappings()
-    try:
-        parsed = datasheets.parse(text, mappings)
-    except SystemExit as e:
-        raise ValueError(str(e))
-    army.resolve(parsed, catalog, mappings, prefer_static=prefer_static, repick=repick)
-    if repick:
-        army.MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))
-    matcher = army.Matcher(catalog, parsed, mappings.get("aliases", {}).get(parsed["faction"]))
-    seen, units = {}, []
-    for u in parsed["units"]:
-        seen[u["name"]] = seen.get(u["name"], 0) + 1
-        groups = {}
-        for m in u["models"]:
-            key = army.model_key(parsed["faction"], u, m)
-            if key not in groups:
-                groups[key] = {"key": key, "model": m["name"], "wargear": m["wargear"], "count": 0,
-                               "picks": mappings["models"].get(key, []), "options": None, "_m": m}
-            groups[key]["count"] += 1
-        for gr in groups.values():
-            ranked = matcher.ranked(u, gr.pop("_m"), u["allied"], prefer_static)
-            opts = [f"{g}:{i}" for _, g, i, _ in ranked[:15]]
-            opts = [p for p in gr["picks"] if p not in opts] + opts
-            gr["options"] = [entry_info(catalog, p) for p in opts]
-            gr["picks"] = [entry_info(catalog, p) for p in gr["picks"]]
-        units.append({"name": u["name"], "n": seen[u["name"]], "groups": list(groups.values())})
-    return {"title": parsed["title"], "faction": parsed["faction"], "units": units}
-
-
 def unit_summary(parsed):
     seen, out = {}, []
     for u in parsed["units"]:
         seen[u["name"]] = seen.get(u["name"], 0) + 1
         out.append({"name": u["name"], "n": seen[u["name"]], "count": len(u["models"]),
                     "datasheet": (u.get("datasheet") or {}).get("name"),
+                    "guessed": u.get("composition") == "datasheet",
                     "unmatched": sum(1 for m in u["models"] if not m["pick"])})
+    has_sheets = any("datasheet" in u for u in parsed["units"])
     return {"title": parsed["title"], "faction": parsed["faction"], "sub": parsed["sub"],
-            "units": out, "models": sum(u["count"] for u in out)}
+            "units": out, "models": sum(u["count"] for u in out), "datasheets_cached": has_sheets,
+            "no_datasheet": [u["name"] for u, p in zip(out, parsed["units"]) if has_sheets and not p.get("datasheet")],
+            "guessed": [u["name"] for u in out if u["guessed"]]}
 
 
 def favourites(key):

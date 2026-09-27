@@ -79,11 +79,6 @@ def parse_list(body: dict):
     return lists.unit_summary(lists.parse(body["text"]))
 
 
-@shared.post("/api/army_models")
-def army_models(body: dict):
-    return lists.army_models(body["text"], bool(body.get("prefer_static")), bool(body.get("repick")))
-
-
 @shared.post("/api/pin")
 def pin(body: dict):
     lists.pin(body["key"], body["pick"])
