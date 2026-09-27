@@ -19,7 +19,7 @@ The command-line tools use only the standard library; `numpy` and `opencv` are f
 | `app/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | Pinned model matches. Changes here change which models spawn. |
-| `lists/` | Saved army lists. Also test fixtures: `tests/test_parse_list.py` has expected counts for each. |
+| `lists/` | The user's saved army lists (git-ignored). Tests use the trimmed exports in `tests/fixtures/`. |
 | `.claude/skills/wh40k-deployment-planner/` | A Claude skill for deployment, driving `board.py`. |
 
 ## Rules
@@ -35,7 +35,8 @@ The command-line tools use only the standard library; `numpy` and `opencv` are f
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
   (−22…22), y up. Facing in degrees: 0 = +z, 90 = +x.
 - **`n` is the nth same-named unit in `parse_list` order** everywhere (vision, scenes, placement). Don't reorder.
-- **Never commit** `catalog/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
+- **Never commit** army lists, `catalog/`, BSData, Wahapedia downloads, `.env`, `scenes/`, `debug/` or `usage.jsonl`.
+  Test data goes in `tests/fixtures/`, trimmed to what the test needs and with no player names.
 - **Tests run without TTS.** Put new logic where it can be tested offline, and add tests for it.
 - Match the surrounding code: module docstrings with usage at the top, sparse comments that say why.
   User-facing text (README, UI) is plain and direct.
@@ -47,5 +48,5 @@ The command-line tools use only the standard library; `numpy` and `opencv` are f
 .venv/bin/ruff check .
 ```
 
-If you change the list parser on purpose and a count in `tests/test_parse_list.py` changes, check the new count
-against the list text and update the table in the same PR.
+If you change the list parser on purpose and a test's expected composition changes, check it against the
+fixture's text and update the test in the same PR.

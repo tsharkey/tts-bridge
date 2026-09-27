@@ -1,4 +1,4 @@
-Jumbo Maverick - « It’s not the plane, it’s the pilot » (2 000 Points)
+Test list (1000 Points)
 
 Space Marines
 Raven Guard
@@ -52,48 +52,5 @@ Intercessor Squad (80 Points)
 ◦ 4x Bolt pistol
 ◦ 4x Bolt rifle
 ◦ 4x Close combat weapon
-
-OTHER DATASHEETS
-
-Centurion Devastator Squad (365 Points)
-• 1x Devastator Centurion Sergeant
-◦ 1x Centurion fists
-◦ 1x Centurion missile launcher
-◦ 1x Grav-cannon
-• 5x Devastator Centurion
-◦ 5x Centurion fists
-◦ 5x Centurion missile launcher
-◦ 5x Grav-cannon
-
-Scout Squad (65 Points)
-• 1x Scout Sergeant
-◦ 1x Astartes chainsword
-◦ 1x Bolt pistol
-◦ 1x Close combat weapon
-• 4x Scout
-◦ 2x Astartes shotgun
-◦ 4x Bolt pistol
-◦ 4x Close combat weapon
-◦ 1x Missile launcher
-◦ 1x Scout sniper rifle
-
-Scout Squad (65 Points)
-• 1x Scout Sergeant
-◦ 1x Astartes chainsword
-◦ 1x Bolt pistol
-◦ 1x Close combat weapon
-• 4x Scout
-◦ 2x Astartes shotgun
-◦ 4x Bolt pistol
-◦ 4x Close combat weapon
-◦ 1x Missile launcher
-◦ 1x Scout sniper rifle
-
-Thunderhawk Gunship (840 Points)
-• 1x Armoured hull
-• 1x Hellstrike missile battery
-• 2x Lascannon
-• 1x Thunderhawk heavy cannon
-• 4x Twin heavy bolter
 
 Exported with App Version: v2.6.0 (3), Data Version: v946

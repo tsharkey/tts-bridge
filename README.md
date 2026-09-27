@@ -48,7 +48,7 @@ catalogue exists, Force Org doesn't need to be open: armies can be spawned into 
 Open <http://localhost:8765>. The header shows whether TTS is connected, and whether LCT is loaded.
 
 1. **Model:** paste your OpenRouter key and pick any vision model. Prices are shown per model.
-2. **Armies:** paste the Red and Blue lists, or pick saved ones, and press **Check**. Add a hint for spotting
+2. **Armies:** paste the Red and Blue lists, or pick saved ones (kept in `lists/`, on your machine only), and press **Check**. Add a hint for spotting
    each army if you like ("black armour, purple trim").
 3. **Table (LCT):** dispositions are filled in from the lists. Pick one of the matchup's three layouts; each
    shows LCT's layout diagram.
@@ -71,8 +71,8 @@ These use the same catalogue. Stop the web app first: only one process can hold 
 **Spawn an army list** (GW app exports and the `+++` format both work):
 
 ```bash
-python3 army.py plan lists/necrons.txt                # show which model each list entry matched
-python3 army.py build lists/necrons.txt -30 21 11 90  # spawn it: top-left x z, row width, facing
+python3 army.py plan my_list.txt                # show which model each list entry matched
+python3 army.py build my_list.txt -30 21 11 90  # spawn it: top-left x z, row width, facing
 ```
 
 `build` also writes the army to TTS's Saved Objects folder, so it can be loaded into any game from

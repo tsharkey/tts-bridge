@@ -50,6 +50,8 @@ alone. Link dependencies as "blocked by", add it to the board, and set Track, Si
 
 ## Data you must not commit
 
+- Army lists (`lists/`): they're players' own. Tests use small trimmed exports in `tests/fixtures/`, with no
+  player names.
 - `catalog/` (Force Org's model data), BSData, and anything downloaded from Wahapedia: they're rebuilt locally
   and aren't ours to redistribute.
 - `.env`, `scenes/`, `debug/`, `usage.jsonl` and other local run output. `.gitignore` covers these.
