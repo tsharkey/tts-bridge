@@ -1,0 +1,173 @@
+2k Ret Cadre v4 (2,005 Points)
+
+T'au Empire
+Retaliation Cadre (3 Detachment Points)
+Purge the Foe
+Strike Force (2,000 Points)
+
+CHARACTERS
+
+Commander Farsight (70 Points)
+  • 1x Dawn Blade
+  • 1x High-intensity plasma rifle
+
+Commander in Coldstar Battlesuit (95 Points)
+  • 1x Battlesuit fists
+  • 1x Cyclic ion blaster
+  • 1x Gun Drone
+  • 1x High-output burst cannon
+  • 1x Marker Drone
+  • 2x Missile pod
+
+Commander in Coldstar Battlesuit (115 Points)
+  • 1x Battlesuit fists
+  • 1x Cyclic ion blaster
+  • 1x Gun Drone
+  • 1x High-output burst cannon
+  • 1x Marker Drone
+  • 2x Missile pod
+  • Enhancements: Starflare Ignition System
+
+Darkstrider (60 Points)
+  • 1x Close combat weapon
+  • 1x Shade
+
+The Twin Lance (230 Points)
+  • 1x Ri'Lantar
+     ◦ 1x Fusion eliminator
+     ◦ 1x MV15 Gun Drone
+     ◦ 1x Shardstorm burst system
+     ◦ 1x Twin pulse blaster
+     ◦ 1x XV pulse pistol
+  • 1x Ri'Locai
+     ◦ 1x Ion scattercannon
+     ◦ 1x MV15 Gun Drone
+     ◦ 1x Shardstorm burst system
+     ◦ 1x Twin pulse blaster
+     ◦ 1x XV pulse pistol
+
+BATTLELINE
+
+Breacher Team (90 Points)
+  • 1x Breacher Fire Warrior Shas'ui
+     ◦ 1x Close combat weapon
+     ◦ 1x Guardian Drone
+     ◦ 1x Gun Drone
+     ◦ 1x Pulse blaster
+     ◦ 1x Pulse pistol
+     ◦ 1x Support turret
+  • 9x Breacher Fire Warriors
+     ◦ 9x Close combat weapon
+     ◦ 9x Pulse blaster
+     ◦ 9x Pulse pistol
+
+Breacher Team (90 Points)
+  • 1x Breacher Fire Warrior Shas'ui
+     ◦ 1x Close combat weapon
+     ◦ 1x Guardian Drone
+     ◦ 1x Gun Drone
+     ◦ 1x Pulse blaster
+     ◦ 1x Pulse pistol
+     ◦ 1x Support turret
+  • 9x Breacher Fire Warriors
+     ◦ 9x Close combat weapon
+     ◦ 9x Pulse blaster
+     ◦ 9x Pulse pistol
+
+OTHER DATASHEETS
+
+Broadside Battlesuits (75 Points)
+  • 1x Crushing bulk
+  • 1x Heavy rail rifle
+  • 2x Missile Drone
+  • 1x Seeker missile
+  • 1x Weapon support system
+
+Broadside Battlesuits (75 Points)
+  • 1x Crushing bulk
+  • 1x Heavy rail rifle
+  • 2x Missile Drone
+  • 1x Seeker missile
+  • 1x Weapon support system
+
+Crisis Starscythe Battlesuits (100 Points)
+  • 1x Crisis Starscythe Shas’vre
+     ◦ 1x Battlesuit fists
+     ◦ 2x Burst cannon
+     ◦ 1x Gun Drone
+     ◦ 1x Shield Drone
+  • 2x Crisis Starscythe Shas’ui
+     ◦ 2x Battlesuit fists
+     ◦ 4x Burst cannon
+     ◦ 2x Gun Drone
+     ◦ 2x Shield Drone
+
+Crisis Starscythe Battlesuits (100 Points)
+  • 1x Crisis Starscythe Shas’vre
+     ◦ 1x Battlesuit fists
+     ◦ 2x Burst cannon
+     ◦ 1x Gun Drone
+     ◦ 1x Shield Drone
+  • 2x Crisis Starscythe Shas’ui
+     ◦ 2x Battlesuit fists
+     ◦ 4x Burst cannon
+     ◦ 2x Gun Drone
+     ◦ 2x Shield Drone
+
+Crisis Sunforge Battlesuits (125 Points)
+  • 1x Crisis Sunforge Shas’vre
+     ◦ 1x Battlesuit fists
+     ◦ 2x Fusion blaster
+     ◦ 1x Gun Drone
+     ◦ 1x Shield Drone
+  • 2x Crisis Sunforge Shas’ui
+     ◦ 2x Battlesuit fists
+     ◦ 4x Fusion blaster
+     ◦ 2x Gun Drone
+     ◦ 2x Shield Drone
+
+Ghostkeel Battlesuit (150 Points)
+  • 1x Battlesuit support system
+  • 1x Fusion collider
+  • 1x Ghostkeel fists
+  • 1x Twin fusion blaster
+
+Riptide Battlesuit (215 Points)
+  • 1x Ion accelerator
+  • 2x Missile pod
+  • 1x Riptide fists
+  • 1x Twin plasma rifle
+
+Riptide Battlesuit (215 Points)
+  • 1x Ion accelerator
+  • 2x Missile pod
+  • 1x Riptide fists
+  • 1x Twin plasma rifle
+
+Stealth Battlesuits (100 Points)
+  • 1x Stealth Shas'vre
+     ◦ 1x Battlesuit fists
+     ◦ 1x Burst cannon
+     ◦ 1x Gun Drone
+     ◦ 1x Marker Drone
+     ◦ 1x Pulse pistol
+  • 4x Stealth Shas'ui
+     ◦ 4x Battlesuit fists
+     ◦ 2x Burst cannon
+     ◦ 2x Fusion blaster
+     ◦ 1x Homing beacon
+
+Stealth Battlesuits (100 Points)
+  • 1x Stealth Shas'vre
+     ◦ 1x Battlesuit fists
+     ◦ 1x Burst cannon
+     ◦ 1x Gun Drone
+     ◦ 1x Marker Drone
+     ◦ 1x Pulse pistol
+  • 4x Stealth Shas'ui
+     ◦ 4x Battlesuit fists
+     ◦ 2x Burst cannon
+     ◦ 2x Fusion blaster
+     ◦ 1x Homing beacon
+
+Exported with New Recruit v36.25, Data Version: v3
