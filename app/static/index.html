@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+  .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .tool { display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px;
+          color: var(--text); text-decoration: none; }
+  .tool:hover { border-color: var(--accent); }
+  .tool h2 { font-size: 15px; margin: 0 0 6px; }
+  .tool p { margin: 0; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TTS Bridge</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+
+<main>
+  <div class="tools" id="tools"></div>
+  <div class="msg" id="toolsMsg"></div>
+</main>
+
+<script src="/shared.js"></script>
+<script>
+api("/api/tools").then(tools => {
+  $("#tools").innerHTML = tools.map(t =>
+    `<a class="tool" href="${t.path}"><h2>${t.name}</h2><p>${t.description}</p></a>`).join("");
+}).catch(e => setMsg($("#toolsMsg"), "Couldn't list the tools: " + e.message, "error"));
+</script>
+</body>
+</html>

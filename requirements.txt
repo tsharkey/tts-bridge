@@ -1,3 +1,5 @@
 # for the web app (app/server.py); the CLI scripts only need the standard library
+fastapi
+uvicorn
 numpy
 opencv-python-headless

@@ -5,6 +5,7 @@ import importlib
 import pytest
 
 
-@pytest.mark.parametrize("name", ["army", "board", "recreate", "tts_bridge", "config", "vision", "server"])
+@pytest.mark.parametrize("name", ["army", "board", "recreate", "tts_bridge", "config",
+                                  "app.server", "app.tools.board_replay.vision"])
 def test_imports(name):
     importlib.import_module(name)

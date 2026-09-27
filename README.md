@@ -45,7 +45,10 @@ catalogue exists, Force Org doesn't need to be open: armies can be spawned into 
 .venv/bin/python app/server.py
 ```
 
-Open <http://localhost:8765>. The header shows whether TTS is connected, and whether LCT is loaded.
+Open <http://localhost:8765>. The homepage lists the tools; every page's header shows whether TTS is
+connected, and whether LCT is loaded.
+
+### Board from image
 
 1. **Model:** paste your OpenRouter key and pick any vision model. Prices are shown per model.
 2. **Armies:** paste the Red and Blue lists, or pick saved ones (kept in `lists/`, on your machine only), and press **Check**. Add a hint for spotting

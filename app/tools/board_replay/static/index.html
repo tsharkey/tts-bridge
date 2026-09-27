@@ -3,54 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TTS Board Rebuilder</title>
+<title>Board from image · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
 <style>
-  :root {
-    --bg: #15171b; --panel: #1e2127; --panel2: #262a31; --line: #343944;
-    --text: #e6e8ec; --muted: #9aa1ad; --accent: #e8b53e;
-    --red: #ff5d5d; --blue: #4aa8ff; --ok: #4fc47b; --warn: #e8b53e; --bad: #ff5d5d;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text);
-         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px;
-           border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
-  header h1 { font-size: 16px; margin: 0; letter-spacing: .3px; }
-  .status { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--bad); }
-  .dot.on { background: var(--ok); }
-  header .spacer { flex: 1; }
   main { display: grid; grid-template-columns: 380px 1fr; gap: 16px; padding: 16px 20px; }
   main > div { min-width: 0; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; margin-bottom: 16px; }
-  section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 10px; }
   .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .section-head h2 { margin: 0; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
-  input, select, textarea, button { font: inherit; color: var(--text); }
-  input, select, textarea { width: 100%; background: var(--panel2); border: 1px solid var(--line);
-                            border-radius: 5px; padding: 6px 8px; }
-  input[type=checkbox], input[type=radio] { width: auto; }
-  textarea { min-height: 110px; resize: vertical; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
-  button { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 6px 12px; cursor: pointer; }
-  button:hover { border-color: var(--muted); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; }
-  button:disabled { opacity: .5; cursor: default; }
-  .row { display: flex; gap: 8px; align-items: center; }
-  .row > * { flex: 1; }
-  .row > button, .row > .fit { flex: 0 0 auto; }
   .army { border-left: 3px solid var(--red); padding-left: 10px; margin-bottom: 14px; }
   .army.blue { border-color: var(--blue); }
   .army h3 { margin: 0 0 4px; font-size: 14px; }
-  .summary { font-size: 12px; color: var(--muted); margin-top: 6px; }
-  .summary b { color: var(--text); }
   .stage { position: relative; background: #0d0e10; border-radius: 6px; overflow: hidden; min-height: 240px;
            display: flex; align-items: center; justify-content: center; }
   .stage canvas { display: block; max-width: 100%; }
   #photo { cursor: grab; }
   #board { cursor: default; }
   #drop { color: var(--muted); padding: 60px; text-align: center; }
-  .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
   .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
   .inline-check { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: 12px; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -59,9 +27,6 @@
   td input { padding: 2px 4px; width: 60px; }
   .conf-high { color: var(--ok); } .conf-medium { color: var(--warn); } .conf-low { color: var(--bad); }
   .tag { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-  .msg { margin-top: 8px; font-size: 13px; white-space: pre-wrap; }
-  .msg.error { color: var(--bad); }
-  .msg.ok { color: var(--ok); }
   .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .results-grid > div { min-width: 0; overflow-x: auto; }
   .reserves { font-size: 12px; color: var(--muted); margin-top: 6px; }
@@ -109,13 +74,12 @@
   .mm-preview { border-left: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
   #mmCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
   @media (max-width: 900px) { .modal-body { grid-template-columns: 1fr; } .mm-preview { display: none; } }
-  [hidden] { display: none !important; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } .results-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <header>
-  <h1>TTS Board Rebuilder</h1>
+  <h1><a href="/">TTS Bridge</a> › Board from image</h1>
   <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
   <div class="spacer"></div>
   <select id="sceneSelect" style="width:220px"><option value="">Load a saved scene…</option></select>
@@ -360,25 +324,11 @@ window.previewModel = async (info, status) => {
 };
 </script>
 
+<script src="/shared.js"></script>
 <script>
-const $ = (s, el = document) => el.querySelector(s);
-const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const store = {
-  get(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
-};
-async function api(path, body) {
-  const r = await fetch(path, body === undefined ? {} : {
-    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
-  const data = await r.json().catch(() => ({error: `HTTP ${r.status}`}));
-  if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-  return data;
-}
-function setMsg(el, text, kind = "") { el.textContent = text; el.className = "msg " + kind; }
-
 // ---------------------------------------------------------------- state
 const W_IN = 60, H_IN = 44;
-const BOARD = {px: 20, margin: 44};   // must match app/vision.py (PX, MARGIN)
+const BOARD = {px: 20, margin: 44};   // must match vision.py (PX, MARGIN)
 const COLORS = ["#ff5d5d", "#4aa8ff"];
 const state = {
   photo: null, imageData: null, rect: null,   // uploaded image and the fitted frame
@@ -387,16 +337,6 @@ const state = {
   units: [[], []],                             // {unit, n, at:[x,z], count, confidence}
 };
 let lct = null, overlay = null;
-
-// ---------------------------------------------------------------- TTS status
-async function pollStatus() {
-  try {
-    const s = await api("/api/status");
-    $("#ttsDot").classList.toggle("on", s.connected);
-    $("#ttsText").textContent = s.connected ? (s.lct ? "TTS connected · LCT" : "TTS connected") : "TTS not responding";
-  } catch { $("#ttsDot").classList.remove("on"); $("#ttsText").textContent = "App server not responding"; }
-}
-pollStatus(); setInterval(pollStatus, 8000);
 
 // ---------------------------------------------------------------- models
 let models = [];
