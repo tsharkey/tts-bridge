@@ -11,12 +11,12 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 
 | File | Does |
 |---|---|
-| `tts_bridge.py` | Talks to TTS: `run_lua()` sends Lua on port 39999 and waits for the reply on 39998. |
+| `tts_bridge.py` | Talks to TTS: `run_lua()` sends Lua on port 39999 and waits for its reply on 39998, or forwards it to the hub when the hub holds 39998. |
 | `army.py` | Parses army lists (GW app export, `+++` format), matches them to Force Org models, spawns them, writes Saved Objects. |
 | `board.py` | Reads the table as units and terrain, measures between units, places a unit in formation. |
 | `recreate.py` | Rebuilds a board state from a scene (unit positions per army). |
 | `app/server.py` | The hub: mounts the shared routes and each tool (`TOOLS`), serves the homepage. |
-| `app/core/` | Shared by every tool: TTS access and its lock (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
+| `app/core/` | Shared by every tool: TTS access, its lock and the event stream (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
 | `app/static/` | The homepage, and `shared.css` / `shared.js` (header, `api()`, `store`, theme) that every page loads. |
 | `app/tools/<tool>/` | One tool: `TOOL` (its homepage card), `routes.py`, and `static/index.html`, served at `/tools/<tool-with-dashes>/`. |
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
@@ -36,8 +36,10 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 
 - **Don't clear or rearrange the user's table** (loading a layout, destroying objects, Clear Table) unless the
   task is exactly that or the user said so. Only move or remove objects this project spawned.
-- **One listener.** Only one process can bind port 39998, so the web app and the CLI tools can't run at the
-  same time (until the TTS gateway lands). Don't "fix" a busy-port error by killing processes.
+- **One listener, and the hub forwards.** Only one process can bind port 39998. The hub holds it and serves
+  `POST /api/tts/lua` (run Lua in the game) and `GET /api/tts/events` (everything else TTS sends, as SSE);
+  `tts_bridge.start_listener()` forwards to the hub when the port is busy, so CLI tools run alongside it. Each
+  call gets its own reply. Don't "fix" a busy-port error by killing processes.
 - **The first line of a spawned model's description is exactly `[<unit name>]`.** `board.py` groups models into
   units by it (`UNIT_RE`). Put anything else (datasheets, tooltips) after that line.
 - **Army tags live in GM Notes:** `army.py:<list title>` or `recreate:<scene>:Red|Blue`. Keep them there.
@@ -60,7 +62,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
   is just another importer. BSData test data is made up in its schema (`tests/fixtures/bsdata/`), not copied.
 - **Tests run without TTS.** Put new logic where it can be tested offline, and add tests for it.
 - **New tools go in `app/tools/<name>/`**, added to `TOOLS` in `app/server.py`. Make routers with
-  `app.core.api.router()` so errors reach the page the same way, and hold `app.core.tts.lock` around TTS calls.
+  `app.core.api.router()` so errors reach the page the same way, and hold `app.core.tts.lock` around a run of TTS calls that must not interleave with another request's (spawning, LCT setup).
 - Match the surrounding code: module docstrings with usage at the top, sparse comments that say why.
   User-facing text (README, UI) is plain and direct.
 

@@ -24,8 +24,8 @@ models more than 2" from each other are separate units, and "1" is the one
 nearest the +z edge. A leader and its bodyguard are separate datasheets, so
 they are separate units here. Units out of coherency are flagged.
 
-Like the other command-line tools, this needs the bridge's listener port, so
-stop the web app first.
+Like the other command-line tools, this runs with or without the web app: when
+the app is up it sends its Lua through the app.
 """
 
 import argparse
