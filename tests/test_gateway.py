@@ -122,6 +122,22 @@ def test_events_stream_what_tts_prints(game):
     assert not tts_bridge.listeners
 
 
+def test_timeouts_that_would_hang_are_refused_or_clamped(game, monkeypatch):
+    """NaN and inf would make a call wait for ever, holding a hub worker thread (#86)."""
+    client = TestClient(server.create_app())
+    r = client.post("/api/tts/lua", content='{"script": "return x -- silent", "timeout": NaN}',
+                    headers={"Content-Type": "application/json"})
+    assert r.status_code == 400 and "timeout" in r.json()["error"]
+    assert not tts_bridge.waiting
+    with pytest.raises(ValueError):
+        tts_bridge.execute("return x", float("inf"))
+    seen = []
+    monkeypatch.setattr(tts_bridge, "execute", lambda script, timeout: seen.append(timeout) or {"ok": True, "result": 1})
+    for asked in (1e9, 0, -5, 3):
+        client.post("/api/tts/lua", json={"script": "return 1", "timeout": asked})
+    assert seen == [600, 0.1, 0.1, 3]
+
+
 def test_cli_forwards_through_the_hub(game):
     """With the hub holding the reply port, a CLI tool in its own process
     binds nothing and still gets its answer."""
