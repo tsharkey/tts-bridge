@@ -86,13 +86,19 @@ def test_lines_for_problems():
 
 def test_draw_and_clear_send_lua(monkeypatch):
     sent = []
-    monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: sent.append(script) or 3)
+    monkeypatch.setattr(tts_bridge, "execute", lambda script, timeout=None: sent.append(script) or {"ok": True, "result": 3})
     lines = [{"points": [[0, 1, 0], [1, 1, 0]], "color": [1, 0, 0], "thickness": 0.1, "loop": False}]
     assert overlays.draw(lines) == 3
     script = sent[-1]
     assert json.dumps(json.dumps(lines)) in script and overlays.HELPER_NOTES in script
     assert "Global.setVectorLines" not in script and "positionToLocal" in script   # only our helper's lines
     assert overlays.clear() == 3 and "destruct" in sent[-1] and overlays.HELPER_NOTES in sent[-1]
+    # TTS failing (it can stop spawning objects) is an error, not "0 lines drawn"
+    monkeypatch.setattr(tts_bridge, "execute", lambda script, timeout=None: {"ok": False, "error": "No response from TTS."})
+    with pytest.raises(ValueError, match="Couldn't draw on the table: No response"):
+        overlays.draw(lines)
+    with pytest.raises(ValueError, match="Couldn't clear the lines"):
+        overlays.clear()
 
 
 @pytest.mark.skipif(not shutil.which("luajit"), reason="LuaJIT isn't installed")

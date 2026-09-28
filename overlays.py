@@ -4,6 +4,7 @@ overlays.py — draw line of sight and threat ranges on the TTS table itself, as
     import overlays
     overlays.show(state, unit_index, ["los", "charge"])   # state: board_summary's data (app.mcp_server.table)
     overlays.clear()
+    overlays.draw(overlays.shape_lines(shapes, y))   # Claude's highlights (app/mcp_server/shared.py)
 
 The lines hang off one helper object tts-bridge spawns under the table (locked, not
 interactable), never off Global, so the table's own lines and other mods' are left alone,
@@ -156,16 +157,63 @@ def lines_for(state, i, show, bands=(), dice="max"):
     return out
 
 
+COLOUR_NAMES = {"red": [1.0, 0.36, 0.36], "blue": [0.29, 0.66, 1.0], "green": [0.31, 0.9, 0.48],
+                "yellow": [1.0, 0.82, 0.29], "orange": [1.0, 0.55, 0.26], "purple": [0.76, 0.55, 1.0],
+                "cyan": [0.29, 0.84, 0.84], "white": [1.0, 1.0, 1.0]}
+
+
+def colour(name):
+    """A colour name (COLOUR_NAMES) or "#rrggbb" as TTS's [r, g, b]; yellow when unknown."""
+    if isinstance(name, str) and len(name) == 7 and name.startswith("#"):
+        try:
+            return [int(name[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+        except ValueError:
+            pass
+    return COLOUR_NAMES.get(name or "", COLOUR_NAMES["yellow"])
+
+
+def shape_lines(shapes, y):
+    """Claude's highlights (app/mcp_server/shared.py resolves them: units to their outline)
+    as vector lines at height y."""
+    out = []
+    for sh in shapes:
+        c, lift = colour(sh.get("color")), y + 0.1
+        if sh["kind"] == "unit":
+            out += [{"points": lifted(arc, lift), "color": c, "thickness": 0.14, "loop": False}
+                    for arc in sh["outline"] if len(arc) > 1]
+        elif sh["kind"] in ("point", "circle"):
+            r = sh.get("r") or 0.8
+            [loop] = ring_outline([(sh["x"], sh["z"], r)], steps=48)
+            out.append({"points": lifted(loop, lift), "color": c, "thickness": 0.12, "loop": False})
+            if sh["kind"] == "point":
+                out += [{"points": lifted([(sh["x"] - r, sh["z"]), (sh["x"] + r, sh["z"])], lift), "color": c,
+                         "thickness": 0.1, "loop": False},
+                        {"points": lifted([(sh["x"], sh["z"] - r), (sh["x"], sh["z"] + r)], lift), "color": c,
+                         "thickness": 0.1, "loop": False}]
+        else:   # line, area
+            out.append({"points": lifted(sh["points"], lift), "color": c, "thickness": 0.12,
+                        "loop": sh["kind"] == "area"})
+    return out
+
+
+def run(script, doing, timeout):
+    """Run Lua in the game; a failure is a ValueError saying what couldn't be done and why."""
+    answer = tts.execute(script, timeout=timeout)
+    if not answer["ok"]:
+        raise ValueError(f"Couldn't {doing} on the table: {answer['error']}")
+    return int(answer["result"] or 0)
+
+
 def draw(lines):
     """Replace what tts-bridge has drawn on the table with these lines. -> lines drawn."""
     script = DRAW_LUA % {"lines": json.dumps(json.dumps(lines)), "notes": HELPER_NOTES,
                          "script": tts.lua_str(HELPER_SCRIPT), "below": -10}
-    return int(tts.run_lua(script, timeout=30) or 0)
+    return run(script, "draw", 30)
 
 
 def clear():
     """Remove everything tts-bridge has drawn on the table. -> helpers removed."""
-    return int(tts.run_lua(CLEAR_LUA, timeout=10) or 0)
+    return run(CLEAR_LUA, "clear the lines", 10)
 
 
 def show(state, i, show, profile=None, dice="max"):
