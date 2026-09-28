@@ -9,8 +9,8 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
   offers for a matchup, with `layouts/index.json` listing them; LCT's raw data isn't. Read one with
   `layouts.load(id)`. `python3 layouts.py check` compares the layout loaded in TTS with its file.
 - **Read by** `board.py` (`layouts.identify` names the layout on the table, and units get its areas and
-  objectives) and the MCP `board_summary` tool; (planned) the LOS engine (#24), threat ranges (#25), the vision phantom checks (#5), the board
-  view (#26) and the deployment skill.
+  objectives), the MCP `board_summary` tool and the LOS engine (`los.py`); (planned) threat ranges (#25),
+  the vision phantom checks (#5), the board view (#26) and the deployment skill.
 - **Sample:** [`tests/fixtures/formats/layout.json`](../../tests/fixtures/formats/layout.json), checked by
   `tests/test_formats.py`; `tests/test_layouts.py` checks every file in `layouts/` the same way.
 

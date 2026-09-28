@@ -14,6 +14,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `tts_bridge.py` | Talks to TTS: `run_lua()` sends Lua on port 39999 and waits for its reply on 39998, or forwards it to the hub when the hub holds 39998. |
 | `army.py` | Parses army lists (GW app export, `+++` format), matches them to Force Org models, spawns them, writes Saved Objects. |
 | `board.py` | Reads the table as units and terrain, measures between units, places a unit in formation. |
+| `los.py` | Line of sight from layout terrain, in 2D and offline: model to model, unit to unit (Hidden, Plunging Fire), and the table a model can see. |
 | `recreate.py` | Rebuilds a board state from a scene (unit positions per army). |
 | `app/server.py` | The hub: mounts the shared routes and each tool (`TOOLS`), serves the homepage. |
 | `app/core/` | Shared by every tool: TTS access, its lock and the event stream (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
