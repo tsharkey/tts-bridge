@@ -24,7 +24,9 @@ MODULES = [status, table]
 INSTRUCTIONS = """Tools for a Warhammer 40,000 game in Tabletop Simulator (TTS), through the
 tts-bridge hub running on this computer. Coordinates are table inches, 0,0 at the centre, x along
 the 60" edge (-30..30), z along the 44" edge (-22..22); facing in degrees, 0 = +z, 90 = +x.
-Call status first if a tool says TTS isn't reachable."""
+Call status first if a tool says TTS isn't reachable. There's no line-of-sight tool yet: board_summary
+gives terrain footprints, categories and heights, not what a model can see, so say so rather than
+judging visibility from them."""
 
 
 def errors_to_claude(fn):

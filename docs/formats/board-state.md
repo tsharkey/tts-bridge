@@ -45,7 +45,9 @@ The table as it is right now, read from TTS: each army's units and where they st
   ],
   "terrain": [
     {
-      "name": "Ruin (large)",       // the object's name, or its TTS type when it has none
+      "name": "Ruin (large)",       // the object's name; unnamed flat pieces (LCT's area mats) are "Terrain area",
+                                    // with the objective LCT tags them as ("Terrain area (red home objective)");
+                                    // anything else unnamed is its TTS type
       "guid": "t-A1a",
       "kind": "terrain",            // terrain (locked objects that aren't models) | zone (scripting zones)
       "x": 0.5, "z": 0.5,           // centre of its bounds

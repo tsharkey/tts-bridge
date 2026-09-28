@@ -170,3 +170,14 @@ def test_long_bases_measure_as_boxes():
     assert board.base_gap(outside, ZONE) == 4.5
     assert board.point_gap(long_base(0, 0), (3, 0)) == 1       # a marker 1" past the base's end
     assert board.point_gap(long_base(0, 0), (1, 0.2)) == 0     # under the base
+
+
+def test_unnamed_terrain_areas_are_named():
+    """LCT's area mats have no name and are "Board"s to TTS; they read as terrain areas, not "Board"."""
+    def piece(guid, height, tags=(), name=""):
+        return {"guid": guid, "tag": "Board", "name": name, "head": "", "notes": "", "locked": True, "rot": 0,
+                "p": [5, 1, 5], "c": [5, 1, 5], "s": [6, height, 4], "tags": list(tags)}
+    terrain = board.collect_terrain([piece("a", 0.0), piece("b", 0.0, ["obj_home_red"]),
+                                     piece("c", 0.0, ["obj_neutral"]), piece("d", 3.0), piece("e", 0.0, name="Crater")])
+    assert [t["name"] for t in terrain] == ["Terrain area", "Terrain area (red home objective)",
+                                            "Terrain area (expansion objective)", "Board", "Crater"]

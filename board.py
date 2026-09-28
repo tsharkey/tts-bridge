@@ -235,6 +235,18 @@ def table_surface(objs):
     return ys[len(ys) // 2] if ys else 0.0
 
 
+def area_name(o):
+    """What to call an unnamed flat piece: a terrain area's mat (LCT's have no name, and are
+    "Board"s to TTS), with the objective LCT tags it as, if any. None for anything else."""
+    if o["tag"] == "Scripting" or o["s"][1] >= layouts.FLAT:
+        return None
+    objective = next((layouts.OBJECTIVE_TAGS[t] for t in tags_of(o) if t in layouts.OBJECTIVE_TAGS), None)
+    if not objective:
+        return "Terrain area"
+    kind, side = objective
+    return f"Terrain area ({side + ' ' if side else ''}{kind} objective)"
+
+
 def collect_terrain(objs):
     """Terrain features, terrain-area mats and scripting zones on the table.
     `height` is the top of the object above the playing surface."""
@@ -249,7 +261,7 @@ def collect_terrain(objs):
         if o["tag"] != "Scripting" and not o["locked"]:
             continue  # loose tokens and markers; terrain in LCT and most tables is locked
         cx, cy, cz = o["c"]
-        out.append({"name": o["name"] or o["tag"], "guid": o["guid"], "kind": "zone" if o["tag"] == "Scripting" else "terrain",
+        out.append({"name": o["name"] or area_name(o) or o["tag"], "guid": o["guid"], "kind": "zone" if o["tag"] == "Scripting" else "terrain",
                     "x": round(cx, 1), "z": round(cz, 1), "w": round(sx, 1), "d": round(sz, 1),
                     "height": round(cy + sy / 2 - surface, 1),
                     "box": [round(cx - sx / 2, 2), round(cx + sx / 2, 2), round(cz - sz / 2, 2), round(cz + sz / 2, 2)]})
