@@ -4,7 +4,9 @@ sheetviewer.py — the datasheet viewer script spawned models carry.
 Right-click a model and choose **Datasheet** (or hover it and press the key
 bound to "Show datasheet" in TTS's Options > Game Keys) to open a floating,
 scrollable, draggable window with its unit's whole datasheet (tooltips.card_text),
-shown only to the player who opened it.
+shown only to the player who opened it. **Show threat range**, **Show line of
+sight** and **Clear overlays** ask the hub to draw on the table (overlays.py),
+through sendExternalMessage({ttsBridge = "overlay", ...}).
 
     import sheetviewer
     sheetviewer.attach(obj, unit_name, card_text)   # adds the script to a spawned object
@@ -70,6 +72,10 @@ local ttsbEarlierOnLoad = onLoad  -- the model's own script, if it had one
 function onLoad(state)
   if ttsbEarlierOnLoad then ttsbEarlierOnLoad(state) end
   self.addContextMenuItem("Datasheet", function(color) ttsBridgeShow({color = color}) end)
+  -- drawn by the tts-bridge hub (overlays.py), when it's running
+  self.addContextMenuItem("Show threat range", function(color) ttsBridgeOverlay(color, "threat") end)
+  self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
+  self.addContextMenuItem("Clear overlays", function(color) ttsBridgeOverlay(color, "clear") end)
   -- one "Show datasheet" hotkey per game, from whichever model loads first
   local owner = Global.getVar("ttsBridgeHotkey")
   if owner == nil or getObjectFromGUID(owner) == nil then
@@ -101,6 +107,10 @@ function ttsBridgeShow(params)
   table.insert(xml, ttsbPanel)  -- beside the table's own UI, not instead of it
   UI.setXmlTable(xml)
   Wait.frames(fill, 3)          -- the new UI is built over the next frames
+end
+
+function ttsBridgeOverlay(color, show)
+  sendExternalMessage({ttsBridge = "overlay", guid = self.getGUID(), show = show, color = color})
 end
 
 function ttsBridgeClose(player, value, id)

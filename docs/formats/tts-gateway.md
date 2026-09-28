@@ -47,6 +47,10 @@ Server-sent events: everything TTS sends that isn't a reply to `/api/tts/lua`, a
 
 - `run_lua` wraps the script so its result comes back as `sendExternalMessage({reply = <id>, ok, result})`;
   messages with a `reply` field are replies and never appear on the event stream. Mods shouldn't use `reply`.
+- Messages whose `customMessage` has a `ttsBridge` field are requests from tts-bridge's own scripts on spawned
+  models, handled by the hub (`tts_bridge.commands`), and never appear on the event stream either. So far:
+  `{"ttsBridge": "overlay", "guid": "a1b2c3", "show": "threat" | "los" | "clear", "color": "Red"}`, from the
+  right-click menu (`sheetviewer.py`), drawn by `app/mcp_server/overlay.py`. Mods shouldn't use `ttsBridge`.
 - The routes don't hold `app.core.tts.lock`; a hub tool holds it around a run of calls that mustn't interleave
   with another request's.
 - Changing an endpoint or message shape needs its own PR or a Discussion (see CONTRIBUTING.md).

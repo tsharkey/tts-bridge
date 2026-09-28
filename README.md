@@ -107,6 +107,11 @@ it). You can also bind a key to **Show datasheet** in TTS's Options → Game Key
 model. The datasheet travels with the model, in a small script on it. **Datasheet** on a unit in Scribe shows
 the same text. `army.py build` and **Board from image** give models the same tooltips and datasheets.
 
+With the web app running, the same right-click menu has **Show threat range** (the unit's move, advance and
+charge, drawn as rings on the table), **Show line of sight** (what it can see, and a line to each enemy model it
+sees) and **Clear overlays**. Everyone at the table sees the lines. They're drawn on a hidden helper object, not
+on the table's own lines, and are gone when a save is loaded.
+
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.
 - **Spawn on the table** places it in the running game, top-left corner at x, z (table inches), rows up to the
@@ -225,8 +230,11 @@ Claude Code or Claude Desktop's chat. Its tools so far:
   advance, charge and each gun's range, measured from its bases' edges.
 - `can_reach`: what one unit can do to another this turn (the charge roll it needs and its chance, which guns are
   in range now, after moving or after advancing, and whether it can see the target), or which enemy units a unit
-  can reach, or which can reach it. Distances are straight lines: terrain in the way isn't counted. Tools only run while the web app is
-up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
+  can reach, or which can reach it. Distances are straight lines: terrain in the way isn't counted.
+- `show_on_table` / `clear_table_overlays`: draw a unit's line of sight and threat ranges on the TTS table for
+  everyone to see, so Claude can show what it's talking about, and remove them.
+
+Tools only run while the web app is up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 
 **Claude Code** (with the web app running):

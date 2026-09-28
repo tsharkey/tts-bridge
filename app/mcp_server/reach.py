@@ -93,6 +93,18 @@ def weapons_carried(units):
     return {id(u): weapon_names([o["guid"] for o in u["models"]], found) for u in units}
 
 
+def row_profile(row, sheets=None, live=True):
+    """(threat profile, where its weapons came from) for a board_summary unit row: its datasheet
+    from its tts-bridge:sheet: tag, and on the live table the weapons its models' tooltips list."""
+    sheets = data.datasheets_by_id() if sheets is None else sheets
+    sheet = sheets.get(row["datasheet"]) if row["datasheet"] else None
+    if not sheet:
+        raise ValueError(f"{row['unit']} has no cached datasheet"
+                         + ("" if row["datasheet"] else " (it wasn't spawned by tts-bridge)") + ".")
+    names = weapon_names(row["guids"], descriptions(row["guids"])) if live else []
+    return (threat.profile(sheet, weapons=names), "models") if names else (threat.profile(sheet), "datasheet defaults")
+
+
 def profiles(units, sheets, carried):
     """{id(unit): (threat profile, where its weapons came from)} for the units with a datasheet."""
     out = {}

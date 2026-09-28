@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 import tts_bridge as tts  # noqa: E402
 from app import mcp_server  # noqa: E402
+from app.mcp_server import overlay  # noqa: E402
 from app.core.api import shared  # noqa: E402
 from app.tools import board, board_replay, data, models, scribe  # noqa: E402
 
@@ -64,8 +65,13 @@ def create_app(hosts=None):
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
-        async with mcp.session_manager.run():
-            yield
+        # spawned models' right-click "Show threat range" / "Show line of sight" (sheetviewer.py)
+        tts.commands["overlay"] = overlay.menu_request
+        try:
+            async with mcp.session_manager.run():
+                yield
+        finally:
+            tts.commands.pop("overlay", None)
 
     app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if hosts:

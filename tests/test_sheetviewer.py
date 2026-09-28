@@ -17,7 +17,9 @@ local log = {}
 local function note(k, v) table.insert(log, k .. "=" .. tostring(v)) end
 self = {guid = "abc123"}
 function self.getGUID() return "abc123" end
-function self.addContextMenuItem(label, fn) note("menu", label); self.menuFn = fn end
+self.menus = {}
+function self.addContextMenuItem(label, fn) note("menu", label); self.menus[label] = fn end
+function sendExternalMessage(t) note("external", t.ttsBridge .. ":" .. t.guid .. ":" .. t.show .. ":" .. t.color) end
 local vars = {}
 Global = {getVar = function(k) return vars[k] end, setVar = function(k, v) vars[k] = v end}
 local xml = {{tag = "Panel", attributes = {id = "lctStartMenu"}}}
@@ -36,7 +38,10 @@ function addHotkey(label, fn) note("hotkey", label) end
 %s
 
 onLoad("saved state")
-self.menuFn("Red")
+self.menus["Datasheet"]("Red")
+self.menus["Show threat range"]("Green")
+self.menus["Show line of sight"]("Green")
+self.menus["Clear overlays"]("Green")
 ttsBridgeShow({color = "Blue"})
 ttsBridgeClose(nil, nil, nil)
 onLoad("again")  -- another model loading: no second hotkey
@@ -73,6 +78,9 @@ def test_script_runs_in_lua(tmp_path):
     assert run.returncode == 0, run.stderr
     log = run.stdout.splitlines()
     assert log.count("menu=Datasheet") == 2 and log.count("hotkey=Show datasheet") == 1
+    # the overlay items ask the hub to draw (app/mcp_server/overlay.py menu_request)
+    assert [line for line in log if line.startswith("external=")] == [
+        "external=overlay:abc123:threat:Green", "external=overlay:abc123:los:Green", "external=overlay:abc123:clear:Green"]
     # the first opening adds the window beside the mod's own UI; the second reuses it
     assert log.count("setXmlTable=2") == 1 and "panels=2" in log and "first panel=lctStartMenu" in log
     assert "value:ttsBridgeSheetTitle=Crisis Sunforge Battlesuits" in log

@@ -36,6 +36,7 @@ hub = None              # the web app's URL while we forward through it, else No
 waiting = {}            # reply id -> queue for the run_lua call waiting on it
 waiting_lock = threading.Lock()
 listeners = []          # callables given everything TTS sends that isn't a reply
+commands = {}           # name -> handler for sendExternalMessage({ttsBridge = name, ...}) from our own scripts
 
 
 def start_listener():
@@ -116,6 +117,10 @@ def dispatch(msg):
         if q:
             q.put_nowait(custom)
         return  # a reply nobody waits for any more (it timed out)
+    handler = commands.get(custom.get("ttsBridge")) if msg.get("messageID") == 4 and isinstance(custom, dict) else None
+    if handler:   # in its own thread: it will want to run Lua, whose reply comes through here
+        threading.Thread(target=handler, args=(custom,), daemon=True).start()
+        return
     for listener in list(listeners) or [handle_passive]:
         try:
             listener(msg)
