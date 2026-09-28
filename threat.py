@@ -7,6 +7,7 @@ datasheet (docs/formats/datasheet.md), measured from the edges of its models' ba
     threat.bands(p)                               # move, advance, charge and weapon reach, in inches
     threat.threats(p, gap=9.5)                    # what it can do to a unit 9.5" away, base to base
     threat.bubbles(models, 12)                    # circles whose union is everything within 12" of the unit
+    threat.model_bands(datasheet_unit, "Intercessor Sergeant")   # one model's move, advance, charge
 
 Distances are base edge to base edge: a unit threatens everything within its reach of any
 of its models' bases, so the area is the union of each base grown by the reach (bubbles).
@@ -83,6 +84,16 @@ def bands(p):
             out.append({"band": f"advance and shoot: {w['name']}", "avg": m + D6[0] + w["range"],
                         "max": m + D6[1] + w["range"]})
     return out
+
+
+def model_bands(sheet, sheet_model=None):
+    """How far one model reaches from its base's edge, for the rings a spawned model can show
+    (sheetviewer.py): [{"band", "reach"}] for move, advance and charge at their maximum, from
+    that datasheet model's Move (the unit's slowest when it isn't known). Empty for a model
+    that can't move."""
+    sm = next((m for m in sheet["models"] if m["name"] == sheet_model), None)
+    p = profile({"name": sheet["name"], "models": [sm] if sm else sheet["models"]}, weapons=[])
+    return [{"band": b["band"], "reach": b["max"]} for b in bands(p)[:3]]
 
 
 def charge_chance(needed):

@@ -4,14 +4,18 @@ sheetviewer.py — the datasheet viewer script spawned models carry.
 Right-click a model and choose **Datasheet** (or hover it and press the key
 bound to "Show datasheet" in TTS's Options > Game Keys) to open a floating,
 scrollable, draggable window with its unit's whole datasheet (tooltips.card_text),
-shown only to the player who opened it. **Show threat range**, **Show line of
-sight** and **Clear overlays** ask the hub to draw on the table (overlays.py),
-through sendExternalMessage({ttsBridge = "overlay", ...}). A model with more
+shown only to the player who opened it. **Threat range on/off** (or the hotkey
+of that name) rings the model with how far it moves, advances and charges, from
+its base's edge: lines on the model itself, so they go where it goes, worked out
+when it was spawned (tooltips.reach), with no hub needed. **Show line of sight**
+asks the hub to draw on the table (overlays.py), through
+sendExternalMessage({ttsBridge = "overlay", ...}); **Clear overlays** turns off
+every model's rings and the hub's lines. A model with more
 than one wound is named "[<left>/<max>] <name>" (tooltips.py): **Take a wound** and
 **Heal a wound** in its menu, or the hotkeys of those names, count them.
 
     import sheetviewer
-    sheetviewer.attach(obj, unit_name, card_text)   # adds the script to a spawned object
+    sheetviewer.attach(obj, unit_name, card_text, reach)   # adds the script to a spawned object
 
 The text lives in the model's own script. The window is one shared panel, added
 to the game's screen UI beside whatever the table already has (not replacing
@@ -21,6 +25,7 @@ it: ours goes after it and calls its onLoad first.
 
 import re
 
+import overlays
 import tts_bridge as tts
 
 PANEL_ID = "ttsBridgeSheet"
@@ -70,6 +75,7 @@ SCRIPT = """%(marker)s: right-click > Datasheet, or the "Show datasheet" hotkey
 TTSB_TITLE = %(title)s
 TTSB_SHEET = %(sheet)s
 TTSB_HAS_SHEET = true
+TTSB_REACH = %(reach)s   -- {base = radius, bands = {{reach, color}}}: the threat rings, or nil
 
 local ttsbPanel = %(panel)s
 
@@ -77,10 +83,17 @@ local ttsbEarlierOnLoad = onLoad  -- the model's own script, if it had one
 function onLoad(state)
   if ttsbEarlierOnLoad then ttsbEarlierOnLoad(state) end
   self.addContextMenuItem("Datasheet", function(color) ttsBridgeShow({color = color}) end)
+  if TTSB_REACH then
+    self.addContextMenuItem("Threat range on/off", function() ttsBridgeThreat({}) end)
+  end
   -- drawn by the tts-bridge hub (overlays.py), when it's running
-  self.addContextMenuItem("Show threat range", function(color) ttsBridgeOverlay(color, "threat") end)
   self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
-  self.addContextMenuItem("Clear overlays", function(color) ttsBridgeOverlay(color, "clear") end)
+  self.addContextMenuItem("Clear overlays", function(color)
+    for _, o in ipairs(getObjects()) do
+      if o.getVar("TTSB_REACH") then o.call("ttsBridgeThreat", {on = false}) end
+    end
+    ttsBridgeOverlay(color, "clear")
+  end)
   -- the wound tracker, on models named "[<left>/<max>] <name>" (tooltips.py); the menu stays open
   if ttsbWounds() then
     self.addContextMenuItem("Take a wound", function() ttsBridgeWound({change = -1}) end, true)
@@ -92,6 +105,9 @@ function onLoad(state)
     Global.setVar("ttsBridgeHotkey", self.guid)
     addHotkey("Show datasheet", function(color, hovered)
       if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeShow", {color = color}) end
+    end)
+    addHotkey("Threat range on/off", function(color, hovered)
+      if hovered ~= nil and hovered.getVar("TTSB_REACH") then hovered.call("ttsBridgeThreat", {}) end
     end)
     addHotkey("Take a wound", function(color, hovered)
       if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeWound", {change = -1}) end
@@ -141,6 +157,32 @@ function ttsBridgeWound(params)
   self.setName("[" .. left .. "/" .. most .. "] " .. rest)
 end
 
+-- the threat rings: on, off, or (on = nil) the other way round. Lines on the model itself,
+-- so they move with it; a ring is its reach out from the base's edge, at the base.
+local ttsbRingsOn = false
+function ttsBridgeThreat(params)
+  local on = params and params.on
+  if on == nil then on = not ttsbRingsOn end
+  ttsbRingsOn = on
+  if not on then
+    self.setVectorLines({})
+    return
+  end
+  local b = self.getBounds()
+  local base = TTSB_REACH.base or (b.size.x + b.size.z) / 4
+  local y = b.center.y - b.size.y / 2 + 0.05
+  local lines = {}
+  for _, band in ipairs(TTSB_REACH.bands) do
+    local points, r = {}, base + band.reach
+    for k = 0, 72 do
+      local a = 2 * math.pi * k / 72
+      table.insert(points, self.positionToLocal({b.center.x + r * math.cos(a), y, b.center.z + r * math.sin(a)}))
+    end
+    table.insert(lines, {points = points, color = band.color, thickness = 0.12})
+  end
+  self.setVectorLines(lines)
+end
+
 function ttsBridgeOverlay(color, show)
   sendExternalMessage({ttsBridge = "overlay", guid = self.getGUID(), show = show, color = color})
 end
@@ -151,17 +193,28 @@ end
 """
 
 
-def script(title, card_text):
-    """The viewer script for one model, with its unit's datasheet in it."""
+def reach_lua(reach):
+    """tooltips.reach as the Lua table TTSB_REACH, each band in its overlay colour; nil
+    for a model with nothing to ring."""
+    if not reach or not reach.get("bands"):
+        return "nil"
+    bands = ", ".join(f"{{reach = {b['reach']:g}, color = {{{', '.join(f'{c:g}' for c in overlays.COLOURS[b['band']])}}}}}"
+                      for b in reach["bands"])
+    return f"{{base = {'nil' if reach['base'] is None else format(reach['base'], 'g')}, bands = {{{bands}}}}}"
+
+
+def script(title, card_text, reach=None):
+    """The viewer script for one model, with its unit's datasheet in it, and its reach
+    (tooltips.reach) for its threat rings."""
     return SCRIPT % {"marker": MARKER, "title": tts.lua_str(title), "sheet": tts.lua_str(rich_text(card_text)),
-                     "panel": PANEL_LUA, "id": PANEL_ID}
+                     "panel": PANEL_LUA, "id": PANEL_ID, "reach": reach_lua(reach)}
 
 
-def attach(obj, unit_name, card_text):
+def attach(obj, unit_name, card_text, reach=None):
     """Give a spawned object the viewer, after any script it already has
     (replacing an earlier viewer of ours)."""
     own = obj.get("LuaScript") or ""
     if MARKER in own:
         own = own[:own.index(MARKER)]
-    obj["LuaScript"] = (own.rstrip() + "\n\n" if own.strip() else "") + script(unit_name, card_text)
+    obj["LuaScript"] = (own.rstrip() + "\n\n" if own.strip() else "") + script(unit_name, card_text, reach)
     return obj

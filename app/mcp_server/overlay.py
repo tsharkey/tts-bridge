@@ -14,7 +14,7 @@ from app.core import tts
 from app.mcp_server import reach, table
 from app.mcp_server.table import UnitRef
 
-THREAT = ["move", "advance", "charge"]   # what the right-click menu's "Show threat range" draws
+THREAT = ["move", "advance", "charge"]   # "Show threat range" on models spawned before they had their own rings
 
 
 class Shown(TypedDict):
@@ -54,10 +54,11 @@ def show_on_table(unit: str, show: list[str] | None = None, army: str | None = N
     enemy model the unit sees: green fully, yellow partly), "move", "advance", "charge", and
     "shoot: <weapon>" for its ranged weapons (names as threat_ranges lists them); default
     ["los"]. Bands are rings round the whole unit at that reach from its bases' edges. dice:
-    "max" or "avg" for advance and charge. The bands follow the unit's models as players move
-    them, and the line of sight is redrawn when they or the enemy move. Lines stay until
+    "max" or "avg" for advance and charge. Bands are drawn where the unit is now; the line of
+    sight is redrawn when its models or the enemy's move. Lines stay until
     clear_table_overlays, anything else is drawn, or a save is loaded; only tts-bridge's own
-    lines are touched."""
+    lines are touched. (Players can also ring a single model with its threat range from its
+    right-click menu; clear_table_overlays turns those off too.)"""
     if dice not in ("max", "avg"):
         raise ToolError('dice is "max" or "avg".')
     with tts.lock:

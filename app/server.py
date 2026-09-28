@@ -65,7 +65,7 @@ def create_app(hosts=None):
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
-        # spawned models' right-click "Show threat range" / "Show line of sight" (sheetviewer.py)
+        # spawned models' right-click "Show line of sight" and "Clear overlays", and the overlay helper (sheetviewer.py, overlays.py)
         tts.commands["overlay"] = overlay.menu_request
         try:
             async with mcp.session_manager.run():

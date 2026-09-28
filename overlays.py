@@ -11,9 +11,8 @@ interactable), never off Global, so the table's own lines and other mods' are le
 and clearing just removes the helper. Its script removes it when a save is loaded, so
 nothing drawn outlives the session it was drawn in.
 
-Threat bands follow their unit: the helper's script redraws them round the models, several
-times a second, as they're moved. Line of sight needs the layout's terrain, which only the
-hub has, so the helper reports moves of the unit's models and the enemy's to the hub
+Line of sight is kept up to date as models move. It needs the layout's terrain, which only
+the hub has, so the helper reports moves of the unit's models and the enemy's to the hub
 (sendExternalMessage({ttsBridge = "overlay", show = "moved", ...}), app/mcp_server/overlay.py),
 and the hub redraws it (moved) from the table it read when it was asked.
 
@@ -43,18 +42,16 @@ COLOURS = {"move": [0.31, 0.77, 0.48], "advance": [0.91, 0.71, 0.24], "charge": 
 SHOTS = [[0.7, 0.55, 1.0], [0.29, 0.84, 0.84], [1.0, 0.36, 0.62], [0.6, 0.82, 0.29], [1.0, 0.82, 0.29]]
 
 HELPER_SCRIPT = r"""-- tts-bridge overlays: line of sight and threat ranges drawn by tts-bridge (overlays.py).
--- Threat bands follow their unit: this script redraws them as its models move. Line of
--- sight is the hub's to work out: this script tells it when the models it watches move.
+-- Line of sight is the hub's to work out (it needs the layout's terrain): this script
+-- tells it when the models it watches move, and the hub redraws it.
 -- Removed when a save is loaded, so nothing it draws outlives the session.
 TTSB_OVERLAYS = 2      -- this script's version: the hub replaces a helper with an older one
 
 local fixed = {}       -- lines as the hub drew them, in table coordinates
-local follow = nil     -- threat bands: {y, models = {{guid, r}}, bands = {{reach, color, thickness}}}
 local watch = nil      -- line of sight: {guids = {...}}, whose moves go to the hub
 local seen = {}        -- guid -> where it was when last looked at
 local moved = false    -- watched models moved since the hub was last told
 local quiet = 0        -- ticks since the hub was last told
-local STEPS = 72       -- points round a full circle
 local EVERY = 3        -- ticks (0.1s) between line-of-sight updates while models move
 
 function onSave() return "saved" end
@@ -65,44 +62,6 @@ function onLoad(state)
   Wait.time(ttsbTick, 0.1, -1)
 end
 
--- the outline of a union of circles {{x, z, r}}: each circle's arcs not inside another
--- (overlays.ring_outline)
-function ttsbOutline(circles)
-  local out = {}
-  for i, c in ipairs(circles) do
-    local pts, keep, some, every = {}, {}, false, true
-    for k = 1, STEPS do
-      local a = 2 * math.pi * (k - 1) / STEPS
-      local x, z = c[1] + c[3] * math.cos(a), c[2] + c[3] * math.sin(a)
-      local inside = false
-      for j, o in ipairs(circles) do
-        if j ~= i and math.sqrt((x - o[1]) ^ 2 + (z - o[2]) ^ 2) < o[3] - 1e-6 then inside = true break end
-      end
-      pts[k], keep[k] = {x, z}, not inside
-      some, every = some or not inside, every and not inside
-    end
-    if every then
-      table.insert(pts, pts[1])
-      table.insert(out, pts)
-    elseif some then
-      local start = 1
-      while keep[start] do start = start + 1 end   -- walk from a hidden point
-      local arc = {}
-      for k = 1, STEPS do
-        local idx = (start - 1 + k) % STEPS + 1
-        if keep[idx] then
-          table.insert(arc, pts[idx])
-        elseif #arc > 0 then
-          table.insert(out, arc)
-          arc = {}
-        end
-      end
-      if #arc > 0 then table.insert(out, arc) end
-    end
-  end
-  return out
-end
-
 local function here(guid)
   local o = getObjectFromGUID(guid)
   if o == nil then return nil end
@@ -110,68 +69,43 @@ local function here(guid)
 end
 
 function ttsbDraw()
-  local function relative(x, y, z) return self.positionToLocal({x, y, z}) end
   local drawn = {}
   for _, line in ipairs(fixed) do
     local points = {}
-    for _, p in ipairs(line.points) do table.insert(points, relative(p[1], p[2], p[3])) end
+    for _, p in ipairs(line.points) do table.insert(points, self.positionToLocal(p)) end
     table.insert(drawn, {points = points, color = line.color, thickness = line.thickness, loop = line.loop})
-  end
-  if follow then
-    for _, band in ipairs(follow.bands) do
-      local circles = {}
-      for _, m in ipairs(follow.models) do
-        local o, b = here(m.guid)
-        if o then table.insert(circles, {b.center.x, b.center.z, m.r + band.reach}) end
-      end
-      for _, arc in ipairs(ttsbOutline(circles)) do
-        if #arc > 1 then
-          local points = {}
-          for _, p in ipairs(arc) do table.insert(points, relative(p[1], follow.y, p[2])) end
-          table.insert(drawn, {points = points, color = band.color, thickness = band.thickness})
-        end
-      end
-    end
   end
   self.setVectorLines(drawn)
   return #drawn
 end
 
--- data: {fixed = lines, follow, watch, replace}. replace: follow and watch are these (or
--- none); otherwise only the fixed lines change (the hub's line of sight, redrawn).
+-- data: {fixed = lines, watch, replace}. replace: watch is this (or none); otherwise only
+-- the lines change (the hub's line of sight, redrawn).
 function ttsbSet(data)
   if data.fixed then fixed = data.fixed end
   if data.replace then
-    follow, watch, seen, moved, quiet = data.follow, data.watch, {}, false, EVERY
+    watch, seen, moved, quiet = data.watch, {}, false, EVERY
   end
   return ttsbDraw()
 end
 
 function ttsbTick()
-  if follow == nil and watch == nil then return end
-  local followed, watched, guids = {}, {}, {}
-  if follow then for _, m in ipairs(follow.models) do followed[m.guid], guids[m.guid] = true, true end end
-  if watch then for _, g in ipairs(watch.guids) do watched[g], guids[g] = true, true end end
-  local redraw, stirred = false, false
-  for g in pairs(guids) do
+  if watch == nil then return end
+  local stirred = false
+  for _, g in ipairs(watch.guids) do
     local o, b = here(g)
     local key = o and string.format("%.2f,%.2f,%.2f", b.center.x, b.center.y, b.center.z) or "gone"
     if seen[g] ~= key then
-      if seen[g] ~= nil then
-        redraw = redraw or followed[g] == true
-        stirred = stirred or watched[g] == true
-      end
+      stirred = stirred or seen[g] ~= nil
       seen[g] = key
     end
   end
-  if redraw then ttsbDraw() end
-  -- line of sight: tell the hub at once, then every EVERY ticks while they move, and
-  -- once more when they stop
+  -- tell the hub at once, then every EVERY ticks while they move, and once more when they stop
   moved = moved or stirred
   quiet = quiet + 1
   if moved and (quiet >= EVERY or not stirred) then
     local models = {}
-    for g in pairs(watched) do
+    for _, g in ipairs(watch.guids) do
       local o, b = here(g)
       if o then
         table.insert(models, {guid = g, x = b.center.x, z = b.center.z, bottom = b.center.y - b.size.y / 2,
@@ -211,6 +145,7 @@ CLEAR_LUA = """
 local n = 0
 for _, o in ipairs(getObjects()) do
   if o.getGMNotes() == "%s" then o.destruct(); n = n + 1 end
+  if o.getVar("TTSB_REACH") then o.call("ttsBridgeThreat", {on = false}) end   -- a model's threat rings (sheetviewer.py)
 end
 return n
 """ % HELPER_NOTES
@@ -276,10 +211,9 @@ def los_lines(row, state, y):
     return out
 
 
-def lines_for(state, i, show, bands=(), dice="max", follow=False):
+def lines_for(state, i, show, bands=(), dice="max"):
     """The lines to draw for unit i of a board_summary state: `show` names "los" and bands
-    from `bands` (threat.bands for the unit), measured at their "max" or "avg". follow: leave
-    the bands out, for the helper to draw round the models as they move (follow_for)."""
+    from `bands` (threat.bands for the unit), measured at their "max" or "avg"."""
     row = state["units"][i]
     if not row["on_table"]:
         raise ValueError(f"{row['unit']} is off the table.")
@@ -287,7 +221,7 @@ def lines_for(state, i, show, bands=(), dice="max", follow=False):
     out = []
     shots = [b["band"] for b in bands if b["band"] not in COLOURS]
     for b in bands:
-        if b["band"] in show and not follow:
+        if b["band"] in show:
             colour = COLOURS.get(b["band"]) or SHOTS[shots.index(b["band"]) % len(SHOTS)]
             out += band_lines(row, b["band"], b[dice], colour, y)
     if "los" in show:
@@ -352,21 +286,6 @@ def run(script, doing, timeout):
 live = {}   # the line of sight kept up to date as models move (show, moved): {"state", "i"}
 
 
-def follow_for(state, i, show, bands, dice="max"):
-    """What the helper needs to draw unit i's threat bands in `show` round its models
-    wherever they are: {y, models: [{guid, r}], bands: [{reach, color, thickness}]}, or
-    None when no band is shown."""
-    row = state["units"][i]
-    shots = [b["band"] for b in bands if b["band"] not in COLOURS]
-    shown = [{"reach": b[dice], "thickness": 0.12,
-              "color": COLOURS.get(b["band"]) or SHOTS[shots.index(b["band"]) % len(SHOTS)]}
-             for b in bands if b["band"] in show]
-    if not shown:
-        return None
-    return {"y": round(state["surface_y"] + LIFT, 3), "bands": shown,
-            "models": [{"guid": p["guid"], "r": (p["base"][0] + p["base"][1]) / 4} for p in row["positions"]]}
-
-
 def watch_for(state, i):
     """The models whose moves change unit i's line of sight: its own, and every other
     army's on the table."""
@@ -382,13 +301,11 @@ def send(data, count):
     return run(script, "draw", 30)
 
 
-def draw(lines, follow=None, watch=None):
-    """Replace what tts-bridge has drawn on the table: `lines` where they are, `follow`
-    threat bands the helper redraws round their models as they move (follow_for), and
-    `watch`, models whose moves the helper reports to the hub (watch_for). -> lines drawn."""
+def draw(lines, watch=None):
+    """Replace what tts-bridge has drawn on the table with `lines`, and have the helper report
+    moves of `watch`'s models to the hub (watch_for). -> lines drawn."""
     live.clear()
-    return send({"fixed": lines, "follow": follow, "watch": {"guids": watch} if watch else None, "replace": True},
-                len(lines) + (len(follow["bands"]) if follow else 0))
+    return send({"fixed": lines, "watch": {"guids": watch} if watch else None, "replace": True}, len(lines))
 
 
 def moved(models):
@@ -421,13 +338,12 @@ def clear():
 
 def show(state, i, show, profile=None, dice="max"):
     """Draw `show` ("los", and band names) for unit i of a board_summary state, replacing what
-    was drawn before. The bands follow the unit's models as they move; the line of sight is
-    redrawn when they or the enemy move (moved). profile: its threat.profile, when bands
-    are asked for. -> lines drawn."""
+    was drawn before. The line of sight is redrawn when the unit or the enemy move (moved);
+    bands are drawn where the unit is now. profile: its threat.profile, when bands are asked
+    for. -> lines drawn."""
     bands = threat.bands(profile) if profile else []
-    lines = lines_for(state, i, show, bands, dice, follow=True)
     watch = watch_for(state, i) if "los" in show else None
-    n = draw(lines, follow_for(state, i, show, bands, dice), watch)
+    n = draw(lines_for(state, i, show, bands, dice), watch)
     if watch:
         live.update(state=copy.deepcopy(state), i=i)
     return n

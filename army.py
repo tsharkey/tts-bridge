@@ -945,7 +945,7 @@ def mark(obj, unit_name, model, tags, gm_notes, card=None):
     tag(obj, tags)
     obj["GMNotes"] = gm_notes
     if card:
-        sheetviewer.attach(obj, unit_name, card)
+        sheetviewer.attach(obj, unit_name, card, model.get("reach"))
     return obj
 
 

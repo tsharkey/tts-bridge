@@ -17,9 +17,20 @@ local log = {}
 local function note(k, v) table.insert(log, k .. "=" .. tostring(v)) end
 self = {guid = "abc123"}
 function self.getGUID() return "abc123" end
+function self.getVar(k) return _G[k] end
 local name = "3/3 Crisis Shas'vre"
 function self.getName() return name end
 function self.setName(n) name = n; note("name", n) end
+-- a model 2" wide standing at (10, 1, 5); its local space is the table's, moved to it
+function self.getBounds() return {center = {x = 10, y = 2, z = 5}, size = {x = 2, y = 2, z = 2}} end
+function self.positionToLocal(p) return {p[1] - 10, p[2] - 1, p[3] - 5} end
+function self.setVectorLines(lines)
+  local far = 0
+  for _, l in ipairs(lines) do for _, p in ipairs(l.points) do far = math.max(far, p[1]) end end
+  note("rings", #lines .. (#lines > 0 and string.format(" %%.2f y%%.2f", far, lines[1].points[1][2]) or ""))
+end
+function self.call(fn, params) _G[fn](params) end
+function getObjects() return {self} end
 self.menus = {}
 function self.addContextMenuItem(label, fn) note("menu", label); self.menus[label] = fn end
 function sendExternalMessage(t) note("external", t.ttsBridge .. ":" .. t.guid .. ":" .. t.show .. ":" .. t.color) end
@@ -42,7 +53,9 @@ function addHotkey(label, fn) note("hotkey", label) end
 
 onLoad("saved state")
 self.menus["Datasheet"]("Red")
-self.menus["Show threat range"]("Green")
+self.menus["Threat range on/off"]()     -- on
+self.menus["Threat range on/off"]()     -- off
+self.menus["Threat range on/off"]()     -- on again: Clear overlays turns it off
 self.menus["Show line of sight"]("Green")
 self.menus["Clear overlays"]("Green")
 ttsBridgeShow({color = "Blue"})
@@ -79,8 +92,10 @@ def test_attach_keeps_and_replaces():
 
 @pytest.mark.skipif(not shutil.which("luajit"), reason="LuaJIT isn't installed")
 def test_script_runs_in_lua(tmp_path):
+    reach = {"base": 0.5, "bands": [{"band": "move", "reach": 6}, {"band": "advance", "reach": 12},
+                                    {"band": "charge", "reach": 20}]}
     obj = sheetviewer.attach({"LuaScript": "function onLoad(s) earlierOnLoad = s end"},
-                             "Crisis Sunforge Battlesuits", CARD)
+                             "Crisis Sunforge Battlesuits", CARD, reach)
     lua = tmp_path / "viewer.lua"
     lua.write_text(HARNESS % obj["LuaScript"])
     run = subprocess.run(["luajit", str(lua)], capture_output=True, text=True)
@@ -88,8 +103,13 @@ def test_script_runs_in_lua(tmp_path):
     log = run.stdout.splitlines()
     assert log.count("menu=Datasheet") == 2 and log.count("hotkey=Show datasheet") == 1
     # the overlay items ask the hub to draw (app/mcp_server/overlay.py menu_request)
+    # threat rings: drawn on the model, no hub; the widest 0.5 + 20 from its centre, at its base
+    assert [line for line in log if line.startswith("rings=")] == [
+        "rings=3 20.50 y0.05", "rings=0", "rings=3 20.50 y0.05", "rings=0"]
+    assert "hotkey=Threat range on/off" in log
+    # line of sight and clearing ask the hub to draw (app/mcp_server/overlay.py menu_request)
     assert [line for line in log if line.startswith("external=")] == [
-        "external=overlay:abc123:threat:Green", "external=overlay:abc123:los:Green", "external=overlay:abc123:clear:Green"]
+        "external=overlay:abc123:los:Green", "external=overlay:abc123:clear:Green"]
     # the first opening adds the window beside the mod's own UI; the second reuses it
     assert log.count("setXmlTable=2") == 1 and "panels=2" in log and "first panel=lctStartMenu" in log
     assert "value:ttsBridgeSheetTitle=Crisis Sunforge Battlesuits" in log
@@ -105,3 +125,11 @@ def test_script_runs_in_lua(tmp_path):
         "name=[2/3] Crisis Shas'vre", "name=[1/3] Crisis Shas'vre", "name=[0/3] Crisis Shas'vre",
         "name=[0/3] Crisis Shas'vre", "name=[1/3] Crisis Shas'vre"]
     assert "hotkey=Take a wound" in log and "hotkey=Heal a wound" in log
+
+
+def test_reach_as_lua():
+    reach = {"base": 0.63, "bands": [{"band": "move", "reach": 6}, {"band": "charge", "reach": 20}]}
+    assert sheetviewer.reach_lua(reach) == ("{base = 0.63, bands = {{reach = 6, color = {0.31, 0.77, 0.48}}, "
+                                            "{reach = 20, color = {1, 0.55, 0.26}}}}")
+    assert sheetviewer.reach_lua({"base": None, "bands": [{"band": "move", "reach": 5}]}).startswith("{base = nil,")
+    assert sheetviewer.reach_lua({"base": 1, "bands": []}) == sheetviewer.reach_lua(None) == "nil"   # can't move

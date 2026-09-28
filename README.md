@@ -109,12 +109,16 @@ it). You can also bind a key to **Show datasheet** in TTS's Options → Game Key
 model. The datasheet travels with the model, in a small script on it. **Datasheet** on a unit in Scribe shows
 the same text. `army.py build` and **Board from image** give models the same tooltips and datasheets.
 
-With the web app running, the same right-click menu has **Show threat range** (the unit's move, advance and
-charge, drawn as rings on the table), **Show line of sight** (what it can see, and a line to each enemy model it
-sees) and **Clear overlays**. Everyone at the table sees the lines. The threat rings follow the unit as you move
-its models, and the line of sight is redrawn as you move them (or the enemy), a few times a second while you drag
-and once when you let go. They're drawn on a hidden helper object, not on the table's own lines, and are gone when
-a save is loaded.
+The same right-click menu has **Threat range on/off**: rings round that model for how far it moves, advances
+and charges, measured from its base's edge. They're part of the model, so they go where it goes, and they work
+without the web app. Bind a key to "Threat range on/off" in Options → Game Keys to toggle the model under your
+cursor.
+
+With the web app running, **Show line of sight** draws what the unit can see and a line to each enemy model it sees.
+It's redrawn as you move the unit's models or the enemy's: a few times a second while you drag, and once when you
+let go. **Clear overlays** turns off every model's threat rings and the line of sight. Everyone at the table sees
+the lines. Line of sight is drawn on a hidden helper object, not on the table's own lines, and is gone when a save
+is loaded.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.
