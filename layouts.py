@@ -660,15 +660,17 @@ def load_all(folder=LAYOUTS):
     return [json.loads(f.read_text()) for f in sorted(folder.glob("*.json")) if f.name != "index.json"]
 
 
-def identify(terrain, candidates=None, near=1.0, enough=0.7):
-    """Which layout is on the table, from board.py's terrain (TTS's bounds, so no meshes or
-    LCT cache needed): the one with the most areas and features that have a piece of terrain
-    centred within `near` inches of their own box's centre, and of those the closest in size
-    (a map comes in several terrain packs, with the same spots and different pieces).
-    `candidates` defaults to every layout in layouts/.
+def identify(terrain, candidates=None, near=1.0, enough=0.7, meshes=None, lct=None):
+    """Which layout is on the table, from board.py's terrain (TTS's bounds): the one with the
+    most areas and features that have a piece of terrain centred within `near` inches of their
+    own box's centre. A map comes in several terrain packs, with the same spots and different
+    pieces; to tell them apart, `meshes` (the mesh and asset bundle URLs on the table,
+    board.table_meshes) picks the pack whose objects in LCT's cache (`lct`, default
+    cache/lct/) are there; without them, the pack closest in size. `candidates` defaults to
+    every layout in layouts/.
     -> (layout, matched, total), or None when no layout has `enough` of its pieces there."""
     pieces = [(t["x"], t["z"], t["w"], t["d"]) for t in terrain if t["kind"] == "terrain"]
-    best, best_key = None, None
+    scored = []
     for layout in load_all() if candidates is None else candidates:
         boxes = [bounds(p) for a in layout["areas"] for p in [a["polygon"], *(f["polygon"] for f in a["features"])]]
         matched, misfit = 0, 0.0
@@ -678,10 +680,26 @@ def identify(terrain, candidates=None, near=1.0, enough=0.7):
             if gap <= near:
                 matched += 1
                 misfit += gap + abs(w - pw) + abs(d - pd)
-        key = (matched / len(boxes), -misfit / max(matched, 1))
-        if boxes and matched / len(boxes) >= enough and (best_key is None or key > best_key):
-            best, best_key = (layout, matched, len(boxes)), key
-    return best
+        if boxes and matched / len(boxes) >= enough:
+            scored.append(((matched / len(boxes), -misfit / max(matched, 1)), layout, matched, len(boxes)))
+    if not scored:
+        return None
+    key, best, matched, total = max(scored, key=lambda s: s[0])
+    if meshes:
+        packs = [s for s in scored if (s[1]["map"], s[1]["deployment"]) == (best["map"], best["deployment"])]
+        if len(packs) > 1:
+            on_table = {s[1]["id"]: pack_meshes_found(s[1]["id"], meshes, lct) for s in packs}
+            if any(on_table.values()):
+                key, best, matched, total = max(packs, key=lambda s: (on_table[s[1]["id"]], s[0]))
+    return best, matched, total
+
+
+def pack_meshes_found(layout_id, meshes, lct=None):
+    """How much of a layout's own pieces (their mesh or asset bundle, from LCT's cache) is on the
+    table, 0..1; 0 when the layout isn't cached."""
+    cached = data.read_json((lct or mods.lct_dir()) / "layouts" / f"{layout_id}.json")
+    urls = [mesh_source(o)[0] for o in (cached or {}).get("objects", []) if mesh_source(o)]
+    return sum(u in meshes for u in urls) / len(urls) if urls else 0.0
 
 
 # --------------------------------------------------------------------------

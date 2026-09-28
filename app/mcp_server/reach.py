@@ -8,7 +8,6 @@ from typing_extensions import TypedDict   # see table.py
 
 import board
 import data
-import layouts
 import los
 import threat
 import tooltips
@@ -154,7 +153,7 @@ def reaching(objs, unit=None, target=None, army=None, nth=None, target_army=None
     if a is not None and id(a) not in known:
         raise ToolError(f"{a['name']} has no cached datasheet to work from"
                         + ("" if a.get("datasheet") else " (it wasn't spawned by tts-bridge)") + ".")
-    found = layouts.identify(board.collect_terrain(objs), candidates)
+    found = board.find_layout(objs, candidates)
     terrain = los.blockers(found[0]) if found else None
     surface = board.table_surface(objs)
 

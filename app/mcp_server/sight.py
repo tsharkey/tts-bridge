@@ -5,7 +5,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 from typing_extensions import NotRequired, TypedDict   # see table.py
 
 import board
-import layouts
 import los
 from app.mcp_server.table import UnitRef
 
@@ -45,7 +44,7 @@ def seeing(objs, unit, target=None, army=None, nth=None, target_army=None, targe
         chosen = [board.find_unit(units, target, target_army, target_nth)] if target else None
     except board.UnitError as e:
         raise ToolError(str(e)) from None
-    found = layouts.identify(board.collect_terrain(objs), candidates)
+    found = board.find_layout(objs, candidates)
     if not found:
         raise ToolError("Line of sight needs the terrain of the LCT layout on the table, and none of layouts/ "
                         "matches it (board_summary's layout is null).")

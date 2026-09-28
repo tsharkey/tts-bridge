@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import board
 import layouts
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -233,3 +234,35 @@ def test_polygon_gap_and_within():
     across = [[1, 1.5], [5, 1.5], [5, 3], [1, 3]]              # every corner but one in the L, and it crosses the notch
     assert not layouts.polygon_within(across, ell)
     assert layouts.polygon_within([[0.5, 0.5], [5, 0.5], [5, 1.5], [0.5, 1.5]], ell)
+
+
+def test_the_table_meshes_pick_the_terrain_pack(tmp_path):
+    """Two terrain packs of one map, every piece in the same spot (#105): pack A's footprints are
+    closer in size to what TTS reports, but pack B's meshes are the ones on the table."""
+    base = layouts.load("33ce09")
+    pack_a = {**base, "id": "aaaaaa", "pack": "A"}
+    pack_b = {**base, "id": "bbbbbb", "pack": "B"}
+    other_map = {**base, "id": "cccccc", "map": "Somewhere else"}
+    for pack, url in (("aaaaaa", "http://example.test/a.obj"), ("bbbbbb", "http://example.test/b.obj")):
+        (tmp_path / "layouts").mkdir(exist_ok=True)
+        (tmp_path / "layouts" / f"{pack}.json").write_text(json.dumps(
+            {"guid": pack, "objects": [{"CustomMesh": {"MeshURL": url}}, {"CustomMesh": {"MeshURL": url + "2"}}]}))
+    terrain = pieces(pack_a)
+    candidates = [pack_a, pack_b, other_map]
+    assert layouts.identify(terrain, candidates)[0]["id"] == "aaaaaa"          # by size: a tie, so the first
+    on_table = {"http://example.test/b.obj", "http://example.test/b.obj2", "http://example.test/mat.obj"}
+    assert layouts.identify(terrain, candidates, meshes=on_table, lct=tmp_path)[0]["id"] == "bbbbbb"
+    neither = {"http://example.test/other.obj"}
+    assert layouts.identify(terrain, candidates, meshes=neither, lct=tmp_path)[0]["id"] == "aaaaaa"
+    assert layouts.pack_meshes_found("bbbbbb", {"http://example.test/b.obj"}, tmp_path) == 0.5
+    assert layouts.pack_meshes_found("zzzzzz", on_table, tmp_path) == 0.0     # not cached
+
+
+def test_board_reads_meshes_for_identify():
+    """Only terrain on the table counts: not a pack parked beside it, loose pieces or models."""
+    def piece(guid, x, mesh, locked=True):
+        return {"guid": guid, "tag": "Custom_Model", "name": "Ruin", "head": "", "notes": "", "tags": [],
+                "locked": locked, "rot": 0, "p": [x, 1, 0], "c": [x, 2, 0], "s": [4, 2, 3], "mesh": mesh}
+    objs = [piece("a1", 0, "http://example.test/a.obj"), piece("b1", 45, "http://example.test/b.obj"),
+            piece("c1", 5, "http://example.test/c.obj", locked=False), piece("d1", 10, None)]
+    assert board.table_meshes(objs) == {"http://example.test/a.obj"}
