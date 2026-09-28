@@ -51,7 +51,7 @@ def test_profile_from_the_datasheet(squad):
 
 def test_bands(squad):
     got = {b["band"]: (b["avg"], b["max"]) for b in threat.bands(threat.profile(squad))}
-    assert got == {"move": (6, 6), "advance": (9.5, 12), "charge": (15, 20), "shoot: Pulse rifle": (36, 36)}
+    assert got == {"move": (6, 6), "advance": (9.5, 12), "charge": (13, 18), "shoot: Pulse rifle": (36, 36)}
     bikes = {b["band"]: (b["avg"], b["max"]) for b in threat.bands(threat.profile(BIKES))}
     assert bikes["move"] == (12, 12)                                      # the slowest model's M
     assert bikes["advance and shoot: Twin shotgun"] == (27.5, 30)        # Assault: advance, then shoot
@@ -68,11 +68,13 @@ def test_charge_chance():
 
 def test_threats_at_a_distance(squad):
     p = threat.profile(squad)
-    got = threat.threats(p, 15.2)                  # 15.2 - 6 move - 2 engagement: needs a 8 (7.2 rounded up)
-    assert got["charge"] == {"needed": 8, "chance": round(15 / 36, 3)} and not got["engaged"]
+    got = threat.threats(p, 15.2)                  # 15.2 - 6 move, to base contact: needs a 10 (9.2 rounded up)
+    assert got["charge"] == {"needed": 10, "chance": round(6 / 36, 3)} and not got["engaged"]
     assert got["weapons"] == [{"weapon": "Pulse rifle", "range": 30, "now": True, "after_move": True,
                                "after_advance": False}]
-    assert threat.threats(p, 21)["charge"] is None                    # beyond 6 + 12 + 2
+    assert threat.threats(p, 18)["charge"]["needed"] == 12
+    assert threat.threats(p, 18.5)["charge"] is None                  # beyond 6 + 12
+    assert threat.threats(p, 5)["charge"] == {"needed": 2, "chance": 1.0}   # the move stops 2" short
     assert threat.threats(p, 1.5)["engaged"] and threat.threats(p, 1.5)["charge"]["needed"] == 0
     far = threat.threats(p, 33)["weapons"][0]
     assert (far["now"], far["after_move"]) == (False, True)

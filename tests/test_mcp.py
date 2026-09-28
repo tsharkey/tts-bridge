@@ -205,7 +205,7 @@ def test_threat_ranges(armed_table):
     assert (got["move"], got["weapons_from"], got["datasheet"]) == (6, "models", "c8b1-9d6c-4a53-b0e2")
     assert [w["name"] for w in got["weapons"]] == ["Bolt rifle"]
     bands = {b["band"]: (b["avg"], b["max"]) for b in got["bands"]}
-    assert bands["charge"] == (15, 20) and bands["advance and shoot: Bolt rifle"] == (33.5, 36)
+    assert bands["charge"] == (13, 18) and bands["advance and shoot: Bolt rifle"] == (33.5, 36)
     armed_table.clear()                               # models without tooltips: the datasheet's defaults
     assert call("threat_ranges", {"unit": "Pathfinder"}).structured_content["weapons_from"] == "datasheet defaults"
     untagged = call("threat_ranges", {"unit": "Intercessor"})

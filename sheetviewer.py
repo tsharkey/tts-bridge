@@ -158,7 +158,8 @@ function ttsBridgeWound(params)
 end
 
 -- the threat rings: on, off, or (on = nil) the other way round. Lines on the model itself,
--- so they move with it; a ring is its reach out from the base's edge, at the base.
+-- so they move with it; a ring is its reach out from the base's edge, at the base, with its
+-- label ('6" MOVE') just outside it, reading from the -z side.
 local ttsbRingsOn = false
 function ttsBridgeThreat(params)
   local on = params and params.on
@@ -179,6 +180,13 @@ function ttsBridgeThreat(params)
       table.insert(points, self.positionToLocal({b.center.x + r * math.cos(a), y, b.center.z + r * math.sin(a)}))
     end
     table.insert(lines, {points = points, color = band.color, thickness = 0.12})
+    for _, stroke in ipairs(band.label or {}) do
+      local letters = {}
+      for _, p in ipairs(stroke) do
+        table.insert(letters, self.positionToLocal({b.center.x + p[1], y, b.center.z + r + 0.2 + p[2]}))
+      end
+      table.insert(lines, {points = letters, color = band.color, thickness = 0.05})
+    end
   end
   self.setVectorLines(lines)
 end
@@ -193,13 +201,65 @@ end
 """
 
 
+# A stroke font for the rings' labels ('6" MOVE'): each character as polylines on a grid 4
+# wide and 6 tall, because vector lines are all a model can draw on itself.
+FONT = {
+    "0": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0), (4, 6)]],
+    "1": [[(1, 5), (2, 6), (2, 0)], [(1, 0), (3, 0)]],
+    "2": [[(0, 6), (4, 6), (4, 3), (0, 3), (0, 0), (4, 0)]],
+    "3": [[(0, 6), (4, 6), (4, 0), (0, 0)], [(1, 3), (4, 3)]],
+    "4": [[(0, 6), (0, 3), (4, 3)], [(4, 6), (4, 0)]],
+    "5": [[(4, 6), (0, 6), (0, 3), (4, 3), (4, 0), (0, 0)]],
+    "6": [[(4, 6), (0, 6), (0, 0), (4, 0), (4, 3), (0, 3)]],
+    "7": [[(0, 6), (4, 6), (4, 0)]],
+    "8": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)], [(0, 3), (4, 3)]],
+    "9": [[(4, 3), (0, 3), (0, 6), (4, 6), (4, 0), (0, 0)]],
+    ".": [[(2, 0), (2, 0.6)]],
+    '"': [[(1, 6), (1, 4.5)], [(3, 6), (3, 4.5)]],
+    "A": [[(0, 0), (2, 6), (4, 0)], [(1, 3), (3, 3)]],
+    "C": [[(4, 6), (0, 6), (0, 0), (4, 0)]],
+    "D": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 1), (3, 0), (0, 0)]],
+    "E": [[(4, 6), (0, 6), (0, 0), (4, 0)], [(0, 3), (3, 3)]],
+    "G": [[(4, 6), (0, 6), (0, 0), (4, 0), (4, 3), (2, 3)]],
+    "H": [[(0, 0), (0, 6)], [(4, 0), (4, 6)], [(0, 3), (4, 3)]],
+    "M": [[(0, 0), (0, 6), (2, 3), (4, 6), (4, 0)]],
+    "N": [[(0, 0), (0, 6), (4, 0), (4, 6)]],
+    "O": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)]],
+    "R": [[(0, 0), (0, 6), (4, 6), (4, 3), (0, 3), (4, 0)]],
+    "V": [[(0, 6), (2, 0), (4, 6)]],
+}
+LABEL_HEIGHT = 0.5    # inches: how tall a ring's label is
+LABELS = {"move": "MOVE", "advance": "ADVANCE", "charge": "CHARGE"}
+
+
+def label_strokes(text, height=LABEL_HEIGHT):
+    """`text` as polylines of [x, z] in inches, centred on x = 0 with its baseline on z = 0,
+    reading along +x. Characters FONT hasn't got are left as gaps."""
+    unit = height / 6
+    width = (len(text) * 6 - 2) * unit
+    out = []
+    for n, ch in enumerate(text):
+        x0 = n * 6 * unit - width / 2
+        out += [[[round(x0 + x * unit, 3), round(z * unit, 3)] for x, z in stroke] for stroke in FONT.get(ch, [])]
+    return out
+
+
+def lua_points(strokes):
+    return "{" + ", ".join("{" + ", ".join(f"{{{x:g}, {z:g}}}" for x, z in s) + "}" for s in strokes) + "}"
+
+
+def band_lua(b):
+    colour = ", ".join(f"{c:g}" for c in overlays.COLOURS[b["band"]])
+    label = label_strokes(f'{b["reach"]:g}" {LABELS[b["band"]]}')
+    return f"{{reach = {b['reach']:g}, color = {{{colour}}}, label = {lua_points(label)}}}"
+
+
 def reach_lua(reach):
-    """tooltips.reach as the Lua table TTSB_REACH, each band in its overlay colour; nil
-    for a model with nothing to ring."""
+    """tooltips.reach as the Lua table TTSB_REACH: each band in its overlay colour, with its
+    label ('6" MOVE') as strokes; nil for a model with nothing to ring."""
     if not reach or not reach.get("bands"):
         return "nil"
-    bands = ", ".join(f"{{reach = {b['reach']:g}, color = {{{', '.join(f'{c:g}' for c in overlays.COLOURS[b['band']])}}}}}"
-                      for b in reach["bands"])
+    bands = ", ".join(band_lua(b) for b in reach["bands"])
     return f"{{base = {'nil' if reach['base'] is None else format(reach['base'], 'g')}, bands = {{{bands}}}}}"
 
 

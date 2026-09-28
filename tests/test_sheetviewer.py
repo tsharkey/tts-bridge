@@ -25,9 +25,13 @@ function self.setName(n) name = n; note("name", n) end
 function self.getBounds() return {center = {x = 10, y = 2, z = 5}, size = {x = 2, y = 2, z = 2}} end
 function self.positionToLocal(p) return {p[1] - 10, p[2] - 1, p[3] - 5} end
 function self.setVectorLines(lines)
-  local far = 0
-  for _, l in ipairs(lines) do for _, p in ipairs(l.points) do far = math.max(far, p[1]) end end
-  note("rings", #lines .. (#lines > 0 and string.format(" %%.2f y%%.2f", far, lines[1].points[1][2]) or ""))
+  local rings, strokes, far, top = 0, 0, 0, 0
+  for _, l in ipairs(lines) do
+    if l.thickness == 0.12 then rings = rings + 1 else strokes = strokes + 1 end
+    for _, p in ipairs(l.points) do far, top = math.max(far, p[1]), math.max(top, p[3]) end
+  end
+  note("rings", rings .. (rings > 0 and string.format(" %%.2f y%%.2f labels %%d to %%.2f", far,
+                                                      lines[1].points[1][2], strokes, top) or ""))
 end
 function self.call(fn, params) _G[fn](params) end
 function getObjects() return {self} end
@@ -102,10 +106,12 @@ def test_script_runs_in_lua(tmp_path):
     assert run.returncode == 0, run.stderr
     log = run.stdout.splitlines()
     assert log.count("menu=Datasheet") == 2 and log.count("hotkey=Show datasheet") == 1
-    # the overlay items ask the hub to draw (app/mcp_server/overlay.py menu_request)
-    # threat rings: drawn on the model, no hub; the widest 0.5 + 20 from its centre, at its base
+    # threat rings: drawn on the model, no hub; the widest 0.5 + 20 from its centre, at its base,
+    # with the labels ('6" MOVE' and the rest) just outside their rings (20.5 + 0.2, 0.5 tall)
+    labels = sum(len(sheetviewer.label_strokes(f'{r}" {n}')) for r, n in ((6, "MOVE"), (12, "ADVANCE"), (20, "CHARGE")))
     assert [line for line in log if line.startswith("rings=")] == [
-        "rings=3 20.50 y0.05", "rings=0", "rings=3 20.50 y0.05", "rings=0"]
+        f"rings=3 20.50 y0.05 labels {labels} to 21.20", "rings=0",
+        f"rings=3 20.50 y0.05 labels {labels} to 21.20", "rings=0"]
     assert "hotkey=Threat range on/off" in log
     # line of sight and clearing ask the hub to draw (app/mcp_server/overlay.py menu_request)
     assert [line for line in log if line.startswith("external=")] == [
@@ -128,8 +134,19 @@ def test_script_runs_in_lua(tmp_path):
 
 
 def test_reach_as_lua():
-    reach = {"base": 0.63, "bands": [{"band": "move", "reach": 6}, {"band": "charge", "reach": 20}]}
-    assert sheetviewer.reach_lua(reach) == ("{base = 0.63, bands = {{reach = 6, color = {0.31, 0.77, 0.48}}, "
-                                            "{reach = 20, color = {1, 0.55, 0.26}}}}")
+    reach = {"base": 0.63, "bands": [{"band": "move", "reach": 6}, {"band": "charge", "reach": 18}]}
+    lua = sheetviewer.reach_lua(reach)
+    assert lua.startswith("{base = 0.63, bands = {{reach = 6, color = {0.31, 0.77, 0.48}, label = {{")
+    assert "{reach = 18, color = {1, 0.55, 0.26}, label = " in lua
     assert sheetviewer.reach_lua({"base": None, "bands": [{"band": "move", "reach": 5}]}).startswith("{base = nil,")
     assert sheetviewer.reach_lua({"base": 1, "bands": []}) == sheetviewer.reach_lua(None) == "nil"   # can't move
+
+
+def test_label_strokes():
+    strokes = sheetviewer.label_strokes('6" MOVE')
+    assert len(strokes) == sum(len(sheetviewer.FONT.get(c, [])) for c in '6" MOVE')   # the space is a gap
+    xs = [x for s in strokes for x, _ in s]
+    zs = [z for s in strokes for _, z in s]
+    assert min(xs) == -max(xs) and (min(zs), max(zs)) == (0, sheetviewer.LABEL_HEIGHT)   # centred, on the baseline
+    for band in ("move", "advance", "charge"):                     # every label can be written
+        assert all(c in sheetviewer.FONT or c == " " for c in f'12.5" {sheetviewer.LABELS[band]}')

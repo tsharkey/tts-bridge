@@ -157,7 +157,7 @@ def test_reach_for_threat_rings():
     unit = squad()
     leader, trooper = unit["models"][0], unit["models"][1]
     assert tooltips.reach(leader, SHEET) == {"base": 0.785, "bands": [
-        {"band": "move", "reach": 6.0}, {"band": "advance", "reach": 12.0}, {"band": "charge", "reach": 20.0}]}
+        {"band": "move", "reach": 6.0}, {"band": "advance", "reach": 12.0}, {"band": "charge", "reach": 18.0}]}
     assert tooltips.reach(trooper, SHEET)["base"] is None              # no base known: the model's size in TTS
     slow = dict(SHEET, models=[dict(SHEET["models"][0], stats=dict(SHEET["models"][0]["stats"], M='4"')),
                                SHEET["models"][1]])
