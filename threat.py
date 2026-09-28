@@ -7,11 +7,14 @@ datasheet (docs/formats/datasheet.md), measured from the edges of its models' ba
     threat.bands(p)                               # move, advance, charge and weapon reach, in inches
     threat.threats(p, gap=9.5)                    # what it can do to a unit 9.5" away, base to base
     threat.bubbles(models, 12)                    # circles whose union is everything within 12" of the unit
+    threat.model_bands(datasheet_unit, "Intercessor Sergeant", ["Bolt rifle"])   # one model's move ... and weapons
 
 Distances are base edge to base edge: a unit threatens everything within its reach of any
 of its models' bases, so the area is the union of each base grown by the reach (bubbles).
 Dice use their average and maximum: Advance is M + D6 (3.5, 6), Charge is 2D6 (7, 12) after
-a normal move, ending within engagement range (board.ENGAGEMENT) of the target.
+a normal move, and must reach base to base: engagement range (board.ENGAGEMENT) adds nothing
+to it. A normal move can't end within engagement range of the target, so the charge is
+always at least what's left of that.
 
 Simplifications: movement goes straight, ignoring terrain and other models (no pathfinding);
 the unit moves at its slowest model's M; a unit's weapons are all its models' weapons, fired
@@ -60,21 +63,21 @@ def profile(unit, wargear=None, weapons=None):
             if weapons is not None and w["name"] not in picked:
                 continue
             if not any(o["name"] == w["name"] for o in out):
-                out.append({"name": w["name"], "type": w["type"], "range": inches(w["range"]),
+                out.append({"name": w["name"], "type": w.get("type"), "range": inches(w.get("range")),
                             "assault": any(k.lower() == "assault" for k in w.get("keywords") or [])})
     return {"unit": unit["name"], "move": min(moves) if moves else None, "weapons": out}
 
 
 def bands(p):
     """How far the unit reaches, from its bases' edges: [{"band", "avg", "max"}], for move,
-    advance, charge (move then 2D6, into engagement range), each ranged weapon after a move,
-    and after an advance for Assault weapons. Empty for a unit that can't move."""
+    advance, charge (move then 2D6, to base contact), each ranged weapon after a move, and
+    after an advance for Assault weapons. Empty for a unit that can't move."""
     m = p["move"]
     if m is None:
         return []
     out = [{"band": "move", "avg": m, "max": m},
            {"band": "advance", "avg": m + D6[0], "max": m + D6[1]},
-           {"band": "charge", "avg": m + TWO_D6[0] + ENGAGEMENT, "max": m + TWO_D6[1] + ENGAGEMENT}]
+           {"band": "charge", "avg": m + TWO_D6[0], "max": m + TWO_D6[1]}]
     for w in p["weapons"]:
         if w["range"] is None:
             continue
@@ -82,6 +85,25 @@ def bands(p):
         if w["assault"]:
             out.append({"band": f"advance and shoot: {w['name']}", "avg": m + D6[0] + w["range"],
                         "max": m + D6[1] + w["range"]})
+    return out
+
+
+def model_bands(sheet, sheet_model=None, weapons=()):
+    """How far one model reaches from its base's edge, for the rings a spawned model can show
+    (sheetviewer.py): [{"band", "reach"}] for move, advance and charge at their maximum, from
+    that datasheet model's Move (the unit's slowest when it isn't known), and for each ranged
+    weapon profile in `weapons` (names, as tooltips list them) "range: <weapon>" (from where
+    it stands) and "shoot: <weapon>" (after a move). Empty for a model that can't move."""
+    sm = next((m for m in sheet["models"] if m["name"] == sheet_model), None)
+    p = profile({"name": sheet["name"], "models": [sm] if sm else sheet["models"],
+                 "wargear": sheet.get("wargear", {})}, weapons=list(weapons))
+    out = []
+    for b in bands(p):
+        if b["band"].startswith("shoot: "):
+            w = next(w for w in p["weapons"] if w["name"] == b["band"].removeprefix("shoot: "))
+            out.append({"band": f"range: {w['name']}", "reach": w["range"]})
+        if not b["band"].startswith("advance and"):
+            out.append({"band": b["band"], "reach": b["max"]})
     return out
 
 
@@ -94,13 +116,19 @@ def charge_chance(needed):
 
 def threats(p, gap, visible=None):
     """What the unit can do to a target `gap` inches away, base edge to base edge, this turn.
-    charge: the 2D6 roll it needs after moving its full M (0 when it's already within
-    engagement range) and the chance of making it, or None when it's beyond 12". weapons: for
+    charge: the 2D6 roll it needs to reach base contact after moving its full M, which stops
+    short of engagement range, so never under 2 (0 when it's already within engagement
+    range), and the chance of making it; None when that's more than 12. weapons: for
     each ranged weapon, whether the target is in range now, after moving, and after advancing
     (Assault weapons). visible: from the LOS engine, whether the unit can see the target now
     (None: not checked); a target it can't see isn't in range "now"."""
     m = p["move"] or 0
-    needed = max(0, math.ceil(gap - m - ENGAGEMENT - 1e-9)) if p["move"] is not None else None
+    if p["move"] is None:
+        needed = None
+    elif gap <= ENGAGEMENT:
+        needed = 0
+    else:
+        needed = max(math.ceil(ENGAGEMENT), math.ceil(gap - m - 1e-9))
     charge = None
     if needed is not None and needed <= TWO_D6[1]:
         charge = {"needed": needed, "chance": round(charge_chance(needed), 3)}

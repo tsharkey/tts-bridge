@@ -11,6 +11,11 @@ interactable), never off Global, so the table's own lines and other mods' are le
 and clearing just removes the helper. Its script removes it when a save is loaded, so
 nothing drawn outlives the session it was drawn in.
 
+Line of sight is kept up to date as models move. It needs the layout's terrain, which only
+the hub has, so the helper reports moves of the unit's models and the enemy's to the hub
+(sendExternalMessage({ttsBridge = "overlay", show = "moved", ...}), app/mcp_server/overlay.py),
+and the hub redraws it (moved) from the table it read when it was asked.
+
 What's drawn, just above the mats on the table (the board's and the terrain areas', which sit
 a little above the table surface):
 - A threat band (move, advance, charge, "shoot: <weapon>"; threat.bands) as the outline of
@@ -21,6 +26,7 @@ a little above the table surface):
   of its models that sees it: green when fully visible, yellow when partly.
 """
 
+import copy
 import json
 import math
 
@@ -31,43 +37,116 @@ import tts_bridge as tts
 HELPER_NOTES = "tts-bridge:overlays"
 LIFT = 0.5             # inches above the table surface: clear of the board and terrain-area mats on it
 RING_STEPS = 120       # points round a full circle
-COLOURS = {"move": [0.31, 0.77, 0.48], "advance": [0.91, 0.71, 0.24], "charge": [1.0, 0.55, 0.26],
+# movement in greens (move, advance, charge: lighter to darker), weapon ranges in blues
+COLOURS = {"move": [0.55, 0.93, 0.55], "advance": [0.3, 0.78, 0.42], "charge": [0.13, 0.55, 0.3],
            "los": [1.0, 0.96, 0.82], "full": [0.31, 0.9, 0.48], "partial": [0.95, 0.85, 0.25]}
-SHOTS = [[0.7, 0.55, 1.0], [0.29, 0.84, 0.84], [1.0, 0.36, 0.62], [0.6, 0.82, 0.29], [1.0, 0.82, 0.29]]
+SHOTS = [[0.55, 0.8, 1.0], [0.3, 0.58, 1.0], [0.45, 0.45, 1.0], [0.25, 0.75, 0.9], [0.65, 0.65, 1.0]]
 
-HELPER_SCRIPT = """-- tts-bridge overlays: line of sight and threat ranges drawn by tts-bridge.
+HELPER_SCRIPT = r"""-- tts-bridge overlays: line of sight and threat ranges drawn by tts-bridge (overlays.py).
+-- Line of sight is the hub's to work out (it needs the layout's terrain): this script
+-- tells it when the models it watches move, and the hub redraws it.
 -- Removed when a save is loaded, so nothing it draws outlives the session.
+TTSB_OVERLAYS = 2      -- this script's version: the hub replaces a helper with an older one
+
+local fixed = {}       -- lines as the hub drew them, in table coordinates
+local watch = nil      -- line of sight: {guids = {...}}, whose moves go to the hub
+local seen = {}        -- guid -> where it was when last looked at
+local moved = false    -- watched models moved since the hub was last told
+local quiet = 0        -- ticks since the hub was last told
+local EVERY = 3        -- ticks (0.1s) between line-of-sight updates while models move
+
 function onSave() return "saved" end
-function onLoad(state) if state == "saved" then self.destruct() end end
+
+function onLoad(state)
+  if state == "saved" then self.destruct() return end
+  if state ~= nil and state ~= "" then ttsbSet(JSON.decode(state)) end
+  Wait.time(ttsbTick, 0.1, -1)
+end
+
+local function here(guid)
+  local o = getObjectFromGUID(guid)
+  if o == nil then return nil end
+  return o, o.getBounds()
+end
+
+function ttsbDraw()
+  local drawn = {}
+  for _, line in ipairs(fixed) do
+    local points = {}
+    for _, p in ipairs(line.points) do table.insert(points, self.positionToLocal(p)) end
+    table.insert(drawn, {points = points, color = line.color, thickness = line.thickness, loop = line.loop})
+  end
+  self.setVectorLines(drawn)
+  return #drawn
+end
+
+-- data: {fixed = lines, watch, replace}. replace: watch is this (or none); otherwise only
+-- the lines change (the hub's line of sight, redrawn).
+function ttsbSet(data)
+  if data.fixed then fixed = data.fixed end
+  if data.replace then
+    watch, seen, moved, quiet = data.watch, {}, false, EVERY
+  end
+  return ttsbDraw()
+end
+
+function ttsbTick()
+  if watch == nil then return end
+  local stirred = false
+  for _, g in ipairs(watch.guids) do
+    local o, b = here(g)
+    local key = o and string.format("%.2f,%.2f,%.2f", b.center.x, b.center.y, b.center.z) or "gone"
+    if seen[g] ~= key then
+      stirred = stirred or seen[g] ~= nil
+      seen[g] = key
+    end
+  end
+  -- tell the hub at once, then every EVERY ticks while they move, and once more when they stop
+  moved = moved or stirred
+  quiet = quiet + 1
+  if moved and (quiet >= EVERY or not stirred) then
+    local models = {}
+    for _, g in ipairs(watch.guids) do
+      local o, b = here(g)
+      if o then
+        table.insert(models, {guid = g, x = b.center.x, z = b.center.z, bottom = b.center.y - b.size.y / 2,
+                              held = o.held_by_color ~= nil})
+      end
+    end
+    sendExternalMessage({ttsBridge = "overlay", show = "moved", models = models})
+    moved, quiet = false, 0
+  end
+end
 """
 
+HELPER_VERSION = 2   # TTSB_OVERLAYS in HELPER_SCRIPT
+
 DRAW_LUA = """
-local lines = JSON.decode(%(lines)s)
+local data = %(data)s
 local helper = nil
 for _, o in ipairs(getObjects()) do
-  if o.getGMNotes() == "%(notes)s" then helper = o end
+  if o.getGMNotes() == "%(notes)s" then
+    if o.getVar("TTSB_OVERLAYS") == %(version)d then helper = o else o.destruct() end   -- an older helper
+  end
 end
 if helper == nil then
+  if not %(replace)s then return 0 end   -- cleared since: nothing to update
   helper = spawnObjectData({data = {Name = "BlockSquare", Nickname = "tts-bridge overlays",
-    GMNotes = "%(notes)s", Locked = true, Tooltip = false, LuaScript = %(script)s,
+    GMNotes = "%(notes)s", Locked = true, Tooltip = false, LuaScript = %(script)s, LuaScriptState = data,
     Transform = {posX = 0, posY = %(below)s, posZ = 0, rotX = 0, rotY = 0, rotZ = 0,
                  scaleX = 1, scaleY = 1, scaleZ = 1}}})
   helper.interactable = false
+  return %(count)d
 end
-local drawn = {}
-for _, line in ipairs(lines) do
-  local points = {}
-  for _, p in ipairs(line.points) do table.insert(points, helper.positionToLocal(p)) end
-  table.insert(drawn, {points = points, color = line.color, thickness = line.thickness, loop = line.loop})
-end
-helper.setVectorLines(drawn)
-return #drawn
+helper.call("ttsbSet", JSON.decode(data))
+return %(count)d
 """
 
 CLEAR_LUA = """
 local n = 0
 for _, o in ipairs(getObjects()) do
   if o.getGMNotes() == "%s" then o.destruct(); n = n + 1 end
+  if o.getVar("TTSB_REACH") then o.call("ttsBridgeThreat", {on = false}) end   -- a model's threat rings (sheetviewer.py)
 end
 return n
 """ % HELPER_NOTES
@@ -205,11 +284,52 @@ def run(script, doing, timeout):
     return int(answer["result"] or 0)
 
 
-def draw(lines):
-    """Replace what tts-bridge has drawn on the table with these lines. -> lines drawn."""
-    script = DRAW_LUA % {"lines": json.dumps(json.dumps(lines)), "notes": HELPER_NOTES,
+live = {}   # the line of sight kept up to date as models move (show, moved): {"state", "i"}
+
+
+def watch_for(state, i):
+    """The models whose moves change unit i's line of sight: its own, and every other
+    army's on the table."""
+    row = state["units"][i]
+    return [p["guid"] for r in state["units"] if r["on_table"] and (r is row or r["army"] != row["army"])
+            for p in r["positions"]]
+
+
+def send(data, count):
+    script = DRAW_LUA % {"data": tts.lua_str(json.dumps(data)), "notes": HELPER_NOTES, "version": HELPER_VERSION,
+                         "replace": "true" if data.get("replace") else "false", "count": count,
                          "script": tts.lua_str(HELPER_SCRIPT), "below": -10}
     return run(script, "draw", 30)
+
+
+def draw(lines, watch=None):
+    """Replace what tts-bridge has drawn on the table with `lines`, and have the helper report
+    moves of `watch`'s models to the hub (watch_for). -> lines drawn."""
+    live.clear()
+    return send({"fixed": lines, "watch": {"guids": watch} if watch else None, "replace": True}, len(lines))
+
+
+def moved(models):
+    """Redraw the line of sight show() keeps up to date, with the models the helper reports
+    where they are now: [{guid, x, z, bottom, held}]. A model being held keeps the height it
+    had, not the height it's carried at. -> lines drawn; 0 when nothing is kept up to date."""
+    st = live.get("state")
+    if not st:
+        return 0
+    at = {p["guid"]: p for row in st["units"] for p in row["positions"]}
+    for m in models:
+        p = at.get(m.get("guid"))
+        if p is None:
+            continue
+        p["x"], p["z"] = round(m["x"], 2), round(m["z"], 2)
+        if not m.get("held"):
+            p["height"] = round(m["bottom"] - st["surface_y"], 1)
+    for row in st["units"]:
+        if row["positions"]:
+            row["x"] = round(sum(p["x"] for p in row["positions"]) / len(row["positions"]), 2)
+            row["z"] = round(sum(p["z"] for p in row["positions"]) / len(row["positions"]), 2)
+    lines = lines_for(st, live["i"], ["los"])
+    return send({"fixed": lines}, len(lines))
 
 
 def clear():
@@ -219,6 +339,12 @@ def clear():
 
 def show(state, i, show, profile=None, dice="max"):
     """Draw `show` ("los", and band names) for unit i of a board_summary state, replacing what
-    was drawn before. profile: its threat.profile, when bands are asked for. -> lines drawn."""
+    was drawn before. The line of sight is redrawn when the unit or the enemy move (moved);
+    bands are drawn where the unit is now. profile: its threat.profile, when bands are asked
+    for. -> lines drawn."""
     bands = threat.bands(profile) if profile else []
-    return draw(lines_for(state, i, show, bands, dice))
+    watch = watch_for(state, i) if "los" in show else None
+    n = draw(lines_for(state, i, show, bands, dice), watch)
+    if watch:
+        live.update(state=copy.deepcopy(state), i=i)
+    return n

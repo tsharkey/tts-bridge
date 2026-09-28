@@ -90,9 +90,11 @@ def test_draw_and_clear_send_lua(monkeypatch):
     lines = [{"points": [[0, 1, 0], [1, 1, 0]], "color": [1, 0, 0], "thickness": 0.1, "loop": False}]
     assert overlays.draw(lines) == 3
     script = sent[-1]
-    assert json.dumps(json.dumps(lines)) in script and overlays.HELPER_NOTES in script
-    assert "Global.setVectorLines" not in script and "positionToLocal" in script   # only our helper's lines
+    assert json.dumps({"fixed": lines, "watch": None, "replace": True}) in script
+    assert overlays.HELPER_NOTES in script and "Global.setVectorLines" not in script   # only our helper's lines
+    assert 'helper.call("ttsbSet"' in script and "LuaScriptState = data" in script     # a helper there, or a new one
     assert overlays.clear() == 3 and "destruct" in sent[-1] and overlays.HELPER_NOTES in sent[-1]
+    assert 'o.call("ttsBridgeThreat", {on = false})' in sent[-1]     # models' own threat rings off too
     # TTS failing (it can stop spawning objects) is an error, not "0 lines drawn"
     monkeypatch.setattr(tts_bridge, "execute", lambda script, timeout=None: {"ok": False, "error": "No response from TTS."})
     with pytest.raises(ValueError, match="Couldn't draw on the table: No response"):
@@ -104,7 +106,8 @@ def test_draw_and_clear_send_lua(monkeypatch):
 @pytest.mark.skipif(not shutil.which("luajit"), reason="LuaJIT isn't installed")
 def test_helper_is_gone_after_a_save_is_loaded(tmp_path):
     lua = tmp_path / "helper.lua"
-    lua.write_text("self = {destruct = function() print('destructed') end}\n" + overlays.HELPER_SCRIPT + """
+    lua.write_text("self = {destruct = function() print('destructed') end}\nWait = {time = function() end}\n"
+                   + overlays.HELPER_SCRIPT + """
 onLoad("")                  -- spawned: stays
 print("saved as " .. onSave())
 onLoad(onSave())            -- that save loaded: removes itself
@@ -132,18 +135,21 @@ def table_and_drawing(monkeypatch):
     monkeypatch.setattr(data, "datasheets_by_id", lambda: {"c8b1-9d6c-4a53-b0e2": SHEET})
     lua, drawn = [], []
     monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: lua.append(script) or {})
-    monkeypatch.setattr(overlays, "draw", lambda lines: drawn.append(lines) or len(lines))
+    monkeypatch.setattr(overlays, "draw", lambda lines, watch=None:
+                        drawn.append({"lines": lines, "watch": watch}) or len(lines))
     monkeypatch.setattr(overlays, "clear", lambda: drawn.append("cleared") or 1)
     return drawn, lua
 
 
 def test_menu_request(table_and_drawing):
     drawn, lua = table_and_drawing
+    # models spawned before their rings were in their own script still ask the hub
     overlay.menu_request({"ttsBridge": "overlay", "guid": "a1b2c1", "show": "threat", "color": "Red"})
-    colours = {tuple(ln["color"]) for ln in drawn[-1]}
+    colours = {tuple(ln["color"]) for ln in drawn[-1]["lines"]}
     assert colours == {tuple(overlays.COLOURS[b]) for b in ("move", "advance", "charge")}
+    assert drawn[-1]["watch"] is None
     overlay.menu_request({"ttsBridge": "overlay", "guid": "a1b2c1", "show": "los", "color": "Red"})
-    assert drawn[-1][0]["color"] == overlays.COLOURS["los"]
+    assert drawn[-1]["lines"][0]["color"] == overlays.COLOURS["los"] and "a1b2c1" in drawn[-1]["watch"]
     overlay.menu_request({"ttsBridge": "overlay", "guid": "a1b2c1", "show": "clear", "color": "Red"})
     assert drawn[-1] == "cleared"
     # the Intercessors have no datasheet: the player who asked is told so, in TTS
@@ -161,5 +167,120 @@ def test_mcp_tools(table_and_drawing):
                     await client.call_tool("clear_table_overlays", {}))
     shown, bad_dice, cleared = asyncio.run(main())
     got = shown.structured_content
-    assert got["unit"]["unit"] == "Pathfinder Team" and got["shown"] == ["los", "move"] and got["lines"] == len(drawn[0])
+    assert got["unit"]["unit"] == "Pathfinder Team" and got["shown"] == ["los", "move"]
+    assert got["lines"] == len(drawn[0]["lines"]) and drawn[0]["watch"]
+    assert overlays.COLOURS["move"] in [ln["color"] for ln in drawn[0]["lines"]]
     assert bad_dice.is_error and cleared.structured_content == {"removed": 1}
+
+
+def test_what_is_watched():
+    st = state()
+    i = index(st, "Pathfinder Team")
+    pf = st["units"][i]["positions"]
+    watched = overlays.watch_for(st, i)
+    mine = {p["guid"] for p in pf}
+    enemy = {p["guid"] for r in st["units"] if r["on_table"] and r["army"] != st["units"][i]["army"] for p in r["positions"]}
+    assert set(watched) == mine | enemy and enemy                    # its own models and the enemy's, nobody else's
+
+
+def test_line_of_sight_redrawn_as_models_move(monkeypatch):
+    sent = []
+    monkeypatch.setattr(overlays, "send", lambda data, count: sent.append(data) or count)
+    overlays.live.clear()
+    st = state()
+    i = index(st, "Pathfinder Team")
+    assert overlays.moved([{"guid": "x"}]) == 0                       # nothing kept up to date yet
+    overlays.show(st, i, ["los"])
+    assert sent[-1]["replace"] and sent[-1]["watch"]["guids"]
+    before = [ln for ln in sent[-1]["fixed"]]
+    p = st["units"][i]["positions"][0]
+    overlays.moved([{"guid": p["guid"], "x": p["x"] + 6, "z": p["z"], "bottom": st["surface_y"] + 50, "held": True}])
+    assert "replace" not in sent[-1] and sent[-1]["fixed"] != before  # only the lines change: bands keep following
+    kept = overlays.live["state"]["units"][i]["positions"][0]
+    assert kept["x"] == round(p["x"] + 6, 2) and kept["height"] == p["height"]   # held: not seen from where it's carried
+    assert st["units"][i]["positions"][0]["x"] == p["x"]              # the table it was asked with isn't changed
+    overlays.moved([{"guid": p["guid"], "x": p["x"], "z": p["z"], "bottom": st["surface_y"] + 3, "held": False}])
+    assert overlays.live["state"]["units"][i]["positions"][0]["height"] == 3.0   # put down on a floor
+    overlays.draw([])                                                 # anything else drawn: no more updates
+    assert overlays.moved([{"guid": p["guid"], "x": 0, "z": 0, "bottom": 0}]) == 0
+
+
+def test_only_the_newest_move_is_drawn(monkeypatch):
+    drawn, first, go = [], threading.Event(), threading.Event()
+
+    def slow(models):
+        drawn.append(models[0]["guid"])
+        if len(drawn) == 1:
+            first.set()
+            go.wait(2)
+        return 1
+    monkeypatch.setattr(overlays, "moved", slow)
+    worker = threading.Thread(target=overlay.menu_request, args=({"show": "moved", "models": [{"guid": "a"}]},))
+    worker.start()
+    assert first.wait(2)
+    for g in "bcd":                                                   # three more while "a" is being drawn
+        overlay.menu_request({"show": "moved", "models": [{"guid": g}]})
+    go.set()
+    worker.join(2)
+    assert drawn == ["a", "d"] and not overlay.moves["busy"]
+
+
+HELPER_HARNESS = r"""
+local log = {}
+local function note(s) table.insert(log, s) end
+local objects = {}
+local function model(guid, x, z)
+  local o = {x = x, y = 1, z = z}
+  o.getBounds = function() return {center = {x = o.x, y = o.y + 0.5, z = o.z}, size = {x = 1, y = 1, z = 1}} end
+  objects[guid] = o
+  return o
+end
+function getObjectFromGUID(g) return objects[g] end
+self = {positionToLocal = function(p) return {p[1], p[2] + 10, p[3]} end,   -- the helper sits at y -10
+        setVectorLines = function(lines) note("lines " .. #lines) last = lines end,
+        destruct = function() note("destructed") end}
+Wait = {time = function() end}
+JSON = {decode = function(s) return s end}   -- the state below is already a table
+function sendExternalMessage(t)
+  local held = false
+  for _, m in ipairs(t.models) do held = held or m.held end
+  note("sent " .. t.show .. " " .. #t.models .. (held and " held" or ""))
+end
+
+%s
+
+local a, e = model("a", 0, 0), model("e", 10, 0)
+onLoad({replace = true, watch = {guids = {"a", "e"}},
+        fixed = {{points = {{0, 1.4, 0}, {1, 1.4, 0}}, color = {1, 1, 1}, thickness = 0.1}}})
+note("y " .. last[1].points[1][2])
+ttsbTick()                                  -- first look: nothing has moved
+a.x = 5 ttsbTick()                          -- moved: the hub told at once
+a.x = 6 ttsbTick()                          -- still moving: not again until 3 ticks on
+a.x = 7 a.held_by_color = "Red" ttsbTick()
+a.x = 8 ttsbTick()                          -- 3 ticks: told (a is being held)
+a.x = 9 ttsbTick()
+a.held_by_color = nil ttsbTick()            -- let go: told where it stopped
+ttsbTick() ttsbTick()                       -- still: nothing
+ttsbSet({fixed = {}})                       -- the hub's redraw: lines only
+e.x = 3 ttsbTick()                          -- an enemy moved: told
+ttsbSet({fixed = {}, replace = true})       -- something else drawn: nothing watched
+e.x = 4 ttsbTick()
+print(table.concat(log, "\n"))
+"""
+
+
+@pytest.mark.skipif(not shutil.which("luajit"), reason="LuaJIT isn't installed")
+def test_helper_reports_moves(tmp_path):
+    lua = tmp_path / "helper.lua"
+    lua.write_text(HELPER_HARNESS % overlays.HELPER_SCRIPT)
+    run = subprocess.run(["luajit", str(lua)], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    assert run.stdout.splitlines() == [
+        "lines 1", "y 11.4",                     # drawn where the hub said (the helper is at -10)
+        "sent moved 2",
+        "sent moved 2 held",
+        "sent moved 2",
+        "lines 0",
+        "sent moved 2",
+        "lines 0",
+    ]

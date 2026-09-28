@@ -179,8 +179,8 @@ def threat_ranges(unit: str, army: str | None = None, nth: int | None = None) ->
     """How far a unit on the table reaches this turn, from its datasheet: "move" (its slowest
     model's M), its "weapons" (what its models carry, from their tooltips, else the datasheet's
     default wargear: "weapons_from" says which), and "bands": each reach in inches from the
-    edges of its bases, as average and max: move; advance (M + D6); charge (M + 2D6, ending
-    within 2" engagement range); "shoot: <weapon>" (M + range); "advance and shoot: <weapon>"
+    edges of its bases, as average and max: move; advance (M + D6); charge (M + 2D6, to base
+    contact); "shoot: <weapon>" (M + range); "advance and shoot: <weapon>"
     for Assault weapons (M + D6 + range). unit / army / nth: as in measure. Straight-line
     distances: terrain and other models in the way, Fly, Deep Strike and re-rolls aren't counted."""
     return ranging(board.read_objects(), unit, army, nth)
@@ -194,8 +194,8 @@ def can_reach(unit: str | None = None, target: str | None = None, army: str | No
 
     Each entry in "reach": "gap" (closest base to base), "engaged" (within 2"), "visible"
     (whether the attacker can see the target now, from the layout's terrain as line_of_sight
-    works it out; null with no layout), "charge" (the 2D6 roll needed after a full move, and
-    the chance of making it; null beyond 12"), and each ranged weapon: in range "now" (and
+    works it out; null with no layout), "charge" (the 2D6 roll needed to reach base contact
+    after a full move, and the chance of making it; null when that's more than 12), and each ranged weapon: in range "now" (and
     seen), "after_move", "after_advance" (Assault weapons). Most dangerous first.
     "out_of_reach": the other units nothing reaches this turn. "unknown": units with no
     datasheet to work from. Weapons are what the attacker's models carry. Straight-line

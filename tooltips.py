@@ -21,6 +21,7 @@ line that board.py groups units by.
 import re
 
 import datasheets
+import threat
 
 LABEL = "9aa1ad"      # labels and rules, in the hub's muted grey
 ACCENT = "e8b53e"     # weapon names, warlord and enhancements, in the hub's accent
@@ -254,9 +255,20 @@ def card_text(unit, sheet, units=()):
     return "\n\n".join("\n".join(s) for s in sections)
 
 
+def reach(model, sheet):
+    """What a spawned model needs to draw its own threat rings (sheetviewer.py): its base's
+    radius in inches (None when not known) and threat.model_bands, with the ranged weapons
+    it carries."""
+    b = (model.get("base") or {}).get("inches")
+    weapons = [p["name"] for name, _ in carried(model, sheet) for p in sheet["wargear"][name]["weapons"]
+               if p.get("type") != "melee"]
+    return {"base": round((b[0] + b[-1]) / 4, 3) if b else None,
+            "bands": threat.model_bands(sheet, model.get("sheet_model"), weapons)}
+
+
 def attach(parsed, cache=None):
-    """Give every model of a datasheet-matched unit a "tooltip", and the unit
-    its whole datasheet as "card" text. -> how many models."""
+    """Give every model of a datasheet-matched unit a "tooltip" and its "reach" (for its
+    threat rings), and the unit its whole datasheet as "card" text. -> how many models."""
     sheets = None
     count = 0
     for u in parsed["units"]:
@@ -270,6 +282,7 @@ def attach(parsed, cache=None):
         lead = lead_model(u, sheet)
         for i, m in enumerate(u["models"]):
             m["tooltip"] = tooltip(u, m, sheet, i == lead)
+            m["reach"] = reach(m, sheet)
             count += 1
         u["card"] = card_text(u, sheet, parsed["units"])
     return count

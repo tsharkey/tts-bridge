@@ -4,14 +4,18 @@ sheetviewer.py — the datasheet viewer script spawned models carry.
 Right-click a model and choose **Datasheet** (or hover it and press the key
 bound to "Show datasheet" in TTS's Options > Game Keys) to open a floating,
 scrollable, draggable window with its unit's whole datasheet (tooltips.card_text),
-shown only to the player who opened it. **Show threat range**, **Show line of
-sight** and **Clear overlays** ask the hub to draw on the table (overlays.py),
-through sendExternalMessage({ttsBridge = "overlay", ...}). A model with more
+shown only to the player who opened it. **Threat range on/off** (or the hotkey
+of that name) rings the model with how far it moves, advances and charges, from
+its base's edge: lines on the model itself, so they go where it goes, worked out
+when it was spawned (tooltips.reach), with no hub needed. **Show line of sight**
+asks the hub to draw on the table (overlays.py), through
+sendExternalMessage({ttsBridge = "overlay", ...}); **Clear overlays** turns off
+every model's rings and the hub's lines. A model with more
 than one wound is named "[<left>/<max>] <name>" (tooltips.py): **Take a wound** and
 **Heal a wound** in its menu, or the hotkeys of those names, count them.
 
     import sheetviewer
-    sheetviewer.attach(obj, unit_name, card_text)   # adds the script to a spawned object
+    sheetviewer.attach(obj, unit_name, card_text, reach)   # adds the script to a spawned object
 
 The text lives in the model's own script. The window is one shared panel, added
 to the game's screen UI beside whatever the table already has (not replacing
@@ -21,6 +25,7 @@ it: ours goes after it and calls its onLoad first.
 
 import re
 
+import overlays
 import tts_bridge as tts
 
 PANEL_ID = "ttsBridgeSheet"
@@ -70,6 +75,7 @@ SCRIPT = """%(marker)s: right-click > Datasheet, or the "Show datasheet" hotkey
 TTSB_TITLE = %(title)s
 TTSB_SHEET = %(sheet)s
 TTSB_HAS_SHEET = true
+TTSB_REACH = %(reach)s   -- {base = radius, bands = {{reach, color}}}: the threat rings, or nil
 
 local ttsbPanel = %(panel)s
 
@@ -77,10 +83,17 @@ local ttsbEarlierOnLoad = onLoad  -- the model's own script, if it had one
 function onLoad(state)
   if ttsbEarlierOnLoad then ttsbEarlierOnLoad(state) end
   self.addContextMenuItem("Datasheet", function(color) ttsBridgeShow({color = color}) end)
+  if TTSB_REACH then
+    self.addContextMenuItem("Threat range on/off", function() ttsBridgeThreat({}) end)
+  end
   -- drawn by the tts-bridge hub (overlays.py), when it's running
-  self.addContextMenuItem("Show threat range", function(color) ttsBridgeOverlay(color, "threat") end)
   self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
-  self.addContextMenuItem("Clear overlays", function(color) ttsBridgeOverlay(color, "clear") end)
+  self.addContextMenuItem("Clear overlays", function(color)
+    for _, o in ipairs(getObjects()) do
+      if o.getVar("TTSB_REACH") then o.call("ttsBridgeThreat", {on = false}) end
+    end
+    ttsBridgeOverlay(color, "clear")
+  end)
   -- the wound tracker, on models named "[<left>/<max>] <name>" (tooltips.py); the menu stays open
   if ttsbWounds() then
     self.addContextMenuItem("Take a wound", function() ttsBridgeWound({change = -1}) end, true)
@@ -92,6 +105,9 @@ function onLoad(state)
     Global.setVar("ttsBridgeHotkey", self.guid)
     addHotkey("Show datasheet", function(color, hovered)
       if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeShow", {color = color}) end
+    end)
+    addHotkey("Threat range on/off", function(color, hovered)
+      if hovered ~= nil and hovered.getVar("TTSB_REACH") then hovered.call("ttsBridgeThreat", {}) end
     end)
     addHotkey("Take a wound", function(color, hovered)
       if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeWound", {change = -1}) end
@@ -141,6 +157,49 @@ function ttsBridgeWound(params)
   self.setName("[" .. left .. "/" .. most .. "] " .. rest)
 end
 
+-- the threat rings: on, off, or (on = nil) the other way round. Lines on the model itself,
+-- so they move with it; a ring is its reach out from the base's edge, at the base, with its
+-- label ('6" MOVE') just outside it, reading from the -z side.
+local ttsbRingsOn = false
+function ttsBridgeThreat(params)
+  local on = params and params.on
+  if on == nil then on = not ttsbRingsOn end
+  ttsbRingsOn = on
+  if not on then
+    self.setVectorLines({})
+    return
+  end
+  local b = self.getBounds()
+  local base = TTSB_REACH.base or (b.size.x + b.size.z) / 4
+  local y = b.center.y - b.size.y / 2 + 0.05
+  local lines = {}
+  for _, band in ipairs(TTSB_REACH.bands) do
+    local r = base + band.reach
+    local function at(a) return self.positionToLocal({b.center.x + r * math.cos(a), y, b.center.z + r * math.sin(a)}) end
+    if band.dashed then   -- after moving: a dash about every inch round it
+      local dashes = math.max(12, math.floor(2 * math.pi * r))
+      for k = 0, dashes - 1 do
+        local a = 2 * math.pi * k / dashes
+        table.insert(lines, {points = {at(a), at(a + 0.6 * math.pi / dashes), at(a + 1.2 * math.pi / dashes)},
+                             color = band.color, thickness = 0.12})
+      end
+    else
+      local points = {}
+      for k = 0, 72 do table.insert(points, at(2 * math.pi * k / 72)) end
+      table.insert(lines, {points = points, color = band.color, thickness = 0.12})
+    end
+    for _, stroke in ipairs(band.label or {}) do
+      local letters = {}
+      for _, p in ipairs(stroke) do
+        local out = r + 0.2 + (band.row or 0) * 0.7   -- labels of rings as wide as this one stack outwards
+        table.insert(letters, self.positionToLocal({b.center.x + p[1], y, b.center.z + out + p[2]}))
+      end
+      table.insert(lines, {points = letters, color = band.color, thickness = 0.05})
+    end
+  end
+  self.setVectorLines(lines)
+end
+
 function ttsBridgeOverlay(color, show)
   sendExternalMessage({ttsBridge = "overlay", guid = self.getGUID(), show = show, color = color})
 end
@@ -151,17 +210,137 @@ end
 """
 
 
-def script(title, card_text):
-    """The viewer script for one model, with its unit's datasheet in it."""
+# A stroke font for the rings' labels ('6" MOVE', '30" BOLT RIFLE'): each character as
+# polylines on a grid 4 wide and 6 tall, because vector lines are all a model can draw on itself.
+FONT = {
+    "0": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0), (4, 6)]],
+    "1": [[(1, 5), (2, 6), (2, 0)], [(1, 0), (3, 0)]],
+    "2": [[(0, 6), (4, 6), (4, 3), (0, 3), (0, 0), (4, 0)]],
+    "3": [[(0, 6), (4, 6), (4, 0), (0, 0)], [(1, 3), (4, 3)]],
+    "4": [[(0, 6), (0, 3), (4, 3)], [(4, 6), (4, 0)]],
+    "5": [[(4, 6), (0, 6), (0, 3), (4, 3), (4, 0), (0, 0)]],
+    "6": [[(4, 6), (0, 6), (0, 0), (4, 0), (4, 3), (0, 3)]],
+    "7": [[(0, 6), (4, 6), (4, 0)]],
+    "8": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)], [(0, 3), (4, 3)]],
+    "9": [[(4, 3), (0, 3), (0, 6), (4, 6), (4, 0), (0, 0)]],
+    ".": [[(2, 0), (2, 0.6)]],
+    '"': [[(1, 6), (1, 4.5)], [(3, 6), (3, 4.5)]],
+    "'": [[(2, 6), (2, 4.5)]],
+    "-": [[(1, 3), (3, 3)]],
+    "+": [[(0, 3), (4, 3)], [(2, 1), (2, 5)]],
+    "/": [[(0, 0), (4, 6)]],
+    ",": [[(2, 0.6), (1.5, -1)]],
+    ":": [[(2, 1), (2, 1.6)], [(2, 4), (2, 4.6)]],
+    "(": [[(3, 6), (2, 5), (2, 1), (3, 0)]],
+    ")": [[(1, 6), (2, 5), (2, 1), (1, 0)]],
+    "A": [[(0, 0), (2, 6), (4, 0)], [(1, 3), (3, 3)]],
+    "B": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 4), (3, 3), (0, 3)], [(3, 3), (4, 2), (4, 1), (3, 0), (0, 0)]],
+    "C": [[(4, 6), (0, 6), (0, 0), (4, 0)]],
+    "D": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 1), (3, 0), (0, 0)]],
+    "E": [[(4, 6), (0, 6), (0, 0), (4, 0)], [(0, 3), (3, 3)]],
+    "F": [[(4, 6), (0, 6), (0, 0)], [(0, 3), (3, 3)]],
+    "G": [[(4, 6), (0, 6), (0, 0), (4, 0), (4, 3), (2, 3)]],
+    "H": [[(0, 0), (0, 6)], [(4, 0), (4, 6)], [(0, 3), (4, 3)]],
+    "I": [[(2, 0), (2, 6)], [(1, 0), (3, 0)], [(1, 6), (3, 6)]],
+    "J": [[(4, 6), (4, 0), (0, 0), (0, 2)]],
+    "K": [[(0, 0), (0, 6)], [(4, 6), (0, 3), (4, 0)]],
+    "L": [[(0, 6), (0, 0), (4, 0)]],
+    "M": [[(0, 0), (0, 6), (2, 3), (4, 6), (4, 0)]],
+    "N": [[(0, 0), (0, 6), (4, 0), (4, 6)]],
+    "O": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)]],
+    "P": [[(0, 0), (0, 6), (4, 6), (4, 3), (0, 3)]],
+    "Q": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)], [(2, 2), (4, -1)]],
+    "R": [[(0, 0), (0, 6), (4, 6), (4, 3), (0, 3), (4, 0)]],
+    "S": [[(4, 6), (0, 6), (0, 3), (4, 3), (4, 0), (0, 0)]],
+    "T": [[(0, 6), (4, 6)], [(2, 6), (2, 0)]],
+    "U": [[(0, 6), (0, 0), (4, 0), (4, 6)]],
+    "V": [[(0, 6), (2, 0), (4, 6)]],
+    "W": [[(0, 6), (1, 0), (2, 3), (3, 0), (4, 6)]],
+    "X": [[(0, 0), (4, 6)], [(0, 6), (4, 0)]],
+    "Y": [[(0, 6), (2, 3), (4, 6)], [(2, 3), (2, 0)]],
+    "Z": [[(0, 6), (4, 6), (0, 0), (4, 0)]],
+}
+LABEL_HEIGHT = 0.5    # inches: how tall a ring's label is
+LABELS = {"move": "MOVE", "advance": "ADVANCE", "charge": "CHARGE"}
+
+
+def label_strokes(text, height=LABEL_HEIGHT):
+    """`text` as polylines of [x, z] in inches, centred on x = 0 with its baseline on z = 0,
+    reading along +x, in capitals. Characters FONT hasn't got are left as gaps."""
+    text = text.upper().replace("’", "'")
+    unit = height / 6
+    width = (len(text) * 6 - 2) * unit
+    out = []
+    for n, ch in enumerate(text):
+        x0 = n * 6 * unit - width / 2
+        out += [[[round(x0 + x * unit, 3), round(z * unit, 3)] for x, z in stroke] for stroke in FONT.get(ch, [])]
+    return out
+
+
+def lua_points(strokes):
+    return "{" + ", ".join("{" + ", ".join(f"{{{x:g}, {z:g}}}" for x, z in s) + "}" for s in strokes) + "}"
+
+
+DASHED = {"charge"}   # what a model reaches only after moving: dashed rings
+
+
+def rings(bands):
+    """tooltips.reach's bands as the rings to draw: [(reach, colour, label, dashed)].
+    Movement in greens, weapons in blues (overlays.COLOURS / SHOTS). Solid for what the model
+    does from where it stands (move, advance, a weapon's range), dashed for what it reaches
+    after moving (charge, a weapon's range after a move: '30" BOLT RIFLE +MOVE'). Weapons with
+    the same range share a colour and rings, their names joined ('24" BOLT RIFLE / PISTOL')."""
+    out, ranges, moved = [], {}, {}
+    for b in bands:
+        if b["band"] in LABELS:
+            out.append((b["reach"], overlays.COLOURS[b["band"]], LABELS[b["band"]], b["band"] in DASHED))
+        elif b["band"].startswith("range: "):
+            ranges.setdefault(b["reach"], []).append(b["band"].removeprefix("range: "))
+        elif b["band"].startswith("shoot: "):
+            moved[b["band"].removeprefix("shoot: ")] = b["reach"]
+    for n, (reach, names) in enumerate(sorted(ranges.items())):
+        colour, label = overlays.SHOTS[n % len(overlays.SHOTS)], " / ".join(dict.fromkeys(names))
+        out.append((reach, colour, label, False))
+        after = moved.get(names[0])
+        if after is not None and after != reach:
+            out.append((after, colour, label + " +MOVE", True))
+    return out
+
+
+def ring_lua(reach, colour, label, dashed, row=0):
+    """One ring for TTSB_REACH. row: its label's place among the labels of rings as wide as
+    it (a 12" advance and a 12" pistol), each the next one out."""
+    colour = ", ".join(f"{c:g}" for c in colour)
+    text = f'{reach:g}" {label}'
+    return (f"{{reach = {reach:g}, color = {{{colour}}}, dashed = {'true' if dashed else 'false'}, "
+            f"row = {row}, label = {lua_points(label_strokes(text))}}}")
+
+
+def reach_lua(reach):
+    """tooltips.reach as the Lua table TTSB_REACH: its rings (rings), each with its label
+    ('6" MOVE') as strokes; nil for a model with nothing to ring."""
+    if not reach or not reach.get("bands"):
+        return "nil"
+    rows, out = {}, []
+    for r in rings(reach["bands"]):
+        out.append(ring_lua(*r, row=rows.get(r[0], 0)))
+        rows[r[0]] = rows.get(r[0], 0) + 1
+    bands = ", ".join(out)
+    return f"{{base = {'nil' if reach['base'] is None else format(reach['base'], 'g')}, bands = {{{bands}}}}}"
+
+
+def script(title, card_text, reach=None):
+    """The viewer script for one model, with its unit's datasheet in it, and its reach
+    (tooltips.reach) for its threat rings."""
     return SCRIPT % {"marker": MARKER, "title": tts.lua_str(title), "sheet": tts.lua_str(rich_text(card_text)),
-                     "panel": PANEL_LUA, "id": PANEL_ID}
+                     "panel": PANEL_LUA, "id": PANEL_ID, "reach": reach_lua(reach)}
 
 
-def attach(obj, unit_name, card_text):
+def attach(obj, unit_name, card_text, reach=None):
     """Give a spawned object the viewer, after any script it already has
     (replacing an earlier viewer of ours)."""
     own = obj.get("LuaScript") or ""
     if MARKER in own:
         own = own[:own.index(MARKER)]
-    obj["LuaScript"] = (own.rstrip() + "\n\n" if own.strip() else "") + script(unit_name, card_text)
+    obj["LuaScript"] = (own.rstrip() + "\n\n" if own.strip() else "") + script(unit_name, card_text, reach)
     return obj
