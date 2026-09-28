@@ -929,13 +929,29 @@ def tag(obj, tags):
     return obj
 
 
-def model_objects(army, catalog):
-    """Each picked model's catalogue object, ready to spawn: its unit's name on
-    the first description line (board.py groups by it), then its datasheet
-    tooltip when datasheets are cached (tooltips.py), the army tag in GM
-    Notes, its unit tags, and the datasheet viewer script (sheetviewer.py).
-    -> (objects, models, units) with units as [(name, [object index])]."""
+def mark(obj, unit_name, model, tags, gm_notes, card=None):
+    """Make a catalogue object one of ours: named and described for its model
+    (tooltips.describe), its unit tags, the army tag in GM Notes, and the
+    datasheet viewer (sheetviewer.py). Every state of a model with states
+    (recolours, poses) gets the same, so switching state in TTS keeps them."""
     import sheetviewer
+    import tooltips
+
+    for o in [obj] + list((obj.get("States") or {}).values()):
+        tooltips.describe(o, unit_name, model)
+        tag(o, tags)
+        o["GMNotes"] = gm_notes
+        if card:
+            sheetviewer.attach(o, unit_name, card)
+    return obj
+
+
+def model_objects(army, catalog):
+    """Each picked model's catalogue object, ready to spawn (mark): its unit's
+    name on the first description line (board.py groups by it), then its
+    datasheet tooltip when datasheets are cached (tooltips.py), the army tag in
+    GM Notes, its unit tags, and the datasheet viewer script (sheetviewer.py).
+    -> (objects, models, units) with units as [(name, [object index])]."""
     import tooltips
 
     if not any("tooltip" in m for u in army["units"] for m in u["models"]):
@@ -949,11 +965,7 @@ def model_objects(army, catalog):
             g, i = m["pick"].split(":")
             o = copy.deepcopy(catalog[g][int(i)])
             o.pop("GUID", None)
-            tooltips.describe(o, u["name"], m)
-            tag(o, unit_tags(index, u))
-            if u.get("card"):
-                sheetviewer.attach(o, u["name"], u["card"])
-            o["GMNotes"] = f"army.py:{army['title']}"
+            mark(o, u["name"], m, unit_tags(index, u), f"army.py:{army['title']}", u.get("card"))
             members.append(len(objs))
             objs.append(o)
             models.append(m)

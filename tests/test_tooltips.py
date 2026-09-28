@@ -119,3 +119,22 @@ def test_weapon_names_read_back_from_a_tooltip():
     old = ("[Test Squad]\n[b]M[/b] 6\"\n[9aa1ad]Weapons[-]\n2× [e8b53e]Bolt rifle[-]  24\"  A2\n"
            "[e8b53e]Power sword - strike[-]  Melee  A4\n[9aa1ad]Abilities[-]\n[b]Hold Fast:[/b] text")
     assert tooltips.weapon_names(old) == ["Bolt rifle", "Power sword - strike"]
+
+
+def test_every_state_is_marked():
+    """A model with states (a recolour, another pose) keeps our tooltip, tags and
+    viewer when it's switched to another state in TTS."""
+    import army
+    import sheetviewer
+    unit = squad()
+    unit["models"][0]["tooltip"] = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)
+    obj = {"Nickname": "Sergeant", "Description": "Recolored by someone", "Tags": ["theirs"],
+           "States": {"2": {"Nickname": "Sergeant", "Description": "Recolor by someone else",
+                            "LuaScript": "function onLoad() end"}}}
+    army.mark(obj, "Test Squad", unit["models"][0], ["tts-bridge:unit:1"], "army.py:Test", "[b]card[/b]")
+    for o in (obj, obj["States"]["2"]):
+        assert o["Nickname"] == "2/2 Squad Leader"
+        assert o["Description"].startswith("[Test Squad]\n") and "Recolo" not in o["Description"]
+        assert "tts-bridge:unit:1" in o["Tags"] and o["GMNotes"] == "army.py:Test"
+        assert sheetviewer.MARKER in o["LuaScript"]
+    assert obj["Tags"][0] == "theirs" and obj["States"]["2"]["LuaScript"].startswith("function onLoad() end")
