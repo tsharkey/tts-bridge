@@ -20,15 +20,19 @@ from app.core.tts import lock as tts_lock
 router = api_router()
 
 
-def parse(text, mappings, prefer_static=False, repick=False):
-    """-> (parsed list, catalogue or None). The list's parse errors come back
-    as ValueError, so the page shows them as the list's problem, not TTS's."""
+def parse(text, mappings, prefer_static=False, repick=False, name=None):
+    """-> (parsed list, catalogue or None). `name`, the list's saved name, is its
+    title in TTS (the Saved Object and army tag) instead of the export's own.
+    The list's parse errors come back as ValueError, so the page shows them as
+    the list's problem, not TTS's."""
     if not (text or "").strip():
         raise ValueError("Paste a list first.")
     try:
         parsed = datasheets.parse(text, mappings, repick=repick)
     except SystemExit as e:
         raise ValueError(str(e)) from e
+    if (name or "").strip():
+        parsed["title"] = name.strip()
     bases.attach(parsed, mappings)
     tooltips.attach(parsed)
     catalog = army.load_catalog() if army.CATALOG.exists() and any(army.CATALOG.glob("*.json")) else None
@@ -106,7 +110,7 @@ def save_mappings(mappings):
 def read(body: dict):
     mappings = army.load_mappings()
     prefer_static, repick = bool(body.get("prefer_static")), bool(body.get("repick"))
-    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick)
+    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick, body.get("name"))
     if repick:
         save_mappings(mappings)
     return view(parsed, catalog, mappings, prefer_static)
@@ -141,7 +145,7 @@ def pin_datasheet(body: dict):
 def ready(body):
     """Parse for output, pinning every choice as `army.py build` does."""
     mappings = army.load_mappings()
-    parsed, catalog = parse(body.get("text"), mappings)
+    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"))
     if not catalog:
         raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
     save_mappings(mappings)

@@ -928,36 +928,69 @@ def model_objects(army, catalog):
     return objs, models, units
 
 
-def pack(units, dims, x0, z0, width, gap=0.4, pad=3.0):
-    """Lay units out left to right in rows from (x0, z0), top-left, wrapping at
-    `width` inches. dims[k] is object k's [width, depth]. -> [(k, x, z)] centres."""
-    moves = []
-    cx, cz, row_h = x0, z0, 0
-    for _, members in units:
-        if not members:
-            continue
-        sizes = [dims[k] for k in members]
-        # as many models per line as fit the area (max 10), so narrow
-        # deployment zones wrap a unit instead of spilling off the table
-        per_row, run = 0, 0.0
-        for d in sizes[:10]:
-            if per_row and run + d[0] + gap > width:
-                break
-            run += d[0] + gap
-            per_row += 1
-        uw = sum(d[0] + gap for d in sizes[:per_row])
-        if cx + uw > x0 + width and cx > x0:
-            cx, cz, row_h = x0, cz - row_h - pad, 0
-        ux, uz, line_h = cx, cz, 0
-        for n, (k, d) in enumerate(zip(members, sizes)):
-            if n and n % per_row == 0:
-                ux, uz, line_h = cx, uz - line_h - gap, 0
-            moves.append((k, ux + d[0] / 2, uz - d[1] / 2))
-            ux += d[0] + gap
-            line_h = max(line_h, d[1])
-        row_h = max(row_h, cz - uz + line_h)
-        cx += uw + pad
-    return moves
+def groups(army, units):
+    """model_objects' units as the blocks to lay out: each unit with the leaders
+    attached to it (bodyguard first), then everything else. -> [[unit index]]."""
+    led = {}
+    for i, u in enumerate(army["units"]):
+        if u.get("attached_to") is not None and u["attached_to"] < len(army["units"]):
+            led.setdefault(u["attached_to"], []).append(i)
+    placed = {i for leaders in led.values() for i in leaders}
+    return [[i] + led.get(i, []) for i in range(len(units)) if i not in placed]
+
+
+def block(sizes, gap, width):
+    """Models in a rough square, lines of at most 5, and fewer when a line would
+    be wider than `width` (a narrow deployment zone). -> ([(dx, dz)] centres
+    from the block's top-left, width, depth)."""
+    per_row = min(5, math.ceil(math.sqrt(len(sizes))))
+    while per_row > 1 and any(sum(d[0] for d in sizes[r:r + per_row]) + gap * (per_row - 1) > width
+                              for r in range(0, len(sizes), per_row)):
+        per_row -= 1
+    out, most, z = [], 0.0, 0.0
+    for r in range(0, len(sizes), per_row):
+        line, x = sizes[r:r + per_row], 0.0
+        depth = max(d[1] for d in line)
+        for d in line:
+            out.append((x + d[0] / 2, z - depth / 2))
+            x += d[0] + gap
+        most, z = max(most, x - gap), z - depth - gap
+    return out, most, -z - gap
+
+
+def pack(units, dims, x0, z0, width, gap=0.4, pad=2.0, blocks=None):
+    """Lay units out as a compact block from (x0, z0), its top-left: each unit a
+    rough square, leaders beside the unit they lead (`blocks`, from groups()),
+    or below it when that's too wide, and the blocks packed in rows, deepest
+    first, with `pad` between them. Rows are as wide as makes the army roughly
+    square, and never wider than `width` (unless one model is).
+    dims[k] is object k's [width, depth]. -> [(k, x, z)] centres."""
+    laid = []
+    for members in blocks or [[i] for i in range(len(units))]:
+        parts, x, z, depth, most = [], 0.0, 0.0, 0.0, 0.0
+        for i in members:
+            ks = units[i][1]
+            if not ks:
+                continue
+            spots, w, d = block([dims[k] for k in ks], gap, width)
+            if x and x + w > width:   # no room beside: start a line below
+                x, z, depth = 0.0, z - depth - gap * 2, 0.0
+            parts += [(k, x + dx, z + dz) for k, (dx, dz) in zip(ks, spots)]
+            most = max(most, x + w)
+            x, depth = x + w + gap * 2, max(depth, d)   # a leader stands close by, not a unit apart
+        if parts:
+            laid.append((parts, most, depth - z))
+    if not laid:
+        return []
+    area = sum((w + pad) * (d + pad) for _, w, d in laid)
+    row_w = min(width, max(max(w for _, w, _ in laid), math.sqrt(area)))
+    moves, cx, cz, row_d = [], x0, z0, 0.0
+    for parts, w, d in sorted(laid, key=lambda b: -b[2]):
+        if cx > x0 and cx + w > x0 + row_w:
+            cx, cz, row_d = x0, cz - row_d - pad, 0.0
+        moves += [(k, cx + dx, cz + dz) for k, dx, dz in parts]
+        cx, row_d = cx + w + pad, max(row_d, d)
+    return sorted(moves)
 
 
 def spawn(army, catalog, x0, z0, width=110, facing=180, run_lua=None, log=print):
@@ -998,7 +1031,7 @@ def spawn(army, catalog, x0, z0, width=110, facing=180, run_lua=None, log=print)
     lua = [f'do local o = getObjectFromGUID("{guids[k]}") if o then '
            f'o.setPosition({{{x:.2f}, 3, {z:.2f}}}) o.setRotation({{0, {facing}, 0}}) '
            f'o.setLock(false) end end'
-           for k, x, z in pack(units, dims, x0, z0, width)]
+           for k, x, z in pack(units, dims, x0, z0, width, blocks=groups(army, units))]
     run_lua("\n".join(lua), timeout=30)
     return guids
 
@@ -1054,7 +1087,7 @@ def build_saved_object(army, catalog, width=40, facing=180):
     if not objs:
         raise SystemExit("No models to save: nothing in this list matched a Force Org model.")
     dims = [footprint(m) for m in models]
-    for k, x, z in pack(units, dims, 0, 0, width):
+    for k, x, z in pack(units, dims, 0, 0, width, blocks=groups(army, units)):
         objs[k]["Transform"].update(posX=round(x, 2), posY=1.5, posZ=round(z, 2), rotX=0, rotY=facing, rotZ=0)
         objs[k]["Locked"] = False
     return write_saved_object(army, objs)

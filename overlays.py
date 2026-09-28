@@ -11,7 +11,8 @@ interactable), never off Global, so the table's own lines and other mods' are le
 and clearing just removes the helper. Its script removes it when a save is loaded, so
 nothing drawn outlives the session it was drawn in.
 
-What's drawn, a little above the table surface:
+What's drawn, just above the mats on the table (the board's and the terrain areas', which sit
+a little above the table surface):
 - A threat band (move, advance, charge, "shoot: <weapon>"; threat.bands) as the outline of
   everything within that reach of any of the unit's bases: the union of circles, one ring
   round the unit rather than one per model.
@@ -28,7 +29,7 @@ import threat
 import tts_bridge as tts
 
 HELPER_NOTES = "tts-bridge:overlays"
-LIFT = 0.08            # inches above the table surface
+LIFT = 0.5             # inches above the table surface: clear of the board and terrain-area mats on it
 RING_STEPS = 120       # points round a full circle
 COLOURS = {"move": [0.31, 0.77, 0.48], "advance": [0.91, 0.71, 0.24], "charge": [1.0, 0.55, 0.26],
            "los": [1.0, 0.96, 0.82], "full": [0.31, 0.9, 0.48], "partial": [0.95, 0.85, 0.25]}
