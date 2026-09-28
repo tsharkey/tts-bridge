@@ -498,6 +498,39 @@ def link_attachments(units):
         del u["group"]
 
 
+def unit_keys(units):
+    """Each unit's "<name>#<n>", n counting same-named units in list order: how a
+    choice about a unit is saved with its list, so it survives other edits."""
+    seen, out = {}, []
+    for u in units:
+        seen[u["name"]] = seen.get(u["name"], 0) + 1
+        out.append(f"{u['name']}#{seen[u['name']]}")
+    return out
+
+
+def attach_leaders(units, choices):
+    """Apply the leaders chosen for a list, over what the list itself says:
+    choices maps a leader's unit key (unit_keys) to its bodyguard's, or to None
+    to leave it unattached. Keys that no longer match a unit are ignored."""
+    keys = unit_keys(units)
+    at = {k: i for i, k in enumerate(keys)}
+    for leader, bodyguard in (choices or {}).items():
+        if leader not in at or (bodyguard is not None and bodyguard not in at):
+            continue
+        u = units[at[leader]]
+        if bodyguard is None:
+            u["role"], u["attached_to"] = None, None
+        else:
+            u["role"] = u["role"] if u.get("role") in ("leader", "support") else "leader"
+            u["attached_to"] = at[bodyguard]
+    led = {u["attached_to"] for u in units if u.get("attached_to") is not None}
+    for i, u in enumerate(units):
+        if i in led:
+            u["role"] = "bodyguard"
+        elif u.get("role") == "bodyguard":
+            u["role"] = None
+
+
 MODEL = "model"   # a line already known to be a model (NewRecruit compact)
 GEAR = "gear"     # gear that isn't wargear: drones, and lines without a count
 

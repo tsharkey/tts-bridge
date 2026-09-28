@@ -34,7 +34,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `bsdata.py` | Imports BSData's catalogues into our datasheet format ([docs/formats/datasheet.md](docs/formats/datasheet.md)). |
 | `config.py` | Optional settings from the environment or `.env` (see `.env.example`). |
 | `mappings.json` | The user's pinned model matches (git-ignored; created on first use). |
-| `lists/` | The user's saved army lists (git-ignored). Tests use the trimmed exports in `tests/fixtures/`. |
+| `lists/` | The user's saved army lists (git-ignored), with the choices made for each (which unit each leader leads) in `<name>.json` beside it. Tests use the trimmed exports in `tests/fixtures/`. |
 | `.claude/skills/wh40k-deployment-planner/` | A Claude skill for deployment, driving `board.py`. |
 
 ## Rules

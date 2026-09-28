@@ -254,3 +254,33 @@ def test_mapped_placeholder_keeps_its_gear():
     assert broadside["sheet_model"] == "Broadside Shas’vre"
     assert "Seeker missile" in broadside["wargear"]  # from the list; not in the datasheet's defaults
     assert unit(read("tau_tournament.txt"), "Broadside Battlesuits").get("composition") is None
+
+
+def test_leaders_from_the_leader_ability():
+    def sheet(name, text=None):
+        return {"id": name, "name": name, "abilities": [{"name": "Leader", "text": text}] if text else []}
+    captain = sheet("Captain", "This model can be attached to the following units:\n- **Intercessor Squad**\n- Hellblaster Squad.")
+    chaplain = sheet("Chaplain", "This model can be attached to the following units: INTERCESSOR SQUAD, TERMINATOR SQUAD")
+    assert datasheets.leads(captain) == ["intercessor squad", "hellblaster squad"]
+    assert datasheets.leads(chaplain) == ["intercessor squad", "terminator squad"]
+    assert datasheets.leads(sheet("Intercessor Squad")) == []
+    sheets = {s["id"]: s for s in (captain, chaplain, sheet("Intercessor Squad"))}
+
+    class Sheets:
+        get = staticmethod(sheets.get)
+    units = [{"name": n, "datasheet": {"id": i, "name": i}} for n, i in (
+        ("Captain", "Captain"), ("Intercessor Squad", "Intercessor Squad"), ("Chaplain", "Chaplain"),
+        ("Intercessor Squad", "Intercessor Squad"))]
+    datasheets.link_leaders(units, Sheets)
+    assert units[0]["can_lead"] == [1, 3] and units[2]["can_lead"] == [1, 3] and "can_lead" not in units[1]
+
+
+def test_attach_leaders_over_the_list():
+    units = [{"name": "Captain", "role": "leader", "attached_to": 1}, {"name": "Squad", "role": "bodyguard"},
+             {"name": "Squad", "role": None}, {"name": "Chaplain", "role": None, "attached_to": None}]
+    assert army.unit_keys(units) == ["Captain#1", "Squad#1", "Squad#2", "Chaplain#1"]
+    army.attach_leaders(units, {"Captain#1": "Squad#2", "Chaplain#1": "Squad#2", "Gone#1": "Squad#1"})
+    assert [u["role"] for u in units] == ["leader", None, "bodyguard", "leader"]
+    assert units[0]["attached_to"] == units[3]["attached_to"] == 2
+    army.attach_leaders(units, {"Captain#1": None})
+    assert (units[0]["role"], units[0]["attached_to"]) == (None, None) and units[2]["role"] == "bodyguard"

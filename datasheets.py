@@ -212,7 +212,33 @@ def parse(text, mappings, cache=None, repick=False):
             if sheet:
                 move_enhancements(u, sheet)
                 compose(u, sheet)
+        link_leaders(parsed["units"], sheets)
     return parsed
+
+
+LEADER_RE = re.compile(r"attached to the following units?\s*:(.*)", re.I | re.S)
+
+
+def leads(sheet):
+    """The units a character's Leader ability says it can be attached to, by
+    key() name. [] for a unit without one."""
+    for a in sheet["abilities"]:
+        m = a["name"].casefold() == "leader" and LEADER_RE.search(a.get("text") or "")
+        if m:
+            names = re.split(r"[,\n■•]", re.sub(r"\*+|\^\^", "", m.group(1)))
+            return [key(n.strip().lstrip("-").strip().rstrip(".")) for n in names if n.strip(" -.")]
+    return []
+
+
+def link_leaders(units, sheets):
+    """Each unit with a Leader ability gets `can_lead`: the other units of the
+    list it can be attached to, by index."""
+    for i, u in enumerate(units):
+        sheet = sheets.get(u["datasheet"]["id"]) if u.get("datasheet") else None
+        names = set(leads(sheet)) if sheet else set()
+        if names:
+            u["can_lead"] = [j for j, o in enumerate(units) if j != i and (
+                key(o["name"]) in names or (o.get("datasheet") and key(o["datasheet"]["name"]) in names))]
 
 
 def move_enhancements(unit, sheet):

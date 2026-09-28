@@ -18,6 +18,38 @@ def safe_name(name):
     return name
 
 
+def list_name(name):
+    """A saved list's name as its file name. It's also the army's name in TTS
+    (Scribe), so it keeps spaces, apostrophes and brackets; no path characters."""
+    name = re.sub(r"[^\w '()&+,!-]+", "", name or "").strip()
+    if not name:
+        raise ValueError("Give it a name")
+    return name
+
+
+def save(name, text, leaders=None):
+    """Save a list as lists/<name>.txt, with the choices made for it (which unit
+    each leader leads; army.attach_leaders) beside it in <name>.json. Leaders
+    None keeps the choices already saved (a page that doesn't make them). -> its name."""
+    LISTS.mkdir(exist_ok=True)
+    name = list_name(name)
+    (LISTS / f"{name}.txt").write_text(text)
+    choices = LISTS / f"{name}.json"
+    if leaders:
+        choices.write_text(json.dumps({"leaders": leaders}, indent=1, ensure_ascii=False))
+    elif leaders is not None:
+        choices.unlink(missing_ok=True)
+    return name
+
+
+def load(name):
+    """{"text", "leaders"} for a saved list."""
+    name = list_name(name)
+    choices = LISTS / f"{name}.json"
+    return {"text": (LISTS / f"{name}.txt").read_text(),
+            "leaders": json.loads(choices.read_text()).get("leaders", {}) if choices.exists() else {}}
+
+
 def parse(text):
     """Parse + match a list, reporting errors instead of exiting."""
     catalog = army.load_catalog()
