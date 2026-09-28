@@ -53,6 +53,24 @@ def weapon_line(w, count=1):
     return f"{f'{count}× ' if count > 1 else ''}{colour(ACCENT, w['name'])}  {stats}{keywords}"
 
 
+WEAPON_RE = re.compile(r"^(?:\d+× )?\[" + ACCENT + r"\](.+?)\[-\]  ")
+
+
+def weapon_names(description):
+    """The weapon profiles a spawned model's tooltip lists (weapon_line), by name."""
+    lines = (description or "").splitlines()
+    start = next((i for i, line in enumerate(lines) if line == colour(LABEL, "Weapons")), None)
+    if start is None:
+        return []
+    out = []
+    for line in lines[start + 1:]:
+        m = WEAPON_RE.match(line)
+        if not m:
+            break
+        out.append(m.group(1))
+    return out
+
+
 def base_line(model):
     b = model.get("base")
     if not b or b["shape"] == "none":

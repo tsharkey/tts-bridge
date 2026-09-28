@@ -91,3 +91,13 @@ def test_card_has_the_whole_datasheet():
     assert "[b]Deep Strike:[/b] Arrives later." in text   # a unit rule, markup removed
     assert "[b]Assault:[/b]" in text                        # the Bolt rifle is "Assault, Heavy"
     assert "Lance" not in text                              # no weapon here has it
+
+
+def test_weapon_names_read_back_from_a_tooltip():
+    """What reach.py reads off spawned models: the weapon profiles in each one's tooltip."""
+    unit = squad()
+    lead = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)["text"]
+    trooper = tooltips.tooltip(unit, unit["models"][1], SHEET, lead=False)["text"]
+    assert tooltips.weapon_names(f"[Test Squad]\n{lead}") == ["Power sword - strike", "Twin carbine"]
+    assert tooltips.weapon_names(trooper) == ["Bolt rifle"]          # "2× " in front
+    assert tooltips.weapon_names("[Test Squad]\nno tooltip") == [] and tooltips.weapon_names(None) == []
