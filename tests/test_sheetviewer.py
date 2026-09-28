@@ -57,6 +57,10 @@ print(table.concat(log, "\n"))
 """
 
 
+def test_underline_is_the_ability_colour():
+    assert sheetviewer.rich_text("[b][u]Hold Fast[/u][/b]") == "<b><color=#c49bf2>Hold Fast</color></b>"
+
+
 def test_rich_text():
     assert sheetviewer.rich_text(CARD) == (
         "<color=#e8b53e>Leader of X</color>\n<color=#9aa1ad><b>ABILITIES</b></color>\n"
@@ -96,7 +100,8 @@ def test_script_runs_in_lua(tmp_path):
     assert log.count("show=ttsBridgeSheet") == 2 and "hide=ttsBridgeSheet" in log
     assert "earlier=again" in log  # the model's own onLoad still runs
     # the wound tracker counts down to 0 and back up, in the model's name
+    # (from a name without brackets, as models spawned before them were named)
     assert [line for line in log if line.startswith("name=")] == [
-        "name=2/3 Crisis Shas'vre", "name=1/3 Crisis Shas'vre", "name=0/3 Crisis Shas'vre",
-        "name=0/3 Crisis Shas'vre", "name=1/3 Crisis Shas'vre"]
+        "name=[2/3] Crisis Shas'vre", "name=[1/3] Crisis Shas'vre", "name=[0/3] Crisis Shas'vre",
+        "name=[0/3] Crisis Shas'vre", "name=[1/3] Crisis Shas'vre"]
     assert "hotkey=Take a wound" in log and "hotkey=Heal a wound" in log
