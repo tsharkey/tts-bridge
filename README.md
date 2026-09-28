@@ -205,8 +205,11 @@ Claude Code or Claude Desktop's chat. Its tools so far:
 - `place_unit`: set a unit up in rows at a spot and facing, from the table or from reserves. It checks first (off
   the table, overlapping, engagement range, coherency) and only moves with no problems unless forced; it also says
   which objectives and deployment zone the spot is in. `undo_place` puts units back, the last one first.
+- `line_of_sight`: what a unit can see of an enemy unit, model by model and what blocks it, or of every enemy
+  unit on the table. It uses the layout's terrain (Obscuring areas, dense features at ground level, Plunging Fire,
+  Hidden and Gone to Ground ranges), worked out from footprints, so windows and doorways aren't modelled.
 
-Line of sight and threat ranges are coming. Tools only run while the web app is
+Threat ranges are coming. Tools only run while the web app is
 up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 
