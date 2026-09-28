@@ -113,10 +113,8 @@ def inside(point, poly):
     return hit
 
 
-def distance(point, poly):
-    """How far a point is from a polygon's edge: 0 inside it."""
-    if inside(point, poly):
-        return 0.0
+def edge_distance(point, poly):
+    """How far a point is from a polygon's edge, inside or out."""
     x, z = point
     best = math.inf
     for (x1, z1), (x2, z2) in zip(poly, poly[1:] + poly[:1]):
@@ -124,6 +122,11 @@ def distance(point, poly):
         t = max(0.0, min(1.0, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz or 1)))
         best = min(best, math.hypot(x - x1 - t * dx, z - z1 - t * dz))
     return best
+
+
+def distance(point, poly):
+    """How far a point is from a polygon: 0 inside it."""
+    return 0.0 if inside(point, poly) else edge_distance(point, poly)
 
 
 def bounds(poly):

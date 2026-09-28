@@ -1,6 +1,10 @@
 """Grouping models into units on the table (board.py), with and without the
 unit tags army.py and recreate.py put on spawned models (issue #29)."""
 
+import math
+
+import pytest
+
 import army
 import board
 
@@ -89,3 +93,56 @@ def test_spawned_objects_carry_the_tags():
     # the datasheet rides on the model, in its viewer script; B has no datasheet, so no script
     assert "the datasheet" in a["LuaScript"] and "addContextMenuItem" in a["LuaScript"]
     assert not b.get("LuaScript")
+
+
+def test_closest_pair_between_units():
+    a, b = squad(1, 0, 0, n=3), squad(2, 10, 0, n=2)
+    d, p, q = board.closest_pair(a, b)
+    assert (p["guid"], q["guid"]) == ("u1m2", "u2m0")
+    assert abs(d - (10 - 3 - 1.26)) < 1e-9   # centres 7" apart, less two 32mm bases' radii
+
+
+def test_find_unit_says_what_went_wrong():
+    red = squad(1, 0, 0, n=2, army_tag="recreate:s:Red")
+    blue = squad(1, 0, 10, n=2, army_tag="recreate:s:Blue")
+    reserve = [model(40, 0, unit="Pathfinder Team")]
+    units = board.collect_units(red + blue + reserve)
+    with pytest.raises(board.UnitError, match="matches 2 units on the table.*Narrow it"):
+        board.find_unit(units, "Intercessor")
+    assert board.find_unit(units, "intercessor", army="blue")["army"] == "recreate:s:Blue"
+    with pytest.raises(board.UnitError, match=r'No unit on the table matches "Pathfinder" \(one off the table does\)'):
+        board.find_unit(units, "Pathfinder")
+    with pytest.raises(board.UnitError, match=r'matches "Hive Tyrant"\.$'):
+        board.find_unit(units, "Hive Tyrant")
+
+
+ZONE = [[-30, 10], [30, 10], [30, 22], [-30, 22]]
+LAYOUT = {"id": "test", "areas": [{"id": "A1", "polygon": [[-2, -2], [2, -2], [2, 2], [-2, 2]], "features": []}],
+          "objectives": [{"id": "central", "kind": "central", "side": None, "x": 0, "z": 0, "area": "A1"},
+                         {"id": "home-red", "kind": "home", "side": "red", "x": 0, "z": 18, "area": None}],
+          "zones": [{"side": "red", "polygon": ZONE}]}
+
+
+def test_landmarks():
+    rows = {r["id"]: r for r in board.landmarks(squad(1, 2.5, 16, n=2), LAYOUT)}
+    assert rows["central"]["within"] is False   # nearest the area's corner (2, 2)
+    assert rows["central"]["distance"] == round(math.hypot(0.5, 14) - 0.63, 2)
+    assert rows["home-red"]["within"] is None                  # a marker: range is the mission's
+    assert rows["home-red"]["distance"] == round(((2.5 ** 2 + 2 ** 2) ** 0.5) - 0.63, 2)
+    assert rows["red"] == {"kind": "zone", "id": "red", "distance": 0, "within": True}
+    on_the_line = board.landmarks(squad(1, 0, 10.3, n=1), LAYOUT)[-1]   # base straddles the zone edge
+    assert on_the_line["distance"] == 0 and on_the_line["within"] is False
+    in_area = board.landmarks(squad(1, 2.4, 0, n=1), LAYOUT)[0]        # centre outside, base overlaps
+    assert in_area["distance"] == 0 and in_area["within"] is True
+
+
+def test_measure_units():
+    a, b = board.collect_units(squad(1, 0, 0, n=2) + squad(2, 3.5, 0, n=1, army_tag="army.py:Enemy"))
+    got = board.measure(a, b)
+    assert got["a"]["unit"] == "Intercessor Squad" and got["b"]["army"] == "army.py:Enemy"
+    assert got["distance"] == round(2 - 1.26, 2) and got["engagement_range"] is True
+    assert [p["guid"] for p in got["closest"]] == ["u1m1", "u2m0"]
+    assert got["landmarks"] == [] and got["layout"] is None
+    alone = board.measure(a, layout=LAYOUT)
+    assert alone["b"] is None and alone["distance"] is None
+    assert {r["unit"] for r in alone["landmarks"]} == {"a"} and len(alone["landmarks"]) == 3

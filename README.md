@@ -199,8 +199,10 @@ Claude Code or Claude Desktop's chat. Its tools so far:
 - `status`: is TTS reachable, is LCT loaded.
 - `board_summary`: every unit on the table and in reserves, with each model's position; which LCT layout is loaded,
   with its exact terrain areas, objectives and deployment zones; and which areas and objectives each unit is in.
+- `measure`: the closest base-to-base distance between two units, and optionally how far each is from every
+  objective and deployment zone (and whether it holds the objective, or is wholly within the zone).
 
-Measuring, line of sight and placing units are coming. Tools only run while the web app is
+Line of sight, threat ranges and placing units are coming. Tools only run while the web app is
 up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 

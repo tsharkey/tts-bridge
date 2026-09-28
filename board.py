@@ -285,9 +285,63 @@ def unit_row(u, terrain, surface=0.0, layout=None):
                if layout else {})}
 
 
+def closest_pair(a, b):
+    """(distance, model of a, model of b): the closest two bases between two lists of models."""
+    return min(((model_gap(p, q), p, q) for p in a for q in b), key=lambda t: t[0])
+
+
 def closest(a, b):
     """Closest base-to-base distance between two lists of models."""
-    return min(model_gap(p, q) for p in a for q in b)
+    return closest_pair(a, b)[0]
+
+
+def reach(models, poly):
+    """(how far the nearest base is from a polygon, 0 when one overlaps it; whether every base is
+    wholly inside it). Bases as circles."""
+    gaps = [(layouts.distance((o["c"][0], o["c"][2]), poly), o) for o in models]
+    wholly = all(layouts.inside((o["c"][0], o["c"][2]), poly)
+                 and layouts.edge_distance((o["c"][0], o["c"][2]), poly) >= radius(o) for o in models)
+    return max(0.0, min(d - radius(o) for d, o in gaps)), wholly
+
+
+def landmarks(models, layout):
+    """How far a unit is from each of the layout's objectives and deployment zones. `within`:
+    a base overlaps the objective's terrain area (None for a marker on open ground, whose range
+    the mission sets), or every base is wholly within the zone."""
+    areas = {a["id"]: a["polygon"] for a in layout["areas"]}
+    out = []
+    for ob in layout["objectives"]:
+        if ob["area"]:
+            gap, _ = reach(models, areas[ob["area"]])
+            within = gap == 0
+        else:
+            gap = max(0.0, min(math.dist((o["c"][0], o["c"][2]), (ob["x"], ob["z"])) - radius(o) for o in models))
+            within = None
+        out.append({"kind": "objective", "id": ob["id"], "distance": round(gap, 2), "within": within})
+    for zone in layout["zones"]:
+        gap, wholly = reach(models, zone["polygon"])
+        out.append({"kind": "zone", "id": zone["side"], "distance": round(gap, 2), "within": wholly})
+    return out
+
+
+def unit_ref(u):
+    return {"army": u["army"], "unit": u["name"], "nth": u["nth"], "models": len(u["models"])}
+
+
+def measure(a, b=None, layout=None):
+    """Unit a to unit b (units as collect_units makes them): the closest base-to-base distance,
+    horizontally, and the two models it's between; with a layout, each unit's distance to its
+    objectives and zones."""
+    out = {"a": unit_ref(a), "b": unit_ref(b) if b else None, "distance": None, "closest": None,
+           "engagement_range": None, "layout": layout and layout["id"], "landmarks": []}
+    if b:
+        d, p, q = closest_pair(a["models"], b["models"])
+        out.update(distance=round(d, 2), engagement_range=d <= ENGAGEMENT,
+                   closest=[{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2)} for o in (p, q)])
+    if layout:
+        out["landmarks"] = [{"unit": side, **row} for side, u in (("a", a), ("b", b)) if u
+                            for row in landmarks(u["models"], layout)]
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -337,6 +391,10 @@ def army_matches(tag, army):
     return army is None or army.lower() == tag.split(":")[-1].lower()
 
 
+class UnitError(ValueError):
+    """A unit name that matches no unit, or several; the message says which."""
+
+
 def find_unit(units, name, army=None, nth=None, on_table=True):
     want = name.lower()
     pool = [u for u in units if u["on_table"] == on_table]
@@ -349,9 +407,14 @@ def find_unit(units, name, army=None, nth=None, on_table=True):
     hits = exact or hits
     if nth is not None:
         hits = [u for u in hits if u["nth"] == nth]
-    if len(hits) != 1:
-        choices = "; ".join(f"{u['name']} #{u['nth']} ({u['army']})" for u in hits) or "none"
-        sys.exit(f'"{name}" matches {len(hits)} units: {choices}. Narrow it with --army or --nth.')
+    where = "on the table" if on_table else "off the table"
+    if not hits:
+        elsewhere = any(want in u["name"].lower() for u in units if u["on_table"] != on_table)
+        raise UnitError(f'No unit {where} matches "{name}"'
+                        + (f" (one {'off' if on_table else 'on'} the table does)." if elsewhere else "."))
+    if len(hits) > 1:
+        choices = "; ".join(f"{u['name']} #{u['nth']} ({u['army']})" for u in hits)
+        raise UnitError(f'"{name}" matches {len(hits)} units {where}: {choices}. Narrow it by army or nth.')
     return hits[0]
 
 
@@ -506,7 +569,10 @@ def main():
     sub.add_parser("undo").set_defaults(fn=cmd_undo)
     args = p.parse_args()
     tts.start_listener()
-    args.fn(args)
+    try:
+        args.fn(args)
+    except UnitError as e:
+        sys.exit(str(e))
 
 
 if __name__ == "__main__":

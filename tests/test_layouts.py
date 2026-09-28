@@ -215,3 +215,9 @@ def test_identify_nothing_on_the_table():
     assert layouts.identify(few) is None
     zones = [{**p, "kind": "zone"} for p in pieces(layouts.load("33ce09"))]
     assert layouts.identify(zones) is None
+
+
+def test_edge_distance_inside_and_out():
+    square = [[0, 0], [4, 0], [4, 4], [0, 4]]
+    assert layouts.edge_distance((1, 2), square) == 1
+    assert layouts.edge_distance((6, 2), square) == 2
