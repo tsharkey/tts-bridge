@@ -76,13 +76,21 @@ class Reaches(TypedDict):
     unknown: list[UnitRef]         # units with no datasheet to work from (not spawned by tts-bridge, or not cached)
 
 
-def weapons_carried(units):
-    """{unit_id or id(unit): [weapon profile names]} from the models' tooltips, one Lua call."""
-    guids = [o["guid"] for u in units for o in u["models"]]
+def descriptions(guids):
+    """{guid: description} for objects on the table, in one Lua call."""
     raw = tts_bridge.run_lua(DESCRIPTIONS_LUA % json.dumps(json.dumps(guids)), timeout=20) if guids else {}
-    raw = json.loads(raw) if isinstance(raw, str) else raw or {}
-    return {id(u): list(dict.fromkeys(w for o in u["models"] for w in tooltips.weapon_names(raw.get(o["guid"]))))
-            for u in units}
+    return json.loads(raw) if isinstance(raw, str) else raw or {}
+
+
+def weapon_names(guids, found):
+    """The weapon profiles a unit's models carry, from their tooltips (found: descriptions())."""
+    return list(dict.fromkeys(w for g in guids for w in tooltips.weapon_names(found.get(g))))
+
+
+def weapons_carried(units):
+    """{id(unit): [weapon profile names]} from the models' tooltips, one Lua call."""
+    found = descriptions([o["guid"] for u in units for o in u["models"]])
+    return {id(u): weapon_names([o["guid"] for o in u["models"]], found) for u in units}
 
 
 def profiles(units, sheets, carried):

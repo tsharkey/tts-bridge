@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board view · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { max-width: 1400px; padding: 14px 20px; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; }
+  .board-wrap { position: relative; }
+  canvas#board { width: 100%; display: block; border-radius: 6px; background: #2a2f27; cursor: default; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
+  .bar select { width: auto; }
+  .bar .when { color: var(--muted); font-size: 12px; }
+  aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+  aside h2 { font-size: 14px; margin: 0 0 6px; }
+  aside h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 10px 0 4px; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .row { display: flex; align-items: center; gap: 6px; font-size: 13px; padding: 2px 0; }
+  label.row { margin: 0; color: var(--text); font-size: 13px; }
+  .row input[type=checkbox] { margin: 0; padding: 0; flex: none; }
+  .row .n { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+  .list { max-height: 220px; overflow: auto; }
+  .list .row { cursor: pointer; }
+  .list .row:hover { color: var(--accent); }
+  .dim { color: var(--muted); }
+  .big { font-size: 22px; font-weight: 600; }
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Board view</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+
+<main>
+  <div>
+    <div class="bar">
+      <select id="source" aria-label="What to show">
+        <option value="live">Live table</option>
+        <option value="file">Saved board.json</option>
+      </select>
+      <button id="refresh">Refresh</button>
+      <span class="when" id="when"></span>
+    </div>
+    <div class="board-wrap"><canvas id="board" width="1200" height="880"></canvas></div>
+    <p class="hint">Click a unit to see what it can see and how far it reaches. Shift-click another unit for the
+      distance between them. Line of sight works from the layout's terrain footprints, so windows and doorways
+      aren't counted.</p>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <aside>
+    <section id="unitCard" hidden></section>
+    <section id="pairCard" hidden></section>
+    <section id="tableCard"></section>
+  </aside>
+</main>
+
+<script src="/shared.js"></script>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const canvas = $("#board"), ctx = canvas.getContext("2d");
+const W = 60, H = 44;
+const ARMY = ["#ff5d5d", "#4aa8ff", "#c38bff", "#4fc47b"];
+const BAND = {move: "#4fc47b", advance: "#e8b53e", charge: "#ff8c42"};
+const SHOTS = ["#b28dff", "#4ad6d6", "#ff5d9e", "#9ad14a", "#ffd24a"];
+
+let st = null;              // the last state read
+let sel = null, other = null;   // selected unit indexes
+let selKey = null, otherKey = null;
+let sight = null, bands = null, pair = null;
+let shown = new Set(["los"]);
+let dice = store.get("board.dice", "max");
+let loading = false;
+
+const key = u => `${u.army}|${u.unit}|${u.nth}|${u.on_table}`;
+const scale = () => canvas.width / W;
+const px = (x, z) => [(x + W / 2) * scale(), (H / 2 - z) * scale()];
+const radius = p => (p.base[0] + p.base[1]) / 4;
+
+function armyColour(army) {
+  if (army.endsWith(":Red")) return ARMY[0];
+  if (army.endsWith(":Blue")) return ARMY[1];
+  const armies = [...new Set(st.units.map(u => u.army))].filter(a => !/:(Red|Blue)$/.test(a));
+  return ARMY[armies.indexOf(army) % ARMY.length] || "#aaa";
+}
+
+function fitCanvas() {
+  const w = Math.round(canvas.clientWidth * (window.devicePixelRatio || 1));
+  if (w && canvas.width !== w) { canvas.width = w; canvas.height = Math.round(w * H / W); }
+}
+
+function path(poly) {
+  ctx.beginPath();
+  poly.forEach(([x, z], k) => { const [a, b] = px(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+  ctx.closePath();
+}
+
+// Shapes that overlap (a unit's visibility polygons, its models' reach) are drawn opaque on a
+// layer, then laid over the board at one alpha, so the union reads as one area.
+function layer(colour, alpha, draw) {
+  const off = document.createElement("canvas");
+  off.width = canvas.width; off.height = canvas.height;
+  const o = off.getContext("2d");
+  o.fillStyle = colour;
+  draw(o);
+  ctx.save(); ctx.globalAlpha = alpha; ctx.drawImage(off, 0, 0); ctx.restore();
+}
+
+function draw() {
+  fitCanvas();
+  const s = scale();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!st) return;
+  const lo = st.layout;
+  if (lo) {
+    for (const zn of lo.zones) {
+      path(zn.polygon); ctx.fillStyle = (zn.side === "red" ? ARMY[0] : ARMY[1]) + "22"; ctx.fill();
+    }
+    for (const a of lo.areas) {
+      path(a.polygon); ctx.fillStyle = "#3d4238"; ctx.fill();
+      ctx.lineWidth = 1; ctx.strokeStyle = "#5b6153"; ctx.stroke();
+    }
+    for (const a of lo.areas) for (const f of a.features) {
+      path(f.polygon);
+      ctx.fillStyle = f.category === "dense" ? "#6b5a4a" : f.category === "light" ? "#4f5a45" : "#454a40";
+      ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = "#1b1d19"; ctx.stroke();
+    }
+    for (const ob of lo.objectives) {
+      const area = ob.area && lo.areas.find(a => a.id === ob.area);
+      if (area) { path(area.polygon); ctx.lineWidth = 2; ctx.strokeStyle = "#e8b53e"; ctx.stroke(); }
+      const [x, y] = px(ob.x, ob.z);
+      ctx.beginPath(); ctx.arc(x, y, 0.8 * s, 0, 7); ctx.fillStyle = "#e8b53e"; ctx.fill();
+      ctx.font = `${Math.max(10, 0.55 * s)}px sans-serif`; ctx.fillStyle = "#1b1d19";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(ob.kind[0].toUpperCase(), x, y);
+    }
+  }
+  for (const t of st.terrain) {   // what the layout doesn't have, as TTS's boxes
+    const [x0, x1, z0, z1] = t.box;
+    ctx.lineWidth = 1; ctx.strokeStyle = t.kind === "zone" ? "#8a8f99" : "#777";
+    ctx.setLineDash(t.kind === "zone" ? [4, 4] : []);
+    ctx.strokeRect(...px(x0, z1), (x1 - x0) * s, (z1 - z0) * s);
+    ctx.setLineDash([]);
+  }
+
+  const u = sel !== null ? st.units[sel] : null;
+  if (u && bands) {
+    for (const b of bands.bands) {
+      if (!shown.has(b.band)) continue;
+      const reach = dice === "avg" ? b.avg : b.max;
+      layer(bandColour(b.band), 0.16, o => {
+        for (const p of u.positions) {
+          const [x, y] = px(p.x, p.z);
+          o.beginPath(); o.arc(x, y, (radius(p) + reach) * s, 0, 7); o.fill();
+        }
+      });
+    }
+  }
+  if (u && sight && shown.has("los")) {
+    layer("#fff6d0", 0.22, o => {
+      for (const poly of sight.polygons) {
+        o.beginPath();
+        poly.forEach(([x, z], k) => { const [a, b] = px(x, z); k ? o.lineTo(a, b) : o.moveTo(a, b); });
+        o.closePath(); o.fill();
+      }
+    });
+  }
+
+  st.units.forEach((unit, i) => {
+    if (!unit.on_table) return;
+    const colour = armyColour(unit.army), picked = i === sel || i === other;
+    for (const p of unit.positions) {
+      const [x, y] = px(p.x, p.z), r = Math.max(radius(p) * s, 2);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
+      ctx.fillStyle = colour + (picked ? "ff" : "bb"); ctx.fill();
+      ctx.lineWidth = picked ? 2.5 : 1; ctx.strokeStyle = picked ? "#fff" : "#111"; ctx.stroke();
+      const t = (p.facing - 90) * Math.PI / 180;   // 0 = +z, which is up on screen
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(t) * r, y + Math.sin(t) * r);
+      ctx.strokeStyle = "#111"; ctx.lineWidth = 1; ctx.stroke();
+    }
+  });
+  ctx.font = `600 ${Math.max(10, 0.42 * s)}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+  st.units.forEach(unit => {
+    if (!unit.on_table) return;
+    const top = Math.max(...unit.positions.map(p => p.z + radius(p)));
+    const [x, y] = px(unit.x, top);
+    const label = unit.unit + (unit.nth > 1 ? ` #${unit.nth}` : "");
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(0,0,0,.8)"; ctx.strokeText(label, x, y - 2);
+    ctx.fillStyle = "#fff"; ctx.fillText(label, x, y - 2);
+  });
+  if (u && other !== null && pair) {
+    const a = u.positions, b = st.units[other].positions;
+    let best = null;
+    for (const p of a) for (const q of b) {
+      const d = Math.hypot(p.x - q.x, p.z - q.z) - radius(p) - radius(q);
+      if (!best || d < best[0]) best = [d, p, q];
+    }
+    const [x0, y0] = px(best[1].x, best[1].z), [x1, y1] = px(best[2].x, best[2].z);
+    ctx.setLineDash([6, 4]); ctx.lineWidth = 2; ctx.strokeStyle = "#fff";
+    ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); ctx.setLineDash([]);
+    const label = `${pair.distance}"`;
+    ctx.font = `700 ${Math.max(12, 0.6 * s)}px sans-serif`; ctx.textBaseline = "middle";
+    ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeText(label, (x0 + x1) / 2, (y0 + y1) / 2);
+    ctx.fillStyle = "#fff"; ctx.fillText(label, (x0 + x1) / 2, (y0 + y1) / 2);
+  }
+}
+
+function bandColour(band) {
+  if (BAND[band]) return BAND[band];
+  const shots = bands.bands.filter(b => !BAND[b.band]).map(b => b.band);
+  return SHOTS[shots.indexOf(band) % SHOTS.length];
+}
+
+function unitAt(e) {
+  const rect = canvas.getBoundingClientRect(), k = canvas.width / rect.width;
+  const x = (e.clientX - rect.left) * k / scale() - W / 2, z = H / 2 - (e.clientY - rect.top) * k / scale();
+  let best = null, bestD = 0.6;   // inches past a base's edge still counts
+  st?.units.forEach((u, i) => {
+    if (!u.on_table) return;
+    for (const p of u.positions) {
+      const d = Math.hypot(p.x - x, p.z - z) - radius(p);
+      if (d < bestD) { best = i; bestD = d; }
+    }
+  });
+  return best;
+}
+
+canvas.addEventListener("mousemove", e => { canvas.style.cursor = unitAt(e) !== null ? "pointer" : "default"; });
+canvas.addEventListener("click", e => {
+  const i = unitAt(e);
+  if (e.shiftKey && sel !== null && i !== null && i !== sel) choose(sel, i);
+  else choose(i, null);
+});
+
+async function choose(i, j) {
+  sel = i; other = j;
+  selKey = i === null ? null : key(st.units[i]);
+  otherKey = j === null ? null : key(st.units[j]);
+  if (i === null) { sight = bands = pair = null; render(); return; }
+  await loadOverlays();
+}
+
+async function loadOverlays() {
+  const u = st.units[sel], v = st.v;
+  sight = bands = pair = null;
+  render();
+  const jobs = [];
+  if (u.on_table && st.layout) jobs.push(api(`/api/board/sight?i=${sel}&v=${v}`).then(r => sight = r).catch(err => sightError = err.message));
+  jobs.push(api(`/api/board/threat?i=${sel}&v=${v}`).then(r => bands = r).catch(err => bandError = err.message));
+  if (other !== null) jobs.push(api(`/api/board/pair?a=${sel}&b=${other}&v=${v}`).then(r => pair = r).catch(err => setMsg($("#msg"), err.message, "error")));
+  sightError = bandError = null;
+  await Promise.all(jobs);
+  if (st.v === v) render();
+}
+let sightError = null, bandError = null;
+
+function render() { draw(); renderUnit(); renderPair(); renderTable(); }
+
+function renderUnit() {
+  const card = $("#unitCard");
+  if (sel === null || !st) { card.hidden = true; return; }
+  const u = st.units[sel];
+  card.hidden = false;
+  const bandRows = bands ? bands.bands.map(b => `
+      <label class="row"><input type="checkbox" data-band="${esc(b.band)}" ${shown.has(b.band) ? "checked" : ""}>
+        <span class="swatch" style="background:${bandColour(b.band)}"></span>${esc(b.band)}
+        <span class="n">${b.avg === b.max ? `${b.max}"` : `${b.avg}–${b.max}"`}</span></label>`).join("")
+    : `<div class="sub">${esc(bandError || "Working out its reach…")}</div>`;
+  const seesRows = !u.on_table ? `<div class="sub">Off the table.</div>`
+    : !st.layout ? `<div class="sub">No layout of ours on the table, so no line of sight.</div>`
+    : sight ? sight.sees.map(s => `
+      <div class="row" data-pair="${s.i}">${esc(s.unit)}${s.nth > 1 ? ` #${s.nth}` : ""}
+        <span class="n ${s.visible ? "" : "dim"}">${s.visible ? `${s.visible}/${s.models}${s.fully_visible < s.visible ? ` (${s.fully_visible} fully)` : ""}` : "hidden"}</span></div>`).join("")
+    : `<div class="sub">${esc(sightError || "Working out what it sees…")}</div>`;
+  card.innerHTML = `
+    <h2><span class="swatch" style="display:inline-block;background:${armyColour(u.army)}"></span>
+      ${esc(u.unit)}${u.nth > 1 ? ` #${u.nth}` : ""}</h2>
+    <div class="sub">${esc(u.army)} · ${u.models} model${u.models === 1 ? "" : "s"}
+      ${u.objectives?.length ? ` · on ${esc(u.objectives.join(", "))}` : ""}</div>
+    ${u.coherency.length ? `<div class="msg error" style="margin-top:6px">${esc(u.coherency.join("; "))}</div>` : ""}
+    <h3>Show</h3>
+    <label class="row"><input type="checkbox" data-band="los" ${shown.has("los") ? "checked" : ""}>
+      <span class="swatch" style="background:#fff6d0"></span>What it can see</label>
+    ${bandRows}
+    ${bands ? `<label class="row"><span class="sub">Dice</span>
+      <select id="dice" style="width:auto;margin-left:auto">
+        <option value="max" ${dice === "max" ? "selected" : ""}>max</option>
+        <option value="avg" ${dice === "avg" ? "selected" : ""}>average</option></select></label>
+      <div class="sub">Weapons from ${esc(bands.weapons_from)}. Straight-line reach from each base's edge; terrain
+        in the way isn't counted.</div>` : ""}
+    <h3>Sees</h3><div class="list">${seesRows}</div>`;
+  $$("input[data-band]", card).forEach(el => el.addEventListener("change", () => {
+    el.checked ? shown.add(el.dataset.band) : shown.delete(el.dataset.band); draw();
+  }));
+  $("#dice", card)?.addEventListener("change", e => { dice = e.target.value; store.set("board.dice", dice); render(); });
+  $$("[data-pair]", card).forEach(el => el.addEventListener("click", () => choose(sel, +el.dataset.pair)));
+}
+
+function renderPair() {
+  const card = $("#pairCard");
+  if (other === null || !pair) { card.hidden = true; return; }
+  card.hidden = false;
+  const name = r => `${esc(r.unit)}${r.nth > 1 ? ` #${r.nth}` : ""}`;
+  const seen = s => s === null ? `<span class="dim">no line of sight without a layout</span>`
+    : s.visible ? `${s.visible}/${s.of} models${s.fully_visible < s.visible ? `, ${s.fully_visible} fully` : ""}` : "nothing";
+  card.innerHTML = `
+    <h2>${name(pair.a)} → ${name(pair.b)}</h2>
+    <div class="big">${pair.distance}"</div><div class="sub">closest base to base</div>
+    <h3>Can see</h3>
+    <div class="row">${name(pair.a)} sees <span class="n">${seen(pair.a_sees)}</span></div>
+    <div class="row">${name(pair.b)} sees <span class="n">${seen(pair.b_sees)}</span></div>`;
+}
+
+function renderTable() {
+  const card = $("#tableCard");
+  if (!st) { card.innerHTML = `<div class="sub">Reading the table…</div>`; return; }
+  const armies = [...new Set(st.units.map(u => u.army))];
+  const reserves = armies.map(a => {
+    const off = st.units.map((u, i) => [u, i]).filter(([u]) => u.army === a && !u.on_table);
+    return off.length ? `<h3><span class="swatch" style="display:inline-block;background:${armyColour(a)}"></span>
+      ${esc(a)} · off the table</h3>${off.map(([u, i]) => `<div class="row" data-unit="${i}">${esc(u.unit)}${u.nth > 1 ? ` #${u.nth}` : ""}
+      <span class="n">${u.models}</span></div>`).join("")}` : "";
+  }).join("");
+  card.innerHTML = `
+    <h2>${st.layout ? esc(st.layout.name) : "No layout of ours matched"}</h2>
+    <div class="sub">${st.units.filter(u => u.on_table).length} units on the table, ${st.units.filter(u => !u.on_table).length} off it</div>
+    <div class="list">${reserves || ""}</div>
+    <h3>Key</h3>
+    <div class="row"><span class="swatch" style="background:#6b5a4a"></span>Dense
+      <span class="swatch" style="background:#4f5a45;margin-left:10px"></span>Light
+      <span class="swatch" style="background:#3d4238;margin-left:10px"></span>Terrain area</div>
+    <div class="row"><span class="swatch" style="background:#e8b53e"></span>Objective: H home, E expansion, C central</div>`;
+  $$("[data-unit]", card).forEach(el => el.addEventListener("click", () => choose(+el.dataset.unit, null)));
+}
+
+async function load() {
+  if (loading) return;
+  loading = true;
+  const source = $("#source").value;
+  try {
+    const next = await api(`/api/board/state?source=${source}`);
+    st = next; mark = next.fingerprint;
+    // keep the selection across a refresh, by unit
+    const find = k => { const i = k ? st.units.findIndex(u => key(u) === k) : -1; return i < 0 ? null : i; };
+    sel = find(selKey); other = sel === null ? null : find(otherKey);
+    $("#when").textContent = `${source === "live" ? "Read from TTS" : "From board.json"} at ${new Date().toLocaleTimeString()}`;
+    setMsg($("#msg"), "");
+    render();
+    if (sel !== null) await loadOverlays();
+  } catch (e) {
+    setMsg($("#msg"), e.message, "error");
+  } finally {
+    loading = false;
+  }
+}
+
+// TTS sends nothing when a model moves: poll a cheap fingerprint of where the armies stand.
+let mark = null;
+async function watch() {
+  if ($("#source").value !== "live" || document.hidden || loading || !st) return;
+  try {
+    const f = (await api("/api/board/fingerprint")).fingerprint;
+    if (f !== mark) await load();
+  } catch {}
+}
+setInterval(watch, 1500);
+
+$("#source").value = store.get("board.source", "live");
+$("#source").addEventListener("change", e => { store.set("board.source", e.target.value); sel = other = null; selKey = otherKey = null; load(); });
+$("#refresh").addEventListener("click", load);
+window.addEventListener("resize", draw);
+render();
+load();
+</script>
+</body>
+</html>

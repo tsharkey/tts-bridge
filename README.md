@@ -76,6 +76,19 @@ their Lua through it. `POST /api/tts/lua` with `{"script": "...", "timeout": 10}
 your game**, and `GET /api/tts/events` streams what TTS prints and sends. It only listens on 127.0.0.1 and only
 answers requests addressed to `localhost` or `127.0.0.1`, so only programs on your computer can use it.
 
+### Board view
+
+The table from above: the LCT layout's terrain, objectives and deployment zones, and every model's base. It
+keeps up with the game, redrawing within a couple of seconds when something moves in TTS.
+
+- **Click a unit** to see what it can see (its line of sight, from the layout's terrain) and which enemy units
+  it can see, and to switch on its move, advance, charge and weapon ranges, measured from its bases' edges.
+- **Shift-click a second unit** for the distance between the two and how much each can see of the other.
+- **Saved board.json** shows the last `python3 board.py summary` instead, without TTS.
+
+Line of sight is worked out from the terrain's footprints, so windows and doorways aren't counted, and ranges
+are straight lines that ignore terrain in the way.
+
 ### Scribe
 
 Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (full, simple or short export) or a

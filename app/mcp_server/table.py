@@ -104,11 +104,16 @@ class BoardSummary(TypedDict):
 
 def summary(objs, candidates=None) -> BoardSummary:
     """board_summary on objects as board.READ_LUA returns them."""
-    state = board.board_state(objs, candidates)
+    return expand(board.board_state(objs, candidates), candidates)
+
+
+def expand(state, candidates=None) -> BoardSummary:
+    """A board state (board.board_state, or board.json) as board_summary returns it: with its
+    layout's areas, objectives and zones, and only the terrain the layout doesn't have."""
     layout, terrain = None, state["terrain"]
-    if state["layout"]:
-        full = next(lo for lo in (layouts.load_all() if candidates is None else candidates)
-                    if lo["id"] == state["layout"]["id"])
+    full = state["layout"] and next((lo for lo in (layouts.load_all() if candidates is None else candidates)
+                                     if lo["id"] == state["layout"]["id"]), None)
+    if full:
         layout = {**state["layout"], **{k: full[k] for k in ("map", "deployment", "pack", "areas", "objectives",
                                                              "zones")}}
         # the layout has these exactly; keep what it doesn't (scripting zones, anything added since)
