@@ -28,12 +28,12 @@ import tts_bridge as tts  # noqa: E402
 from app import mcp_server  # noqa: E402
 from app.mcp_server import overlay  # noqa: E402
 from app.core.api import shared  # noqa: E402
-from app.tools import board, board_replay, data, models, scribe  # noqa: E402
+from app.tools import board, board_replay, data, layouts, models, scribe  # noqa: E402
 
 PORT = tts.HUB_PORT
 HOSTS = ["127.0.0.1", "localhost"]
 STATIC = Path(__file__).resolve().parent / "static"
-TOOLS = [board, scribe, models, board_replay, data]
+TOOLS = [board, scribe, models, board_replay, layouts, data]
 
 
 class Static(StaticFiles):

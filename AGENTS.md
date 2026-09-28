@@ -26,7 +26,7 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `app/tools/board_replay/vision.py` | Straightens a board image and asks a vision model (via OpenRouter) where units are. |
 | `data.py` | The local data cache in `cache/`: fetches sources (BSData), imports them, and reads datasheets back (`datasheets(faction)`). |
 | `datasheets.py` | `parse()`: a list parsed with the data cache (datasheets matched and pinned, compositions filled in); look-alike figures for `army.resolve`. |
-| `layouts.py` | Builds `layouts/` (committed): exact terrain for every LCT layout from the cache and TTS's downloaded meshes; `load(id)` reads one. |
+| `layouts.py` | Builds `layouts/` (committed): exact terrain for every LCT layout from the cache and TTS's downloaded meshes; `load(id)` reads one. Also checks, saves, deletes and imports layouts (the Layouts tool); a build or import never overwrites one marked `edited`. |
 | `mods.py` | Reads Force Org (into `catalog/`) and LCT's layouts (into `cache/lct/`) from TTS's Workshop folder, with TTS closed. |
 | `tooltips.py` | Datasheet tooltips (TTS BBCode) for spawned models, written after the `[<unit>]` line. |
 | `sheetviewer.py` | The datasheet viewer script on spawned models: right-click → Datasheet opens a scrollable window. |
