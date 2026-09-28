@@ -152,12 +152,15 @@ def test_one_state_only():
 
 
 def test_reach_for_threat_rings():
-    """What a spawned model rings itself with: its base's radius, and its own move,
-    advance and charge at their maximum (threat.model_bands)."""
+    """What a spawned model rings itself with: its base's radius, its own move, advance and
+    charge at their maximum, and each ranged weapon it carries from where it stands and after
+    a move (threat.model_bands)."""
     unit = squad()
     leader, trooper = unit["models"][0], unit["models"][1]
     assert tooltips.reach(leader, SHEET) == {"base": 0.785, "bands": [
-        {"band": "move", "reach": 6.0}, {"band": "advance", "reach": 12.0}, {"band": "charge", "reach": 18.0}]}
+        {"band": "move", "reach": 6.0}, {"band": "advance", "reach": 12.0}, {"band": "charge", "reach": 18.0},
+        {"band": "range: Twin carbine", "reach": 20.0}, {"band": "shoot: Twin carbine", "reach": 26.0}]}   # not its sword
+    assert [b["band"] for b in tooltips.reach(trooper, SHEET)["bands"]][3:] == ["range: Bolt rifle", "shoot: Bolt rifle"]
     assert tooltips.reach(trooper, SHEET)["base"] is None              # no base known: the model's size in TTS
     slow = dict(SHEET, models=[dict(SHEET["models"][0], stats=dict(SHEET["models"][0]["stats"], M='4"')),
                                SHEET["models"][1]])

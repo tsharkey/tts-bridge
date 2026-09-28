@@ -174,16 +174,25 @@ function ttsBridgeThreat(params)
   local y = b.center.y - b.size.y / 2 + 0.05
   local lines = {}
   for _, band in ipairs(TTSB_REACH.bands) do
-    local points, r = {}, base + band.reach
-    for k = 0, 72 do
-      local a = 2 * math.pi * k / 72
-      table.insert(points, self.positionToLocal({b.center.x + r * math.cos(a), y, b.center.z + r * math.sin(a)}))
+    local r = base + band.reach
+    local function at(a) return self.positionToLocal({b.center.x + r * math.cos(a), y, b.center.z + r * math.sin(a)}) end
+    if band.dashed then   -- after moving: a dash about every inch round it
+      local dashes = math.max(12, math.floor(2 * math.pi * r))
+      for k = 0, dashes - 1 do
+        local a = 2 * math.pi * k / dashes
+        table.insert(lines, {points = {at(a), at(a + 0.6 * math.pi / dashes), at(a + 1.2 * math.pi / dashes)},
+                             color = band.color, thickness = 0.12})
+      end
+    else
+      local points = {}
+      for k = 0, 72 do table.insert(points, at(2 * math.pi * k / 72)) end
+      table.insert(lines, {points = points, color = band.color, thickness = 0.12})
     end
-    table.insert(lines, {points = points, color = band.color, thickness = 0.12})
     for _, stroke in ipairs(band.label or {}) do
       local letters = {}
       for _, p in ipairs(stroke) do
-        table.insert(letters, self.positionToLocal({b.center.x + p[1], y, b.center.z + r + 0.2 + p[2]}))
+        local out = r + 0.2 + (band.row or 0) * 0.7   -- labels of rings as wide as this one stack outwards
+        table.insert(letters, self.positionToLocal({b.center.x + p[1], y, b.center.z + out + p[2]}))
       end
       table.insert(lines, {points = letters, color = band.color, thickness = 0.05})
     end
@@ -201,8 +210,8 @@ end
 """
 
 
-# A stroke font for the rings' labels ('6" MOVE'): each character as polylines on a grid 4
-# wide and 6 tall, because vector lines are all a model can draw on itself.
+# A stroke font for the rings' labels ('6" MOVE', '30" BOLT RIFLE'): each character as
+# polylines on a grid 4 wide and 6 tall, because vector lines are all a model can draw on itself.
 FONT = {
     "0": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0), (4, 6)]],
     "1": [[(1, 5), (2, 6), (2, 0)], [(1, 0), (3, 0)]],
@@ -216,17 +225,40 @@ FONT = {
     "9": [[(4, 3), (0, 3), (0, 6), (4, 6), (4, 0), (0, 0)]],
     ".": [[(2, 0), (2, 0.6)]],
     '"': [[(1, 6), (1, 4.5)], [(3, 6), (3, 4.5)]],
+    "'": [[(2, 6), (2, 4.5)]],
+    "-": [[(1, 3), (3, 3)]],
+    "+": [[(0, 3), (4, 3)], [(2, 1), (2, 5)]],
+    "/": [[(0, 0), (4, 6)]],
+    ",": [[(2, 0.6), (1.5, -1)]],
+    ":": [[(2, 1), (2, 1.6)], [(2, 4), (2, 4.6)]],
+    "(": [[(3, 6), (2, 5), (2, 1), (3, 0)]],
+    ")": [[(1, 6), (2, 5), (2, 1), (1, 0)]],
     "A": [[(0, 0), (2, 6), (4, 0)], [(1, 3), (3, 3)]],
+    "B": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 4), (3, 3), (0, 3)], [(3, 3), (4, 2), (4, 1), (3, 0), (0, 0)]],
     "C": [[(4, 6), (0, 6), (0, 0), (4, 0)]],
     "D": [[(0, 0), (0, 6), (3, 6), (4, 5), (4, 1), (3, 0), (0, 0)]],
     "E": [[(4, 6), (0, 6), (0, 0), (4, 0)], [(0, 3), (3, 3)]],
+    "F": [[(4, 6), (0, 6), (0, 0)], [(0, 3), (3, 3)]],
     "G": [[(4, 6), (0, 6), (0, 0), (4, 0), (4, 3), (2, 3)]],
     "H": [[(0, 0), (0, 6)], [(4, 0), (4, 6)], [(0, 3), (4, 3)]],
+    "I": [[(2, 0), (2, 6)], [(1, 0), (3, 0)], [(1, 6), (3, 6)]],
+    "J": [[(4, 6), (4, 0), (0, 0), (0, 2)]],
+    "K": [[(0, 0), (0, 6)], [(4, 6), (0, 3), (4, 0)]],
+    "L": [[(0, 6), (0, 0), (4, 0)]],
     "M": [[(0, 0), (0, 6), (2, 3), (4, 6), (4, 0)]],
     "N": [[(0, 0), (0, 6), (4, 0), (4, 6)]],
     "O": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)]],
+    "P": [[(0, 0), (0, 6), (4, 6), (4, 3), (0, 3)]],
+    "Q": [[(0, 0), (4, 0), (4, 6), (0, 6), (0, 0)], [(2, 2), (4, -1)]],
     "R": [[(0, 0), (0, 6), (4, 6), (4, 3), (0, 3), (4, 0)]],
+    "S": [[(4, 6), (0, 6), (0, 3), (4, 3), (4, 0), (0, 0)]],
+    "T": [[(0, 6), (4, 6)], [(2, 6), (2, 0)]],
+    "U": [[(0, 6), (0, 0), (4, 0), (4, 6)]],
     "V": [[(0, 6), (2, 0), (4, 6)]],
+    "W": [[(0, 6), (1, 0), (2, 3), (3, 0), (4, 6)]],
+    "X": [[(0, 0), (4, 6)], [(0, 6), (4, 0)]],
+    "Y": [[(0, 6), (2, 3), (4, 6)], [(2, 3), (2, 0)]],
+    "Z": [[(0, 6), (4, 6), (0, 0), (4, 0)]],
 }
 LABEL_HEIGHT = 0.5    # inches: how tall a ring's label is
 LABELS = {"move": "MOVE", "advance": "ADVANCE", "charge": "CHARGE"}
@@ -234,7 +266,8 @@ LABELS = {"move": "MOVE", "advance": "ADVANCE", "charge": "CHARGE"}
 
 def label_strokes(text, height=LABEL_HEIGHT):
     """`text` as polylines of [x, z] in inches, centred on x = 0 with its baseline on z = 0,
-    reading along +x. Characters FONT hasn't got are left as gaps."""
+    reading along +x, in capitals. Characters FONT hasn't got are left as gaps."""
+    text = text.upper().replace("’", "'")
     unit = height / 6
     width = (len(text) * 6 - 2) * unit
     out = []
@@ -248,18 +281,51 @@ def lua_points(strokes):
     return "{" + ", ".join("{" + ", ".join(f"{{{x:g}, {z:g}}}" for x, z in s) + "}" for s in strokes) + "}"
 
 
-def band_lua(b):
-    colour = ", ".join(f"{c:g}" for c in overlays.COLOURS[b["band"]])
-    label = label_strokes(f'{b["reach"]:g}" {LABELS[b["band"]]}')
-    return f"{{reach = {b['reach']:g}, color = {{{colour}}}, label = {lua_points(label)}}}"
+DASHED = {"charge"}   # what a model reaches only after moving: dashed rings
+
+
+def rings(bands):
+    """tooltips.reach's bands as the rings to draw: [(reach, colour, label, dashed)].
+    Movement in greens, weapons in blues (overlays.COLOURS / SHOTS). Solid for what the model
+    does from where it stands (move, advance, a weapon's range), dashed for what it reaches
+    after moving (charge, a weapon's range after a move: '30" BOLT RIFLE +MOVE'). Weapons with
+    the same range share a colour and rings, their names joined ('24" BOLT RIFLE / PISTOL')."""
+    out, ranges, moved = [], {}, {}
+    for b in bands:
+        if b["band"] in LABELS:
+            out.append((b["reach"], overlays.COLOURS[b["band"]], LABELS[b["band"]], b["band"] in DASHED))
+        elif b["band"].startswith("range: "):
+            ranges.setdefault(b["reach"], []).append(b["band"].removeprefix("range: "))
+        elif b["band"].startswith("shoot: "):
+            moved[b["band"].removeprefix("shoot: ")] = b["reach"]
+    for n, (reach, names) in enumerate(sorted(ranges.items())):
+        colour, label = overlays.SHOTS[n % len(overlays.SHOTS)], " / ".join(dict.fromkeys(names))
+        out.append((reach, colour, label, False))
+        after = moved.get(names[0])
+        if after is not None and after != reach:
+            out.append((after, colour, label + " +MOVE", True))
+    return out
+
+
+def ring_lua(reach, colour, label, dashed, row=0):
+    """One ring for TTSB_REACH. row: its label's place among the labels of rings as wide as
+    it (a 12" advance and a 12" pistol), each the next one out."""
+    colour = ", ".join(f"{c:g}" for c in colour)
+    text = f'{reach:g}" {label}'
+    return (f"{{reach = {reach:g}, color = {{{colour}}}, dashed = {'true' if dashed else 'false'}, "
+            f"row = {row}, label = {lua_points(label_strokes(text))}}}")
 
 
 def reach_lua(reach):
-    """tooltips.reach as the Lua table TTSB_REACH: each band in its overlay colour, with its
-    label ('6" MOVE') as strokes; nil for a model with nothing to ring."""
+    """tooltips.reach as the Lua table TTSB_REACH: its rings (rings), each with its label
+    ('6" MOVE') as strokes; nil for a model with nothing to ring."""
     if not reach or not reach.get("bands"):
         return "nil"
-    bands = ", ".join(band_lua(b) for b in reach["bands"])
+    rows, out = {}, []
+    for r in rings(reach["bands"]):
+        out.append(ring_lua(*r, row=rows.get(r[0], 0)))
+        rows[r[0]] = rows.get(r[0], 0) + 1
+    bands = ", ".join(out)
     return f"{{base = {'nil' if reach['base'] is None else format(reach['base'], 'g')}, bands = {{{bands}}}}}"
 
 

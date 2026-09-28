@@ -68,8 +68,9 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "
 const canvas = $("#board"), ctx = canvas.getContext("2d");
 const W = 60, H = 44;
 const ARMY = ["#ff5d5d", "#4aa8ff", "#c38bff", "#4fc47b"];
-const BAND = {move: "#4fc47b", advance: "#e8b53e", charge: "#ff8c42"};
-const SHOTS = ["#b28dff", "#4ad6d6", "#ff5d9e", "#9ad14a", "#ffd24a"];
+// overlays.COLOURS / SHOTS: movement in greens, weapon ranges in blues
+const BAND = {move: "#8ced8c", advance: "#4dc76b", charge: "#218c4d"};
+const SHOTS = ["#8cccff", "#4d94ff", "#7373ff", "#40bfe6", "#a6a6ff"];
 
 let st = null;              // the last state read
 let sel = null, other = null;   // selected unit indexes

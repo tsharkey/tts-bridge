@@ -37,9 +37,10 @@ import tts_bridge as tts
 HELPER_NOTES = "tts-bridge:overlays"
 LIFT = 0.5             # inches above the table surface: clear of the board and terrain-area mats on it
 RING_STEPS = 120       # points round a full circle
-COLOURS = {"move": [0.31, 0.77, 0.48], "advance": [0.91, 0.71, 0.24], "charge": [1.0, 0.55, 0.26],
+# movement in greens (move, advance, charge: lighter to darker), weapon ranges in blues
+COLOURS = {"move": [0.55, 0.93, 0.55], "advance": [0.3, 0.78, 0.42], "charge": [0.13, 0.55, 0.3],
            "los": [1.0, 0.96, 0.82], "full": [0.31, 0.9, 0.48], "partial": [0.95, 0.85, 0.25]}
-SHOTS = [[0.7, 0.55, 1.0], [0.29, 0.84, 0.84], [1.0, 0.36, 0.62], [0.6, 0.82, 0.29], [1.0, 0.82, 0.29]]
+SHOTS = [[0.55, 0.8, 1.0], [0.3, 0.58, 1.0], [0.45, 0.45, 1.0], [0.25, 0.75, 0.9], [0.65, 0.65, 1.0]]
 
 HELPER_SCRIPT = r"""-- tts-bridge overlays: line of sight and threat ranges drawn by tts-bridge (overlays.py).
 -- Line of sight is the hub's to work out (it needs the layout's terrain): this script

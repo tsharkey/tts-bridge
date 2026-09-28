@@ -257,10 +257,13 @@ def card_text(unit, sheet, units=()):
 
 def reach(model, sheet):
     """What a spawned model needs to draw its own threat rings (sheetviewer.py): its base's
-    radius in inches (None when not known) and threat.model_bands."""
+    radius in inches (None when not known) and threat.model_bands, with the ranged weapons
+    it carries."""
     b = (model.get("base") or {}).get("inches")
+    weapons = [p["name"] for name, _ in carried(model, sheet) for p in sheet["wargear"][name]["weapons"]
+               if p.get("type") != "melee"]
     return {"base": round((b[0] + b[-1]) / 4, 3) if b else None,
-            "bands": threat.model_bands(sheet, model.get("sheet_model"))}
+            "bands": threat.model_bands(sheet, model.get("sheet_model"), weapons)}
 
 
 def attach(parsed, cache=None):
