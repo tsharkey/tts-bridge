@@ -8,6 +8,7 @@ worked out in 2D from the footprints, offline: no TTS, no meshes.
     los.sight(a, b, terrain)                   # ("full" | "partial" | "none", {"A3", "A3a"})
     los.unit_visibility(unit_a, unit_b, terrain, target_hidden=True)
     los.visibility_polygon(a, terrain)          # the table a model can see, for drawing
+    los.visibility_polygon(a, terrain, max_range=24)   # ... that a 24" gun reaches
 
 The rules (the terrain table in .claude/skills/wh40k-deployment-planner/SKILL.md):
 - Obscuring: a terrain area with a light or dense feature blocks a line that crosses it,
@@ -200,11 +201,12 @@ def exit_distance(ox, oz, dx, dz, poly):
     return far
 
 
-def visibility_polygon(m, terrain):
+def visibility_polygon(m, terrain, max_range=None):
     """The part of the table a model can see from its base's centre, as a polygon of [x, z]
     corners, for drawing: rays out to the table edge, each stopped where it leaves the first
     blocker it passes through (a target inside an Obscuring area is within it, so the whole
-    area is seen). Targets are taken to be at ground level."""
+    area is seen). Targets are taken to be at ground level. max_range: no further than this
+    from the base's edge (a weapon's range, or Night Fighting's 18")."""
     ox, oz = m["x"], m["z"]
     low = m["height"] <= FLOOR
     near = []
@@ -224,7 +226,8 @@ def visibility_polygon(m, terrain):
         dx, dz = math.cos(angle), math.sin(angle)
         # to the table edge
         reach = min((HALF_X - ox) / dx if dx > 0 else (-HALF_X - ox) / dx if dx < 0 else math.inf,
-                    (HALF_Z - oz) / dz if dz > 0 else (-HALF_Z - oz) / dz if dz < 0 else math.inf)
+                    (HALF_Z - oz) / dz if dz > 0 else (-HALF_Z - oz) / dz if dz < 0 else math.inf,
+                    math.inf if max_range is None else m["r"] + max_range)
         for lo, hi, poly in near:
             if (angle - lo) % (2 * math.pi) <= (hi - lo) + 1e-9:
                 t = exit_distance(ox, oz, dx, dz, poly)
