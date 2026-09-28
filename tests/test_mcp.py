@@ -102,6 +102,8 @@ def test_measure_says_which_unit_it_cant_find(monkeypatch):
     monkeypatch.setattr(board, "read_objects", made_up_table)
     result = call("measure", {"unit": "Stealth Battlesuits", "to": "Pathfinder"})
     assert result.is_error and "one off the table does" in result.content[0].text
+    same = call("measure", {"unit": "Pathfinder", "to": "Pathfinder Team"})
+    assert same.is_error and "same unit" in same.content[0].text
     got = call("measure", {"unit": "Pathfinder"}).structured_content   # no layout asked for: nothing to measure to
     assert got["b"] is None and got["landmarks"] == [] and got["layout"] is None
 

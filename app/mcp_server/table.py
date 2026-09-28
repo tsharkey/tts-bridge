@@ -186,6 +186,9 @@ def measuring(objs, unit, to=None, army=None, nth=None, to_army=None, to_nth=Non
         b = board.find_unit(units, to, to_army, to_nth) if to else None
     except board.UnitError as e:
         raise ToolError(str(e)) from None
+    if b is a:
+        raise ToolError(f'"{unit}" and "{to}" are the same unit ({a["name"]} #{a["nth"]}, {a["army"]}). '
+                        "Name another unit, or narrow it by army or nth.")
     found = layouts.identify(board.collect_terrain(objs), candidates) if landmarks else None
     return board.measure(a, b, found[0] if found else None)
 

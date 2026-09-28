@@ -146,3 +146,27 @@ def test_measure_units():
     alone = board.measure(a, layout=LAYOUT)
     assert alone["b"] is None and alone["distance"] is None
     assert {r["unit"] for r in alone["landmarks"]} == {"a"} and len(alone["landmarks"]) == 3
+
+
+def test_overlapping_units_measure_zero():
+    a, b = board.collect_units(squad(1, 0, 0, n=1) + squad(2, 1, 0, n=1, army_tag="army.py:Enemy"))
+    d, p, q = board.closest_pair(a["models"], b["models"])
+    assert d == 0 and (p["guid"], q["guid"]) == ("u1m0", "u2m0")
+    assert board.model_gap(p, q) < 0   # place still sees the overlap
+
+
+def long_base(x, z, w=4.0, d=1.0):
+    return {**model(x, z), "s": [w, 1.0, d]}
+
+
+def test_long_bases_measure_as_boxes():
+    """A 4" x 1" base 1.5" inside the zone edge reaches 0.5" past it; as a circle (radius 1.25") it wouldn't."""
+    hull = long_base(28.5, 16)                 # zone's +x edge is x = 30
+    assert board.base_within(hull, ZONE) is False
+    assert board.reach([hull], ZONE) == (0, False)
+    turned = long_base(28.5, 16, w=1.0, d=4.0)   # same spot, the long side along the edge: inside
+    assert board.base_within(turned, ZONE) is True
+    outside = long_base(0, 5)                  # 5" below the zone, the base reaches 0.5" of that
+    assert board.base_gap(outside, ZONE) == 4.5
+    assert board.point_gap(long_base(0, 0), (3, 0)) == 1       # a marker 1" past the base's end
+    assert board.point_gap(long_base(0, 0), (1, 0.2)) == 0     # under the base

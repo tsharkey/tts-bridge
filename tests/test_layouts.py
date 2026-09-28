@@ -221,3 +221,15 @@ def test_edge_distance_inside_and_out():
     square = [[0, 0], [4, 0], [4, 4], [0, 4]]
     assert layouts.edge_distance((1, 2), square) == 1
     assert layouts.edge_distance((6, 2), square) == 2
+
+
+def test_polygon_gap_and_within():
+    square = [[0, 0], [4, 0], [4, 4], [0, 4]]
+    assert layouts.polygon_gap([[5, 1], [6, 1], [6, 2], [5, 2]], square) == 1
+    assert layouts.polygon_gap([[3, 3], [6, 3], [6, 6], [3, 6]], square) == 0     # overlapping corners
+    assert layouts.polygon_gap([[-1, 1], [5, 1], [5, 2], [-1, 2]], square) == 0   # straight across, no corner inside
+    assert layouts.polygon_within([[1, 1], [2, 1], [2, 2], [1, 2]], square)
+    ell = [[0, 0], [6, 0], [6, 2], [2, 2], [2, 6], [0, 6]]     # an L: the notch is x > 2, z > 2
+    across = [[1, 1.5], [5, 1.5], [5, 3], [1, 3]]              # every corner but one in the L, and it crosses the notch
+    assert not layouts.polygon_within(across, ell)
+    assert layouts.polygon_within([[0.5, 0.5], [5, 0.5], [5, 1.5], [0.5, 1.5]], ell)
