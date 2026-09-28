@@ -111,8 +111,10 @@ the same text. `army.py build` and **Board from image** give models the same too
 
 With the web app running, the same right-click menu has **Show threat range** (the unit's move, advance and
 charge, drawn as rings on the table), **Show line of sight** (what it can see, and a line to each enemy model it
-sees) and **Clear overlays**. Everyone at the table sees the lines. They're drawn on a hidden helper object, not
-on the table's own lines, and are gone when a save is loaded.
+sees) and **Clear overlays**. Everyone at the table sees the lines. The threat rings follow the unit as you move
+its models, and the line of sight is redrawn as you move them (or the enemy), a few times a second while you drag
+and once when you let go. They're drawn on a hidden helper object, not on the table's own lines, and are gone when
+a save is loaded.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.
