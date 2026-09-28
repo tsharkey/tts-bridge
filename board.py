@@ -63,10 +63,12 @@ for _, o in ipairs(getObjects()) do
     -- a plain find, not a pattern: TTS's Lua gives up on "^([^\\n]*)\\n" ("pattern
     -- too complex") for a long description with no line break, like LCT's mission cards
     local nl = d:find("\\n", 1, true)
+    local c = o.getCustomObject() or {}
+    local mesh = c.mesh or c.assetbundle   -- which terrain pack a piece is from (layouts.identify)
     table.insert(out, {
         guid = o.guid, tag = o.tag, name = o.getName() or "",
         head = nl and d:sub(1, nl - 1) or "", notes = o.getGMNotes() or "", tags = o.getTags(),
-        locked = o.getLock(), rot = r.y, p = {p.x, p.y, p.z},
+        locked = o.getLock(), rot = r.y, p = {p.x, p.y, p.z}, mesh = mesh,
         c = {b.center.x, b.center.y, b.center.z}, s = {b.size.x, b.size.y, b.size.z},
     })
 end
@@ -397,12 +399,23 @@ def measure(a, b=None, layout=None):
 # --------------------------------------------------------------------------
 # Commands
 
+def table_meshes(objs):
+    """The mesh and asset bundle URLs of the objects on the table."""
+    return {o["mesh"] for o in objs if o.get("mesh")}
+
+
+def find_layout(objs, candidates=None):
+    """Which of layouts/ (or `candidates`) is on the table: layouts.identify, with the table's
+    meshes to tell a map's terrain packs apart."""
+    return layouts.identify(collect_terrain(objs), candidates, meshes=table_meshes(objs))
+
+
 def board_state(objs, candidates=None):
     """The table as units and terrain: what board.json holds (docs/formats/board-state.md).
     `layout` is which of layouts/ (or `candidates`) is on the table, or None: its areas,
     objectives and zones are in layouts/<id>.json."""
     terrain, surface = collect_terrain(objs), table_surface(objs)
-    found = layouts.identify(terrain, candidates)
+    found = layouts.identify(terrain, candidates, meshes=table_meshes(objs))
     layout = found and found[0]
     return {"surface_y": round(surface, 2),
             "layout": found and {"id": layout["id"], "name": layout["name"], "matched": found[1], "pieces": found[2]},

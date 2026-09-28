@@ -5,7 +5,6 @@ from mcp.server.mcpserver.exceptions import ToolError
 from typing_extensions import NotRequired, TypedDict   # see table.py
 
 import board
-import layouts
 from app.core import tts
 from app.mcp_server.table import Point, UnitRef
 
@@ -35,7 +34,7 @@ def placing(objs, unit, x, z, facing=None, cols=None, army=None, nth=None, from_
     """place_unit on objects as board.READ_LUA returns them; `apply` moves the unit."""
     try:
         u = board.find_unit(board.collect_units(objs), unit, army, nth, on_table=not from_reserves)
-        found = layouts.identify(board.collect_terrain(objs), candidates)
+        found = board.find_layout(objs, candidates)
         y = board.DROP_Y if height is None else board.table_surface(objs) + height + 0.6
         plan = board.plan_place(objs, u, x, z, facing, cols, y, found[0] if found else None)
     except board.UnitError as e:

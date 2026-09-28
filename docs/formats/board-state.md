@@ -13,7 +13,8 @@ The table as it is right now, read from TTS: each army's units and where they st
 ```jsonc
 {
   "surface_y": 1.0,                 // height of the playing surface in TTS (the mat's top); heights below are above it
-  "layout": {                       // which of layouts/ is on the table (layouts.identify, from terrain positions), or null
+  "layout": {                       // which of layouts/ is on the table, or null (board.find_layout: terrain positions,
+                                    // and the table's meshes against LCT's cache to tell a map's terrain packs apart)
     "id": "0c4960",                 // layouts/<id>.json has its exact areas, objectives and zones
     "name": "TnH vs TnH 2 - Dawn of War - BTTF",
     "matched": 6, "pieces": 6       // how many of its areas and features have a piece on the table
