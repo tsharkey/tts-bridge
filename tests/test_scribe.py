@@ -119,7 +119,7 @@ def test_save_without_tts(client, paths, monkeypatch):
     states = json.loads(path.read_text())["ObjectStates"]
     assert len(states) == r.json()["models"] > 0 and not any(o["Name"] == "Notecard" for o in states)
     # each model carries its unit's whole datasheet in its viewer script
-    assert "<b>ABILITIES</b>" in states[0]["LuaScript"] and "Dawn Blade" in states[0]["LuaScript"]
+    assert "<b>MODELS</b>" in states[0]["LuaScript"] and "Dawn Blade" in states[0]["LuaScript"]
     first = states[0]
     assert first["Description"].split("\n")[0] == "[Commander Farsight]"  # board.py groups units by it
     assert first["GMNotes"] == "army.py:T'au Empire Retaliation Cadre (Bonded Heroes) 2005"
@@ -208,9 +208,13 @@ def test_pack_is_compact():
 
 
 def test_pack_keeps_to_the_width():
-    units = [(f"U{i}", [i]) for i in range(8)]
-    moves = army.pack(units, [[2, 2]] * 8, 0, 0, width=5)
-    assert all(x <= 5 for _, x, _ in moves)
+    units = [(f"U{i}", [i]) for i in range(8)] + [("Squad", list(range(8, 18))), ("Leader", [18])]
+    dims = [[2, 2]] * 8 + [[1.26, 1.26]] * 10 + [[1.6, 1.6]]
+    blocks = army.groups({"units": [{}] * 9 + [{"attached_to": 8}]}, units)
+    moves = army.pack(units, dims, 0, 0, width=5, blocks=blocks)
+    assert all(x + dims[k][0] / 2 <= 5 + 1e-9 and x - dims[k][0] / 2 >= -1e-9 for k, x, _ in moves)  # base edges
+    at = {k: (x, z) for k, x, z in moves}
+    assert min(math.dist(at[18], at[k]) for k in range(8, 18)) < 2.5   # the leader still stands by its unit (below it)
 
 
 @pytest.mark.parametrize("faction,title,folder,name", [

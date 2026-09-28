@@ -972,39 +972,47 @@ def groups(army, units):
     return [[i] + led.get(i, []) for i in range(len(units)) if i not in placed]
 
 
-def block(sizes, gap):
-    """Models in a rough square, lines of at most 5. -> ([(dx, dz)] centres from
-    the block's top-left, width, depth)."""
+def block(sizes, gap, width):
+    """Models in a rough square, lines of at most 5, and fewer when a line would
+    be wider than `width` (a narrow deployment zone). -> ([(dx, dz)] centres
+    from the block's top-left, width, depth)."""
     per_row = min(5, math.ceil(math.sqrt(len(sizes))))
-    out, width, z = [], 0.0, 0.0
+    while per_row > 1 and any(sum(d[0] for d in sizes[r:r + per_row]) + gap * (per_row - 1) > width
+                              for r in range(0, len(sizes), per_row)):
+        per_row -= 1
+    out, most, z = [], 0.0, 0.0
     for r in range(0, len(sizes), per_row):
         line, x = sizes[r:r + per_row], 0.0
         depth = max(d[1] for d in line)
         for d in line:
             out.append((x + d[0] / 2, z - depth / 2))
             x += d[0] + gap
-        width, z = max(width, x - gap), z - depth - gap
-    return out, width, -z - gap
+        most, z = max(most, x - gap), z - depth - gap
+    return out, most, -z - gap
 
 
 def pack(units, dims, x0, z0, width, gap=0.4, pad=2.0, blocks=None):
     """Lay units out as a compact block from (x0, z0), its top-left: each unit a
     rough square, leaders beside the unit they lead (`blocks`, from groups()),
-    and the blocks packed in rows, deepest first, with `pad` between them. Rows
-    are as wide as makes the army roughly square, and never wider than `width`.
+    or below it when that's too wide, and the blocks packed in rows, deepest
+    first, with `pad` between them. Rows are as wide as makes the army roughly
+    square, and never wider than `width` (unless one model is).
     dims[k] is object k's [width, depth]. -> [(k, x, z)] centres."""
     laid = []
     for members in blocks or [[i] for i in range(len(units))]:
-        parts, x, depth = [], 0.0, 0.0
+        parts, x, z, depth, most = [], 0.0, 0.0, 0.0, 0.0
         for i in members:
             ks = units[i][1]
             if not ks:
                 continue
-            spots, w, d = block([dims[k] for k in ks], gap)
-            parts += [(k, x + dx, dz) for k, (dx, dz) in zip(ks, spots)]
+            spots, w, d = block([dims[k] for k in ks], gap, width)
+            if x and x + w > width:   # no room beside: start a line below
+                x, z, depth = 0.0, z - depth - gap * 2, 0.0
+            parts += [(k, x + dx, z + dz) for k, (dx, dz) in zip(ks, spots)]
+            most = max(most, x + w)
             x, depth = x + w + gap * 2, max(depth, d)   # a leader stands close by, not a unit apart
         if parts:
-            laid.append((parts, x - gap * 2, depth))
+            laid.append((parts, most, depth - z))
     if not laid:
         return []
     area = sum((w + pad) * (d + pad) for _, w, d in laid)

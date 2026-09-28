@@ -6,7 +6,9 @@ bound to "Show datasheet" in TTS's Options > Game Keys) to open a floating,
 scrollable, draggable window with its unit's whole datasheet (tooltips.card_text),
 shown only to the player who opened it. **Show threat range**, **Show line of
 sight** and **Clear overlays** ask the hub to draw on the table (overlays.py),
-through sendExternalMessage({ttsBridge = "overlay", ...}).
+through sendExternalMessage({ttsBridge = "overlay", ...}). A model with more
+than one wound is named "<left>/<max> <name>" (tooltips.py): **Take a wound** and
+**Heal a wound** in its menu, or the hotkeys of those names, count them.
 
     import sheetviewer
     sheetviewer.attach(obj, unit_name, card_text)   # adds the script to a spawned object
@@ -76,12 +78,23 @@ function onLoad(state)
   self.addContextMenuItem("Show threat range", function(color) ttsBridgeOverlay(color, "threat") end)
   self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
   self.addContextMenuItem("Clear overlays", function(color) ttsBridgeOverlay(color, "clear") end)
+  -- the wound tracker, on models named "<left>/<max> <name>" (tooltips.py); the menu stays open
+  if string.match(self.getName(), "^%%d+/%%d+ ") then
+    self.addContextMenuItem("Take a wound", function() ttsBridgeWound({change = -1}) end, true)
+    self.addContextMenuItem("Heal a wound", function() ttsBridgeWound({change = 1}) end, true)
+  end
   -- one "Show datasheet" hotkey per game, from whichever model loads first
   local owner = Global.getVar("ttsBridgeHotkey")
   if owner == nil or getObjectFromGUID(owner) == nil then
     Global.setVar("ttsBridgeHotkey", self.guid)
     addHotkey("Show datasheet", function(color, hovered)
       if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeShow", {color = color}) end
+    end)
+    addHotkey("Take a wound", function(color, hovered)
+      if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeWound", {change = -1}) end
+    end)
+    addHotkey("Heal a wound", function(color, hovered)
+      if hovered ~= nil and hovered.getVar("TTSB_HAS_SHEET") then hovered.call("ttsBridgeWound", {change = 1}) end
     end)
   end
 end
@@ -107,6 +120,13 @@ function ttsBridgeShow(params)
   table.insert(xml, ttsbPanel)  -- beside the table's own UI, not instead of it
   UI.setXmlTable(xml)
   Wait.frames(fill, 3)          -- the new UI is built over the next frames
+end
+
+function ttsBridgeWound(params)
+  local left, most, rest = string.match(self.getName(), "^(%%d+)/(%%d+) (.*)$")
+  if left == nil then return end
+  left = math.max(0, math.min(tonumber(most), tonumber(left) + params.change))
+  self.setName(left .. "/" .. most .. " " .. rest)
 end
 
 function ttsBridgeOverlay(color, show)

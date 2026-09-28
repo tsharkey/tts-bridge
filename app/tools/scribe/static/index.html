@@ -44,8 +44,9 @@
   .starBtn.on, .starBtn:hover { color: var(--accent); }
   .gear { color: var(--muted); }
   .tip td { background: #101114; }
+  .tt { white-space: pre-wrap; }  /* as TTS shows it: runs of spaces line the stats up */
   .tip .tt { font-size: 12px; line-height: 1.5; max-width: 640px; }
-  .tip .tt b { color: var(--text); }
+  .tip .tt > b { color: var(--text); }
   /* the 3D view: a modal over the page */
   #preview { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
              align-items: center; justify-content: center; padding: 16px; }
@@ -232,8 +233,7 @@ function badges(u) {
 // TTS BBCode ([b], [i], [RRGGBB]...[-]) as HTML, for the tooltip preview
 function bbcode(text) {
   return esc(text).replace(/\[(\/?)(b|i|u|s)\]/g, "<$1$2>")
-    .replace(/\[([0-9a-fA-F]{6})\]/g, '<span style="color:#$1">').replace(/\[-\]/g, "</span>")
-    .replace(/\n/g, "<br>");
+    .replace(/\[([0-9a-fA-F]{6})\]/g, '<span style="color:#$1">').replace(/\[-\]/g, "</span>");
 }
 
 function groupRow(u, g, gi) {
@@ -344,7 +344,8 @@ $("#result").addEventListener("click", async e => {
     if (next && next.classList.contains("tip")) return next.remove();
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
     row.insertAdjacentHTML("afterend", `<tr class="tip"><td colspan="4"><div class="muted">${esc(g.tooltip.name)}</div>
-      <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]<br>${bbcode(g.tooltip.text)}</div></td></tr>`);
+      <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]
+${bbcode(g.tooltip.text)}</div></td></tr>`);
   } else if (e.target.matches(".starBtn")) {
     const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
     await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
