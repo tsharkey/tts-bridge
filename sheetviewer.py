@@ -7,7 +7,7 @@ scrollable, draggable window with its unit's whole datasheet (tooltips.card_text
 shown only to the player who opened it. **Show threat range**, **Show line of
 sight** and **Clear overlays** ask the hub to draw on the table (overlays.py),
 through sendExternalMessage({ttsBridge = "overlay", ...}). A model with more
-than one wound is named "<left>/<max> <name>" (tooltips.py): **Take a wound** and
+than one wound is named "[<left>/<max>] <name>" (tooltips.py): **Take a wound** and
 **Heal a wound** in its menu, or the hotkeys of those names, count them.
 
     import sheetviewer
@@ -24,13 +24,16 @@ import re
 import tts_bridge as tts
 
 PANEL_ID = "ttsBridgeSheet"
+UNDERLINE = "c49bf2"   # tooltips.ABILITIES
 MARKER = "-- tts-bridge datasheet viewer"
 
 
 def rich_text(bbcode):
-    """TTS tooltip BBCode ([b], [i], [RRGGBB]…[-]) as the Unity rich text the
-    screen UI understands (<b>, <i>, <color=#RRGGBB>…</color>)."""
+    """TTS tooltip BBCode ([b], [i], [u], [RRGGBB]…[-]) as the Unity rich text the
+    screen UI understands (<b>, <i>, <color=#RRGGBB>…</color>). It can't underline,
+    so underlined names (abilities) are shown in the tooltip's ability colour."""
     text = (bbcode or "").replace("<", "‹").replace(">", "›")  # a rule's own "<" isn't a tag
+    text = text.replace("[u]", f"<color=#{UNDERLINE}>").replace("[/u]", "</color>")
     text = re.sub(r"\[(/?)(b|i)\]", r"<\1\2>", text)
     text = re.sub(r"\[([0-9a-fA-F]{6})\]", r"<color=#\1>", text)
     return text.replace("[-]", "</color>")
@@ -78,8 +81,8 @@ function onLoad(state)
   self.addContextMenuItem("Show threat range", function(color) ttsBridgeOverlay(color, "threat") end)
   self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
   self.addContextMenuItem("Clear overlays", function(color) ttsBridgeOverlay(color, "clear") end)
-  -- the wound tracker, on models named "<left>/<max> <name>" (tooltips.py); the menu stays open
-  if string.match(self.getName(), "^%%d+/%%d+ ") then
+  -- the wound tracker, on models named "[<left>/<max>] <name>" (tooltips.py); the menu stays open
+  if ttsbWounds() then
     self.addContextMenuItem("Take a wound", function() ttsBridgeWound({change = -1}) end, true)
     self.addContextMenuItem("Heal a wound", function() ttsBridgeWound({change = 1}) end, true)
   end
@@ -122,11 +125,20 @@ function ttsBridgeShow(params)
   Wait.frames(fill, 3)          -- the new UI is built over the next frames
 end
 
+-- -> wounds left, most, and the rest of the name; also reads "<left>/<max> <name>",
+-- how models spawned before the brackets were named
+function ttsbWounds()
+  local name = self.getName()
+  local left, most, rest = string.match(name, "^%%[(%%d+)/(%%d+)%%] (.*)$")
+  if left == nil then left, most, rest = string.match(name, "^(%%d+)/(%%d+) (.*)$") end
+  return left, most, rest
+end
+
 function ttsBridgeWound(params)
-  local left, most, rest = string.match(self.getName(), "^(%%d+)/(%%d+) (.*)$")
+  local left, most, rest = ttsbWounds()
   if left == nil then return end
   left = math.max(0, math.min(tonumber(most), tonumber(left) + params.change))
-  self.setName(left .. "/" .. most .. " " .. rest)
+  self.setName("[" .. left .. "/" .. most .. "] " .. rest)
 end
 
 function ttsBridgeOverlay(color, show)

@@ -38,7 +38,7 @@ def test_tooltip_sections():
     unit = squad()
     assert tooltips.lead_model(unit, SHEET) == 0
     tip = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)
-    assert tip["name"] == "2/2 Squad Leader"                    # the wound tracker's count
+    assert tip["name"] == "[2/2] Squad Leader"                    # the wound tracker's count
     sections = tip["text"].split("\n\n")
     stats, weapons, abilities, footer = [s.split("\n") for s in sections]
     assert stats[0] == tooltips.RULE
@@ -47,7 +47,7 @@ def test_tooltip_sections():
     assert weapons == ["[ef6f6c][b]Weapons[/b][-]",
                        "[e8b53e]Power sword - strike[-]", "Melee  A4  WS3+  S5  AP-2  D1",
                        "[e8b53e]Twin carbine[-]", '20"  A2  BS5+  S5  AP0  D1']   # a drone's weapon too
-    assert abilities == ["[c49bf2][b]Abilities[/b][-]", "Hold Fast", "Drone", "Deep Strike"]   # names only
+    assert abilities == ["[c49bf2][b]Abilities[/b][-]", "[u]Hold Fast[/u]", "[u]Drone[/u]", "[u]Deep Strike[/u]"]  # names only
     assert footer == ["[e8b53e]Warlord · Enhancement: Iron Will[-]", "[9aa1ad]Keywords: Infantry, Battleline[-]",
                       "[9aa1ad]Base: 40mm[-]"]
 
@@ -56,7 +56,7 @@ def test_every_model_has_the_same_sections():
     unit = squad()
     tip = tooltips.tooltip(unit, unit["models"][1], SHEET, lead=False)
     text = tip["text"]
-    assert tip["name"] == "2/2 Trooper"
+    assert tip["name"] == "[2/2] Trooper"
     assert "InSv" in text.split("\n")[1] and "5+" in text.split("\n")[2]
     assert '2× [e8b53e]Bolt rifle[-]\n24"  A2  BS3+  S4  AP-1  D1  [i]Assault, Heavy[/i]' in text
     assert "Hold Fast" in text and "Keywords" in text
@@ -76,7 +76,7 @@ def test_describe_keeps_the_unit_line_first():
     obj = tooltips.describe({"Name": "Custom_Model", "Nickname": "Old", "Description": "By someone"},
                             "Test Squad", unit["models"][0])
     assert obj["Name"] == "Custom_Model"  # the TTS object type, untouched
-    assert obj["Nickname"] == "2/2 Squad Leader"
+    assert obj["Nickname"] == "[2/2] Squad Leader"
     head, rest = obj["Description"].split("\n", 1)
     assert board.UNIT_RE.match(head).group(1) == "Test Squad"  # board.py still finds the unit
     assert "By someone" not in rest and "Hold Fast" in rest    # the catalogue's own text is dropped
@@ -102,8 +102,8 @@ def test_card_has_the_whole_datasheet():
                      "[9aa1ad][b]KEYWORDS[/b][-] Infantry, Battleline"]
     assert "[b]FACTION[/b]" in sections[-1]
     assert "[e8b53e]Bolt rifle[-]\n24\"  A2" in text and "Power sword - strike" in text and "Twin carbine" in text
-    assert "[b]Deep Strike[/b]\nArrives later." in text   # a unit rule, markup removed, text under its name
-    assert "[b]Assault[/b]" in text                        # the Bolt rifle is "Assault, Heavy"
+    assert "[b][u]Deep Strike[/u][/b]\nArrives later." in text   # a unit rule, markup removed, text under its name
+    assert "[b][u]Assault[/u][/b]" in text                        # the Bolt rifle is "Assault, Heavy"
     assert "Lance" not in text                             # no weapon here has it
 
 
@@ -121,20 +121,19 @@ def test_weapon_names_read_back_from_a_tooltip():
     assert tooltips.weapon_names(old) == ["Bolt rifle", "Power sword - strike"]
 
 
-def test_every_state_is_marked():
-    """A model with states (a recolour, another pose) keeps our tooltip, tags and
-    viewer when it's switched to another state in TTS."""
+def test_one_state_only():
+    """A model with states (a recolour, another pose) spawns as the one showing:
+    TTS's state counter in the tooltip reads like the wound count."""
     import army
     import sheetviewer
     unit = squad()
     unit["models"][0]["tooltip"] = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)
     obj = {"Nickname": "Sergeant", "Description": "Recolored by someone", "Tags": ["theirs"],
-           "States": {"2": {"Nickname": "Sergeant", "Description": "Recolor by someone else",
-                            "LuaScript": "function onLoad() end"}}}
+           "LuaScript": "function onLoad() end",
+           "States": {"2": {"Nickname": "Sergeant", "Description": "Recolor by someone else"}}}
     army.mark(obj, "Test Squad", unit["models"][0], ["tts-bridge:unit:1"], "army.py:Test", "[b]card[/b]")
-    for o in (obj, obj["States"]["2"]):
-        assert o["Nickname"] == "2/2 Squad Leader"
-        assert o["Description"].startswith("[Test Squad]\n") and "Recolo" not in o["Description"]
-        assert "tts-bridge:unit:1" in o["Tags"] and o["GMNotes"] == "army.py:Test"
-        assert sheetviewer.MARKER in o["LuaScript"]
-    assert obj["Tags"][0] == "theirs" and obj["States"]["2"]["LuaScript"].startswith("function onLoad() end")
+    assert "States" not in obj
+    assert obj["Nickname"] == "[2/2] Squad Leader"
+    assert obj["Description"].startswith("[Test Squad]\n") and "Recolo" not in obj["Description"]
+    assert obj["Tags"] == ["theirs", "tts-bridge:unit:1"] and obj["GMNotes"] == "army.py:Test"
+    assert obj["LuaScript"].startswith("function onLoad() end") and sheetviewer.MARKER in obj["LuaScript"]

@@ -932,17 +932,18 @@ def tag(obj, tags):
 def mark(obj, unit_name, model, tags, gm_notes, card=None):
     """Make a catalogue object one of ours: named and described for its model
     (tooltips.describe), its unit tags, the army tag in GM Notes, and the
-    datasheet viewer (sheetviewer.py). Every state of a model with states
-    (recolours, poses) gets the same, so switching state in TTS keeps them."""
+    datasheet viewer (sheetviewer.py). A model with states (recolours, poses)
+    keeps only the one showing: TTS puts a state counter in the tooltip that
+    reads like the wound count, and can't hide it (pick another look in Scribe)."""
     import sheetviewer
     import tooltips
 
-    for o in [obj] + list((obj.get("States") or {}).values()):
-        tooltips.describe(o, unit_name, model)
-        tag(o, tags)
-        o["GMNotes"] = gm_notes
-        if card:
-            sheetviewer.attach(o, unit_name, card)
+    obj.pop("States", None)
+    tooltips.describe(obj, unit_name, model)
+    tag(obj, tags)
+    obj["GMNotes"] = gm_notes
+    if card:
+        sheetviewer.attach(obj, unit_name, card)
     return obj
 
 

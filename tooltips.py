@@ -9,9 +9,9 @@ hover over one.
 Every model's tooltip has the same sections, a blank line apart, as
 Yellowscribe's do: its stats (names over values), the weapons it carries (each
 name on its own line, its profile under it), the unit's abilities and rules by
-name, then keywords and base. One model per unit (its leader or sergeant, or its
+name (underlined), then keywords and base. One model per unit (its leader or sergeant, or its
 only model) also shows the warlord and enhancements. A model with more than one
-wound is named "<left>/<max> <name>" for the wound tracker. The unit gets its
+wound is named "[<left>/<max>] <name>" for the wound tracker. The unit gets its
 whole datasheet as "card" text (card_text), with every rule explained, for the
 datasheet viewer on each of its models (sheetviewer.py). The text is TTS BBCode
 ([b], [i], [RRGGBB]...[-]). army.model_objects writes it after the "[<unit>]"
@@ -139,7 +139,7 @@ def wounds(stats):
 def tooltip(unit, model, sheet, lead):
     """{"name", "text"} for one model: its stats, the weapons it carries, and
     the unit's abilities by name (the datasheet viewer has them in full). A
-    model with more than one wound is named "<left>/<max> <name>" for the
+    model with more than one wound is named "[<left>/<max>] <name>" for the
     wound tracker (sheetviewer.py). lead: whether it shows what the list
     chose for the unit (warlord, enhancements)."""
     sm = next((m for m in sheet["models"] if m["name"] == model.get("sheet_model")), None)
@@ -154,7 +154,7 @@ def tooltip(unit, model, sheet, lead):
         sections.append([heading(WEAPONS, "Weapons")] + weapons)
     abilities = [a["name"] for a in sheet["abilities"]] + gear + list(sheet["rules"])
     if abilities:
-        sections.append([heading(ABILITIES, "Abilities")] + list(dict.fromkeys(abilities)))
+        sections.append([heading(ABILITIES, "Abilities")] + [f"[u]{a}[/u]" for a in dict.fromkeys(abilities)])
     chosen = ((["Warlord"] if unit.get("warlord") else [])
               + [f"Enhancement: {e}" for e in unit.get("enhancements") or []]) if lead else []
     footer = ([colour(ACCENT, " · ".join(chosen))] if chosen else []) + [x for x in (
@@ -163,7 +163,7 @@ def tooltip(unit, model, sheet, lead):
     if footer:
         sections.append(footer)
     w = wounds(stats)
-    name = f"{w}/{w} {model['name']}" if w else model["name"]
+    name = f"[{w}/{w}] {model['name']}" if w else model["name"]
     return {"name": name, "text": "\n\n".join("\n".join(s) for s in sections)}
 
 
@@ -223,7 +223,8 @@ def card_text(unit, sheet, units=()):
             sections.append([heading(WEAPONS, title)] + these)
 
     def explained(a):
-        return f"[b]{a['name']}[/b]\n{plain(a['text'])}" if a.get("text") else f"[b]{a['name']}[/b]"
+        name = f"[b][u]{a['name']}[/u][/b]"   # underlined, so each rule's text is easy to find
+        return f"{name}\n{plain(a['text'])}" if a.get("text") else name
 
     if sheet["abilities"]:
         sections.append([heading(ABILITIES, "ABILITIES")] + [explained(a) for a in sheet["abilities"]])
