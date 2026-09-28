@@ -113,10 +113,8 @@ def inside(point, poly):
     return hit
 
 
-def distance(point, poly):
-    """How far a point is from a polygon's edge: 0 inside it."""
-    if inside(point, poly):
-        return 0.0
+def edge_distance(point, poly):
+    """How far a point is from a polygon's edge, inside or out."""
     x, z = point
     best = math.inf
     for (x1, z1), (x2, z2) in zip(poly, poly[1:] + poly[:1]):
@@ -124,6 +122,37 @@ def distance(point, poly):
         t = max(0.0, min(1.0, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz or 1)))
         best = min(best, math.hypot(x - x1 - t * dx, z - z1 - t * dz))
     return best
+
+
+def distance(point, poly):
+    """How far a point is from a polygon: 0 inside it."""
+    return 0.0 if inside(point, poly) else edge_distance(point, poly)
+
+
+def edges(poly):
+    return zip(poly, poly[1:] + poly[:1])
+
+
+def crossing(p1, p2, q1, q2):
+    """Whether two segments cross (touching ends and overlapping collinear ones don't count)."""
+    def side(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    d1, d2, d3, d4 = side(q1, q2, p1), side(q1, q2, p2), side(p1, p2, q1), side(p1, p2, q2)
+    return d1 * d2 < 0 and d3 * d4 < 0
+
+
+def polygon_gap(a, b):
+    """How far apart two polygons are: 0 when they overlap."""
+    if any(inside(p, b) for p in a) or any(inside(p, a) for p in b) \
+            or any(crossing(p1, p2, q1, q2) for p1, p2 in edges(a) for q1, q2 in edges(b)):
+        return 0.0
+    return min(min(edge_distance(p, b) for p in a), min(edge_distance(p, a) for p in b))
+
+
+def polygon_within(a, b):
+    """Whether polygon a is wholly inside polygon b (which needn't be convex)."""
+    return all(inside(p, b) for p in a) and not any(
+        crossing(p1, p2, q1, q2) for p1, p2 in edges(a) for q1, q2 in edges(b))
 
 
 def bounds(poly):

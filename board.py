@@ -95,11 +95,15 @@ def read_objects():
     return json.loads(raw) if isinstance(raw, str) else raw
 
 
+def is_round(s):
+    """A footprint (w, d) about as wide as it is deep: a round base. Others are long bases and hulls."""
+    return abs(s[0] - s[1]) <= 0.15 * max(s)
+
+
 def gap(x1, z1, s1, x2, z2, s2):
     """Edge-to-edge distance between two bases centred at (x, z) with footprints s = (w, d).
     Round bases are measured as circles; long bases and hulls as boxes."""
-    round1, round2 = abs(s1[0] - s1[1]) <= 0.15 * max(s1), abs(s2[0] - s2[1]) <= 0.15 * max(s2)
-    if round1 and round2:
+    if is_round(s1) and is_round(s2):
         return math.dist((x1, z1), (x2, z2)) - (s1[0] + s1[1]) / 4 - (s2[0] + s2[1]) / 4
     dx = max(abs(x1 - x2) - (s1[0] + s2[0]) / 2, 0)
     dz = max(abs(z1 - z2) - (s1[1] + s2[1]) / 2, 0)
@@ -270,7 +274,7 @@ def unit_row(u, terrain, surface=0.0, layout=None):
     zones = sorted({t["name"] for t in terrain if t["kind"] == "zone"
                     for o in ms if box_hit(o["c"][0], o["c"][2], 0.01, t["box"])})
     areas = [a["id"] for a in (layout or {}).get("areas", [])
-             if u["on_table"] and any(layouts.distance((o["c"][0], o["c"][2]), a["polygon"]) < radius(o) for o in ms)]
+             if u["on_table"] and any(base_gap(o, a["polygon"]) == 0 for o in ms)]
     return {"army": u["army"], "unit": u["name"], "nth": u["nth"], "models": len(ms),
             "on_table": u["on_table"], "unit_id": u.get("unit_id"), "datasheet": u.get("datasheet"),
             "coherency": coherency(ms) if u["on_table"] else [],
@@ -285,9 +289,92 @@ def unit_row(u, terrain, surface=0.0, layout=None):
                if layout else {})}
 
 
+def closest_pair(a, b):
+    """(distance, model of a, model of b): the closest two bases between two lists of models,
+    0 when bases overlap (gap and model_gap keep the overlap, negative, for place's checks)."""
+    d, p, q = min(((model_gap(p, q), p, q) for p in a for q in b), key=lambda t: t[0])
+    return max(d, 0.0), p, q
+
+
 def closest(a, b):
     """Closest base-to-base distance between two lists of models."""
-    return min(model_gap(p, q) for p in a for q in b)
+    return closest_pair(a, b)[0]
+
+
+def base_box(o):
+    """A long base or hull's footprint as a polygon (axis-aligned, from its bounds)."""
+    x, z = o["c"][0], o["c"][2]
+    w, d = foot(o)
+    return [[x - w / 2, z - d / 2], [x + w / 2, z - d / 2], [x + w / 2, z + d / 2], [x - w / 2, z + d / 2]]
+
+
+def base_gap(o, poly):
+    """How far a model's base is from a polygon, 0 when it overlaps; round bases as circles,
+    long bases and hulls as boxes, like gap."""
+    if is_round(foot(o)):
+        return max(0.0, layouts.distance((o["c"][0], o["c"][2]), poly) - radius(o))
+    return layouts.polygon_gap(base_box(o), poly)
+
+
+def point_gap(o, point):
+    """How far a model's base is from a point, 0 when the point is under it."""
+    if is_round(foot(o)):
+        return max(0.0, math.dist((o["c"][0], o["c"][2]), point) - radius(o))
+    return layouts.distance(point, base_box(o))
+
+
+def base_within(o, poly):
+    """Whether a model's base is wholly inside a polygon."""
+    if is_round(foot(o)):
+        centre = (o["c"][0], o["c"][2])
+        return layouts.inside(centre, poly) and layouts.edge_distance(centre, poly) >= radius(o)
+    return layouts.polygon_within(base_box(o), poly)
+
+
+def reach(models, poly):
+    """(how far the nearest base is from a polygon, 0 when one overlaps it; whether every base is
+    wholly inside it)."""
+    return min(base_gap(o, poly) for o in models), all(base_within(o, poly) for o in models)
+
+
+def landmarks(models, layout):
+    """How far a unit is from each of the layout's objectives and deployment zones. `within`:
+    a base overlaps the objective's terrain area (None for a marker on open ground, whose range
+    the mission sets), or every base is wholly within the zone."""
+    areas = {a["id"]: a["polygon"] for a in layout["areas"]}
+    out = []
+    for ob in layout["objectives"]:
+        if ob["area"]:
+            gap, _ = reach(models, areas[ob["area"]])
+            within = gap == 0
+        else:
+            gap = min(point_gap(o, (ob["x"], ob["z"])) for o in models)
+            within = None
+        out.append({"kind": "objective", "id": ob["id"], "distance": round(gap, 2), "within": within})
+    for zone in layout["zones"]:
+        gap, wholly = reach(models, zone["polygon"])
+        out.append({"kind": "zone", "id": zone["side"], "distance": round(gap, 2), "within": wholly})
+    return out
+
+
+def unit_ref(u):
+    return {"army": u["army"], "unit": u["name"], "nth": u["nth"], "models": len(u["models"])}
+
+
+def measure(a, b=None, layout=None):
+    """Unit a to unit b (units as collect_units makes them): the closest base-to-base distance,
+    horizontally, and the two models it's between; with a layout, each unit's distance to its
+    objectives and zones."""
+    out = {"a": unit_ref(a), "b": unit_ref(b) if b else None, "distance": None, "closest": None,
+           "engagement_range": None, "layout": layout and layout["id"], "landmarks": []}
+    if b:
+        d, p, q = closest_pair(a["models"], b["models"])
+        out.update(distance=round(d, 2), engagement_range=d <= ENGAGEMENT,
+                   closest=[{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2)} for o in (p, q)])
+    if layout:
+        out["landmarks"] = [{"unit": side, **row} for side, u in (("a", a), ("b", b)) if u
+                            for row in landmarks(u["models"], layout)]
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -337,6 +424,10 @@ def army_matches(tag, army):
     return army is None or army.lower() == tag.split(":")[-1].lower()
 
 
+class UnitError(ValueError):
+    """A unit name that matches no unit, or several; the message says which."""
+
+
 def find_unit(units, name, army=None, nth=None, on_table=True):
     want = name.lower()
     pool = [u for u in units if u["on_table"] == on_table]
@@ -349,9 +440,14 @@ def find_unit(units, name, army=None, nth=None, on_table=True):
     hits = exact or hits
     if nth is not None:
         hits = [u for u in hits if u["nth"] == nth]
-    if len(hits) != 1:
-        choices = "; ".join(f"{u['name']} #{u['nth']} ({u['army']})" for u in hits) or "none"
-        sys.exit(f'"{name}" matches {len(hits)} units: {choices}. Narrow it with --army or --nth.')
+    where = "on the table" if on_table else "off the table"
+    if not hits:
+        elsewhere = any(want in u["name"].lower() for u in units if u["on_table"] != on_table)
+        raise UnitError(f'No unit {where} matches "{name}"'
+                        + (f" (one {'off' if on_table else 'on'} the table does)." if elsewhere else "."))
+    if len(hits) > 1:
+        choices = "; ".join(f"{u['name']} #{u['nth']} ({u['army']})" for u in hits)
+        raise UnitError(f'"{name}" matches {len(hits)} units {where}: {choices}. Narrow it by army or nth.')
     return hits[0]
 
 
@@ -506,7 +602,10 @@ def main():
     sub.add_parser("undo").set_defaults(fn=cmd_undo)
     args = p.parse_args()
     tts.start_listener()
-    args.fn(args)
+    try:
+        args.fn(args)
+    except UnitError as e:
+        sys.exit(str(e))
 
 
 if __name__ == "__main__":

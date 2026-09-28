@@ -38,7 +38,7 @@ def test_tools_listed_and_described():
         async with Client(mcp_server.server()) as client:
             return await client.list_tools()
     tools = asyncio.run(main())
-    assert {"status", "board_summary"} <= set(names(tools))
+    assert {"status", "board_summary", "measure"} <= set(names(tools))
     assert all(t.description for t in tools.tools)
 
 
@@ -84,6 +84,28 @@ def test_board_summary_without_a_layout(monkeypatch):
     assert got["layout"] is None
     assert "areas" not in got["units"][0]
     assert len(got["terrain"]) == 7   # every piece TTS reports, as boxes
+
+
+def test_measure(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    got = call("measure", {"unit": "Pathfinder", "to": "Intercessor Squad", "landmarks": True}).structured_content
+    assert (got["a"]["unit"], got["b"]["unit"]) == ("Pathfinder Team", "Intercessor Squad")
+    assert got["distance"] == 31.63 and got["engagement_range"] is False   # (-17, 13) to (-6, -18), less the bases
+    assert [p["guid"] for p in got["closest"]] == ["a1b2c2", "0f0f00"]
+    assert got["layout"] == "0c4960"
+    held = [(r["unit"], r["id"]) for r in got["landmarks"] if r["within"]]
+    assert held == [("a", "expansion-red"), ("a", "red"), ("b", "blue")]
+
+
+def test_measure_says_which_unit_it_cant_find(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    result = call("measure", {"unit": "Stealth Battlesuits", "to": "Pathfinder"})
+    assert result.is_error and "one off the table does" in result.content[0].text
+    same = call("measure", {"unit": "Pathfinder", "to": "Pathfinder Team"})
+    assert same.is_error and "same unit" in same.content[0].text
+    got = call("measure", {"unit": "Pathfinder"}).structured_content   # no layout asked for: nothing to measure to
+    assert got["b"] is None and got["landmarks"] == [] and got["layout"] is None
 
 
 def test_board_summary_without_tts(no_tts):

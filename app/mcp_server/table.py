@@ -1,7 +1,10 @@
-"""board_summary: what's on the table, as data: board.py's board state, with the
-layout's exact terrain areas, objectives and deployment zones when it's one of layouts/."""
+"""Tools on what's on the table. board_summary: board.py's board state, with the
+layout's exact terrain areas, objectives and deployment zones when it's one of
+layouts/. measure: how far one unit is from another, and from the objectives and zones."""
 
 import math
+
+from mcp.server.mcpserver.exceptions import ToolError
 from typing_extensions import NotRequired, TypedDict   # typing has NotRequired from 3.11; pydantic wants this TypedDict before 3.12
 
 import board
@@ -143,4 +146,75 @@ def board_summary() -> BoardSummary:
     return summary(board.read_objects())
 
 
-TOOLS = [board_summary]
+class UnitRef(TypedDict):
+    army: str
+    unit: str
+    nth: int
+    models: int
+
+
+class Point(TypedDict):
+    guid: str
+    x: float
+    z: float
+
+
+class Landmark(TypedDict):
+    unit: str              # a | b: whose distance this is
+    kind: str              # objective | zone
+    id: str                # the objective's id, or the zone's side (red | blue)
+    distance: float
+    within: bool | None
+
+
+class Measurement(TypedDict):
+    a: UnitRef
+    b: UnitRef | None
+    distance: float | None
+    closest: list[Point] | None
+    engagement_range: bool | None
+    layout: str | None
+    landmarks: list[Landmark]
+
+
+def measuring(objs, unit, to=None, army=None, nth=None, to_army=None, to_nth=None, landmarks=False,
+              candidates=None) -> Measurement:
+    """measure on objects as board.READ_LUA returns them."""
+    units = board.collect_units(objs)
+    try:
+        a = board.find_unit(units, unit, army, nth)
+        b = board.find_unit(units, to, to_army, to_nth) if to else None
+    except board.UnitError as e:
+        raise ToolError(str(e)) from None
+    if b is a:
+        raise ToolError(f'"{unit}" and "{to}" are the same unit ({a["name"]} #{a["nth"]}, {a["army"]}). '
+                        "Name another unit, or narrow it by army or nth.")
+    found = layouts.identify(board.collect_terrain(objs), candidates) if landmarks else None
+    return board.measure(a, b, found[0] if found else None)
+
+
+def measure(unit: str, to: str | None = None, army: str | None = None, nth: int | None = None,
+            to_army: str | None = None, to_nth: int | None = None, landmarks: bool = False) -> Measurement:
+    """How far a unit on the table is from another: the closest base-to-base distance in inches,
+    measured horizontally (round bases as circles, long bases and hulls as boxes), as the rules
+    measure between units.
+
+    unit / to: unit names as board_summary lists them (part of a name works when it's unique).
+    army / to_army: which army, when both have one: the last part of its tag ("Red", "Blue", or
+    the list title), or any part of it. nth / to_nth: which of several same-named units in that
+    army (board_summary's "nth"). A name that matches no unit, or several, comes back as an
+    error listing the matches. Leave out `to` to measure only landmarks.
+
+    Returns "a" and "b" (the units measured), "distance", "closest" (the two models it's
+    between: a's, then b's), and "engagement_range" (distance 2" or less; engagement also depends
+    on height and which army, so check those).
+
+    landmarks: true adds, for each unit, its distance to every objective and deployment zone of
+    the LCT layout on the table ("layout" is its id, null if none matched, and then there are no
+    landmarks). An objective's "within" is true when a base overlaps its terrain area; null for a
+    marker on open ground, whose range the mission sets (distance is then to the marker's centre).
+    A zone's "within" is true when every base is wholly within it; distance 0 means a base is in it."""
+    return measuring(board.read_objects(), unit, to, army, nth, to_army, to_nth, landmarks)
+
+
+TOOLS = [board_summary, measure]
