@@ -542,8 +542,9 @@ def nest_lines(lines):
     (model at one depth, its wargear deeper); the shallowest bulleted depth is
     the model level. An indented unbulleted line continues the bullet above it,
     so it shares that bullet's level. A list pasted without its indentation has
-    no depth to read: its unbulleted lines are wargear and are left out, as the
-    flat format always was."""
+    no depth to read: its unbulleted lines are wargear that lost their "◦". They
+    count as gear of the model above (what it carries, for tooltips and threat
+    ranges), not as its wargear, so the pins keyed on wargear don't change."""
     bulleted = [ind for ind, b, _, _ in lines if b == "•"]
     base = min(bulleted) if bulleted else 0
     out, level = [], 1
@@ -558,6 +559,7 @@ def nest_lines(lines):
         elif bullet == "•":
             level = 1 if indent <= base else 2
         elif indent <= base:
+            out.append((2, n, name, GEAR))
             continue
         out.append((level, n, name, bullet == MODEL))
     return out
