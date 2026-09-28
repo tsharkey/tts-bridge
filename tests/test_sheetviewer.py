@@ -17,6 +17,9 @@ local log = {}
 local function note(k, v) table.insert(log, k .. "=" .. tostring(v)) end
 self = {guid = "abc123"}
 function self.getGUID() return "abc123" end
+local name = "3/3 Crisis Shas'vre"
+function self.getName() return name end
+function self.setName(n) name = n; note("name", n) end
 self.menus = {}
 function self.addContextMenuItem(label, fn) note("menu", label); self.menus[label] = fn end
 function sendExternalMessage(t) note("external", t.ttsBridge .. ":" .. t.guid .. ":" .. t.show .. ":" .. t.color) end
@@ -43,6 +46,8 @@ self.menus["Show threat range"]("Green")
 self.menus["Show line of sight"]("Green")
 self.menus["Clear overlays"]("Green")
 ttsBridgeShow({color = "Blue"})
+for _ = 1, 4 do self.menus["Take a wound"]() end   -- never below 0
+self.menus["Heal a wound"]()
 ttsBridgeClose(nil, nil, nil)
 onLoad("again")  -- another model loading: no second hotkey
 note("earlier", earlierOnLoad)
@@ -90,3 +95,8 @@ def test_script_runs_in_lua(tmp_path):
         [line for line in log if line.startswith("attr:ttsBridgeSheet:visibility")]
     assert log.count("show=ttsBridgeSheet") == 2 and "hide=ttsBridgeSheet" in log
     assert "earlier=again" in log  # the model's own onLoad still runs
+    # the wound tracker counts down to 0 and back up, in the model's name
+    assert [line for line in log if line.startswith("name=")] == [
+        "name=2/3 Crisis Shas'vre", "name=1/3 Crisis Shas'vre", "name=0/3 Crisis Shas'vre",
+        "name=0/3 Crisis Shas'vre", "name=1/3 Crisis Shas'vre"]
+    assert "hotkey=Take a wound" in log and "hotkey=Heal a wound" in log

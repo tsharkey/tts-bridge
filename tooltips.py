@@ -6,21 +6,28 @@ hover over one.
     tooltips.attach(parsed)        # after datasheets.parse (and bases.attach, for base sizes)
     parsed["units"][0]["models"][0]["tooltip"]   # {"name": ..., "text": ...}
 
-Every model gets its stat line, base and the weapons it carries. One model per
-unit (its leader or sergeant, or its only model) also gets the unit's
-abilities, rules, enhancements and keywords, so the others stay short. The
-unit gets its whole datasheet as "card" text (card_text), with every rule
-explained, for the datasheet viewer on each of its models (sheetviewer.py). The
-text is TTS BBCode ([b], [i], [RRGGBB]...[-]). army.model_objects writes it
-after the "[<unit>]" line that board.py groups units by.
+Every model's tooltip has the same sections, a blank line apart, as
+Yellowscribe's do: its stats (names over values), the weapons it carries (each
+name on its own line, its profile under it), the unit's abilities and rules by
+name, then keywords and base. One model per unit (its leader or sergeant, or its
+only model) also shows the warlord and enhancements. A model with more than one
+wound is named "<left>/<max> <name>" for the wound tracker. The unit gets its
+whole datasheet as "card" text (card_text), with every rule explained, for the
+datasheet viewer on each of its models (sheetviewer.py). The text is TTS BBCode
+([b], [i], [RRGGBB]...[-]). army.model_objects writes it after the "[<unit>]"
+line that board.py groups units by.
 """
 
 import re
 
 import datasheets
 
-LABEL = "9aa1ad"   # labels, in the hub's muted grey
-ACCENT = "e8b53e"  # names, in the hub's accent
+LABEL = "9aa1ad"      # labels and rules, in the hub's muted grey
+ACCENT = "e8b53e"     # weapon names, warlord and enhancements, in the hub's accent
+STATS = "8fd694"      # section headings: stats in green,
+WEAPONS = "ef6f6c"    # weapons in red,
+ABILITIES = "c49bf2"  # abilities in purple
+RULE = "[9aa1ad]" + "-" * 28 + "[-]"   # under the name, as Yellowscribe does
 
 
 def plain(text):
@@ -32,16 +39,29 @@ def colour(hexcode, text):
     return f"[{hexcode}]{text}[-]"
 
 
+STAT_KEYS = ("M", "T", "Sv", "W", "Ld", "OC", "InSv")
+
+
+def stat_table(stats):
+    """A model's characteristics as two lines, names over values, padded to
+    line up roughly (TTS's tooltip font isn't monospaced). None without stats."""
+    keys = [k for k in STAT_KEYS if (stats or {}).get(k)]
+    if not keys:
+        return None
+    widths = [max(len(k), len(str(stats[k]))) + 3 for k in keys]
+    head = "".join(k.ljust(w) for k, w in zip(keys, widths)).rstrip()
+    values = "".join(str(stats[k]).ljust(w) for k, w in zip(keys, widths)).rstrip()
+    return [colour(STATS, head), f"[b]{values}[/b]"]
+
+
 def stat_line(stats):
+    """A model's characteristics on one line, for the datasheet's model list."""
     if not stats:
         return None
-    parts = [f"[b]{k}[/b] {stats[k]}" for k in ("M", "T", "Sv", "W", "Ld", "OC") if stats.get(k)]
-    if stats.get("InSv"):
-        parts.append(f"[b]InSv[/b] {stats['InSv']}")
-    return "  ".join(parts)
+    return "  ".join(f"[b]{k}[/b] {stats[k]}" for k in STAT_KEYS if stats.get(k))
 
 
-def weapon_line(w, count=1):
+def weapon_stats(w):
     melee = w.get("type") == "melee"
     kind = "WS" if melee else "BS"
     stats = "  ".join(x for x in (
@@ -50,24 +70,37 @@ def weapon_line(w, count=1):
         f"S{w['S']}" if w.get("S") else None, f"AP{w['AP']}" if w.get("AP") else None,
         f"D{w['D']}" if w.get("D") else None) if x)
     keywords = f"  [i]{', '.join(w['keywords'])}[/i]" if w.get("keywords") else ""
-    return f"{f'{count}× ' if count > 1 else ''}{colour(ACCENT, w['name'])}  {stats}{keywords}"
+    return stats + keywords
 
 
-WEAPON_RE = re.compile(r"^(?:\d+× )?\[" + ACCENT + r"\](.+?)\[-\]  ")
+def weapon_lines(w, count=1):
+    """A weapon profile as two lines: its name (and how many), then its stats."""
+    stats = weapon_stats(w)
+    return [f"{f'{count}× ' if count > 1 else ''}{colour(ACCENT, w['name'])}"] + ([stats] if stats else [])
+
+
+def heading(hexcode, text):
+    return colour(hexcode, f"[b]{text}[/b]")
+
+
+WEAPON_RE = re.compile(r"^(?:\d+× )?\[" + ACCENT + r"\](.+?)\[-\](?:  |$)")
+WEAPON_HEADINGS = (heading(WEAPONS, "Weapons"), colour(LABEL, "Weapons"))   # this template's, and the one before
 
 
 def weapon_names(description):
-    """The weapon profiles a spawned model's tooltip lists (weapon_line), by name."""
+    """The weapon profiles a spawned model's tooltip lists (weapon_lines), by
+    name. Reads the earlier one-line template too, for models already spawned."""
     lines = (description or "").splitlines()
-    start = next((i for i, line in enumerate(lines) if line == colour(LABEL, "Weapons")), None)
+    start = next((i for i, line in enumerate(lines) if line in WEAPON_HEADINGS), None)
     if start is None:
         return []
     out = []
     for line in lines[start + 1:]:
         m = WEAPON_RE.match(line)
-        if not m:
-            break
-        out.append(m.group(1))
+        if m:
+            out.append(m.group(1))
+        elif not line or line.startswith("[") and not line.startswith("[i]"):
+            break   # the end of the section: a blank line or the next heading
     return out
 
 
@@ -75,7 +108,7 @@ def base_line(model):
     b = model.get("base")
     if not b or b["shape"] == "none":
         return None
-    return f"{colour(LABEL, 'Base')} {'use the model' if b['shape'] == 'model' else b['text']}"
+    return colour(LABEL, f"Base: {'use the model' if b['shape'] == 'model' else b['text']}")
 
 
 def carried(model, sheet):
@@ -90,47 +123,48 @@ def carried(model, sheet):
 
 
 def lead_model(unit, sheet):
-    """Index of the model that carries the unit's rules: its one required
-    single model (the sergeant or leader), else the first."""
+    """Index of the model that carries what the list chose for the unit
+    (warlord, enhancements): its one required single model (the sergeant or
+    leader), else the first."""
     singles = {m["name"] for m in sheet["models"] if m["min"] == m["max"] == 1}
     return next((i for i, m in enumerate(unit["models"]) if m.get("sheet_model") in singles), 0)
 
 
-def unit_lines(unit, sheet):
-    lines = [colour(LABEL, "Abilities")]
-    for a in sheet["abilities"]:
-        lines.append(f"[b]{a['name']}:[/b] {plain(a['text'])}" if a.get("text") else f"[b]{a['name']}[/b]")
-    if sheet["rules"]:
-        lines.append(f"{colour(LABEL, 'Rules')} {', '.join(sheet['rules'])}")
-    extras = ([f"{colour(LABEL, 'Enhancement')} {e}" for e in unit.get("enhancements") or []]
-              + ([colour(ACCENT, "Warlord")] if unit.get("warlord") else []))
-    lines += extras
-    keywords = ", ".join(sheet["keywords"])
-    if keywords:
-        lines.append(f"{colour(LABEL, 'Keywords')} {keywords}")
-    if sheet["factions"]:
-        lines.append(f"{colour(LABEL, 'Faction')} {', '.join(sheet['factions'])}")
-    return lines
+def wounds(stats):
+    """A model's Wounds as a number, when it has more than one (the wound tracker's)."""
+    w = str((stats or {}).get("W") or "")
+    return int(w) if w.isdigit() and int(w) > 1 else None
 
 
 def tooltip(unit, model, sheet, lead):
-    """{"name", "text"} for one model; lead: whether it carries the unit's rules."""
+    """{"name", "text"} for one model: its stats, the weapons it carries, and
+    the unit's abilities by name (the datasheet viewer has them in full). A
+    model with more than one wound is named "<left>/<max> <name>" for the
+    wound tracker (sheetviewer.py). lead: whether it shows what the list
+    chose for the unit (warlord, enhancements)."""
     sm = next((m for m in sheet["models"] if m["name"] == model.get("sheet_model")), None)
-    lines = [x for x in (stat_line(sm and sm["stats"]), base_line(model)) if x]
-    weapons, abilities = [], []
+    stats = sm and sm["stats"]
+    sections = [[RULE] + (stat_table(stats) or [])]
+    weapons, gear = [], []
     for name, count in carried(model, sheet):
         w = sheet["wargear"][name]
-        weapons += [weapon_line(p, count) for p in w["weapons"]]
-        abilities += [f"[b]{a['name']}:[/b] {plain(a['text'])}" for a in w["abilities"]]
+        weapons += [line for p in w["weapons"] for line in weapon_lines(p, count)]
+        gear += [a["name"] for a in w["abilities"]]
     if weapons:
-        lines += [colour(LABEL, "Weapons")] + weapons
+        sections.append([heading(WEAPONS, "Weapons")] + weapons)
+    abilities = [a["name"] for a in sheet["abilities"]] + gear + list(sheet["rules"])
     if abilities:
-        lines += [colour(LABEL, "Wargear")] + abilities
-    if lead:
-        lines += unit_lines(unit, sheet)
-    else:
-        lines.append(f"[i]Unit abilities: on the {unit['models'][lead_model(unit, sheet)]['name']}[/i]")
-    return {"name": model["name"], "text": "\n".join(lines)}
+        sections.append([heading(ABILITIES, "Abilities")] + list(dict.fromkeys(abilities)))
+    chosen = ((["Warlord"] if unit.get("warlord") else [])
+              + [f"Enhancement: {e}" for e in unit.get("enhancements") or []]) if lead else []
+    footer = ([colour(ACCENT, " · ".join(chosen))] if chosen else []) + [x for x in (
+        colour(LABEL, f"Keywords: {', '.join(sheet['keywords'])}") if sheet["keywords"] else None,
+        base_line(model)) if x]
+    if footer:
+        sections.append(footer)
+    w = wounds(stats)
+    name = f"{w}/{w} {model['name']}" if w else model["name"]
+    return {"name": name, "text": "\n\n".join("\n".join(s) for s in sections)}
 
 
 # --------------------------------------------------------------------------
@@ -152,9 +186,10 @@ def rules_for(sheet, keywords):
 
 
 def card_text(unit, sheet, units=()):
-    """The unit's whole datasheet as TTS BBCode: what the list chose, every
-    model's stats, the weapons it carries, abilities, rules explained, keywords."""
-    lines = []
+    """The unit's whole datasheet as TTS BBCode, in the tooltip's sections
+    with a blank line between them: what the list chose, every model's stats,
+    the weapons it carries, abilities, rules explained, keywords."""
+    sections = []
     chosen = []
     if unit.get("role") in ("leader", "support") and unit.get("attached_to") is not None and units:
         chosen.append(f"{unit['role'].title()} of {units[unit['attached_to']]['name']}")
@@ -163,18 +198,18 @@ def card_text(unit, sheet, units=()):
     if unit.get("warlord"):
         chosen.append("Warlord")
     chosen += [f"Enhancement: {e}" for e in unit.get("enhancements") or []]
-    if chosen:
-        lines.append(colour(ACCENT, " · ".join(chosen)))
     counts = {}
     for m in unit["models"]:
         counts[m.get("sheet_model") or m["name"]] = counts.get(m.get("sheet_model") or m["name"], 0) + 1
-    lines.append(" · ".join(f"{n}× {plain(name)}" for name, n in counts.items()))
+    sections.append(([colour(ACCENT, " · ".join(chosen))] if chosen else [])
+                    + [" · ".join(f"{n}× {plain(name)}" for name, n in counts.items())])
 
-    lines.append(colour(LABEL, "[b]MODELS[/b]"))
+    models = [heading(STATS, "MODELS")]
     shown = [m for m in sheet["models"] if m["name"] in counts] or sheet["models"]
     for sm in shown:
         stats = stat_line(sm["stats"])
-        lines.append(f"[b]{plain(sm['name'])}[/b]  {stats}" if stats else f"[b]{plain(sm['name'])}[/b]")
+        models.append(f"[b]{plain(sm['name'])}[/b]  {stats}" if stats else f"[b]{plain(sm['name'])}[/b]")
+    sections.append(models)
 
     carried_names = {}
     for m in unit["models"]:
@@ -182,26 +217,31 @@ def card_text(unit, sheet, units=()):
             carried_names[name] = max(carried_names.get(name, 0), count)
     weapons = [(p, n) for name, n in carried_names.items() for p in sheet["wargear"][name]["weapons"]]
     for kind, title in (("ranged", "RANGED WEAPONS"), ("melee", "MELEE WEAPONS")):
-        these = [weapon_line(p, 1) for p, _ in weapons if (p.get("type") == "melee") == (kind == "melee")]
+        these = [line for p, _ in weapons if (p.get("type") == "melee") == (kind == "melee")
+                 for line in weapon_lines(p)]
         if these:
-            lines += [colour(LABEL, f"[b]{title}[/b]")] + these
+            sections.append([heading(WEAPONS, title)] + these)
 
-    lines.append(colour(LABEL, "[b]ABILITIES[/b]"))
-    for a in sheet["abilities"]:
-        lines.append(f"[b]{a['name']}:[/b] {plain(a['text'])}" if a.get("text") else f"[b]{a['name']}[/b]")
+    def explained(a):
+        return f"[b]{a['name']}[/b]\n{plain(a['text'])}" if a.get("text") else f"[b]{a['name']}[/b]"
+
+    if sheet["abilities"]:
+        sections.append([heading(ABILITIES, "ABILITIES")] + [explained(a) for a in sheet["abilities"]])
     gear = [a for name in carried_names for a in sheet["wargear"][name]["abilities"]]
     if gear:
-        lines.append(colour(LABEL, "[b]WARGEAR ABILITIES[/b]"))
-        lines += [f"[b]{a['name']}:[/b] {plain(a['text'])}" for a in gear]
+        sections.append([heading(ABILITIES, "WARGEAR ABILITIES")] + [explained(a) for a in gear])
     rules = rules_for(sheet, [k for p, _ in weapons for k in p.get("keywords") or []])
     if rules:
-        lines.append(colour(LABEL, "[b]RULES[/b]"))
-        lines += [f"[b]{name}:[/b] {plain(text)}" for name, text in rules.items()]
+        sections.append([heading(ABILITIES, "RULES")]
+                        + [explained({"name": n, "text": t}) for n, t in rules.items()])
+    footer = []
     if sheet["keywords"]:
-        lines.append(f"{colour(LABEL, '[b]KEYWORDS[/b]')} {', '.join(sheet['keywords'])}")
+        footer.append(f"{colour(LABEL, '[b]KEYWORDS[/b]')} {', '.join(sheet['keywords'])}")
     if sheet["factions"]:
-        lines.append(f"{colour(LABEL, '[b]FACTION[/b]')} {', '.join(sheet['factions'])}")
-    return "\n".join(lines)
+        footer.append(f"{colour(LABEL, '[b]FACTION[/b]')} {', '.join(sheet['factions'])}")
+    if footer:
+        sections.append(footer)
+    return "\n\n".join("\n".join(s) for s in sections)
 
 
 def attach(parsed, cache=None):

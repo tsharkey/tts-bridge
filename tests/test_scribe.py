@@ -92,7 +92,7 @@ def test_save_without_tts(client, paths, monkeypatch):
     states = json.loads(path.read_text())["ObjectStates"]
     assert len(states) == r.json()["models"] > 0 and not any(o["Name"] == "Notecard" for o in states)
     # each model carries its unit's whole datasheet in its viewer script
-    assert "<b>ABILITIES</b>" in states[0]["LuaScript"] and "Dawn Blade" in states[0]["LuaScript"]
+    assert "<b>MODELS</b>" in states[0]["LuaScript"] and "Dawn Blade" in states[0]["LuaScript"]
     first = states[0]
     assert first["Description"].split("\n")[0] == "[Commander Farsight]"  # board.py groups units by it
     assert first["GMNotes"] == "army.py:T'au Empire Retaliation Cadre (Bonded Heroes) 2005"
