@@ -40,14 +40,15 @@ def test_tooltip_sections():
     tip = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)
     assert tip["name"] == "[2/2] Squad Leader"                    # the wound tracker's count
     sections = tip["text"].split("\n\n")
-    stats, weapons, abilities, footer = [s.split("\n") for s in sections]
+    stats, ranged, melee, abilities, footer = [s.split("\n") for s in sections]
     assert stats[0] == tooltips.RULE
     assert stats[1] == "[8fd694]M    T   Sv   W   Ld   OC[-]"   # names over values, padded to line up
     assert stats[2] == '[b]6"   4   3+   2   6+   2[/b]'
-    assert weapons == ["[ef6f6c][b]Weapons[/b][-]",
-                       "[e8b53e]Power sword - strike[-]", "Melee  A4  WS3+  S5  AP-2  D1",
-                       "[e8b53e]Twin carbine[-]", '20"  A2  BS5+  S5  AP0  D1']   # a drone's weapon too
-    assert abilities == ["[c49bf2][b]Abilities[/b][-]", "[u]Hold Fast[/u]", "[u]Drone[/u]", "[u]Deep Strike[/u]"]  # names only
+    assert ranged == ["[ef6f6c][b]Ranged weapons[/b][-]",
+                      "[e8b53e]Twin carbine[-]", '20"  A2  BS5+  S5  AP0  D1']   # a drone's weapon too
+    assert melee == ["[ef6f6c][b]Melee weapons[/b][-]",
+                     "[e8b53e]Power sword - strike[-]", "Melee  A4  WS3+  S5  AP-2  D1"]
+    assert abilities == ["[c49bf2][b]Abilities[/b][-]", "Hold Fast", "Drone", "Deep Strike"]   # names only
     assert footer == ["[e8b53e]Warlord · Enhancement: Iron Will[-]", "[9aa1ad]Keywords: Infantry, Battleline[-]",
                       "[9aa1ad]Base: 40mm[-]"]
 
@@ -61,6 +62,17 @@ def test_every_model_has_the_same_sections():
     assert '2× [e8b53e]Bolt rifle[-]\n24"  A2  BS3+  S4  AP-1  D1  [i]Assault, Heavy[/i]' in text
     assert "Hold Fast" in text and "Keywords" in text
     assert "Warlord" not in text and "Iron Will" not in text   # what the list chose shows on the leader only
+
+
+def test_always_equipped_gear_the_list_left_out():
+    """A GW export can drop a line ("5x Guardian spear" without its bullet): what
+    the datasheet model is always equipped with still shows."""
+    sheet = dict(SHEET, models=[dict(SHEET["models"][1], equipped=[{"name": "Power sword", "count": 1}])])
+    trooper = {"name": "Trooper", "wargear": ["Bolt rifle"], "sheet_model": "Trooper",
+               "gear": [{"name": "Bolt rifle", "count": 1}]}
+    assert tooltips.carried(trooper, sheet) == [("Bolt rifle", 1), ("Power sword", 1)]
+    text = tooltips.tooltip({"name": "Test Squad", "models": [trooper]}, trooper, sheet, lead=True)["text"]
+    assert "Melee weapons" in text and "Power sword - strike" in text
 
 
 def test_one_wound_models_have_no_tracker():
@@ -112,7 +124,7 @@ def test_weapon_names_read_back_from_a_tooltip():
     unit = squad()
     lead = tooltips.tooltip(unit, unit["models"][0], SHEET, lead=True)["text"]
     trooper = tooltips.tooltip(unit, unit["models"][1], SHEET, lead=False)["text"]
-    assert tooltips.weapon_names(f"[Test Squad]\n{lead}") == ["Power sword - strike", "Twin carbine"]
+    assert tooltips.weapon_names(f"[Test Squad]\n{lead}") == ["Twin carbine", "Power sword - strike"]   # both sections
     assert tooltips.weapon_names(trooper) == ["Bolt rifle"]          # "2× " in front
     assert tooltips.weapon_names("[Test Squad]\nno tooltip") == [] and tooltips.weapon_names(None) == []
     # models spawned with the earlier one-line template still read
