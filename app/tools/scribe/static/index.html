@@ -171,8 +171,9 @@ async function read(opts = {}) {
   const text = $("#listText").value;
   setMsg($("#listMsg"), "Reading…");
   try {
-    current = await api("/api/scribe/read", {text, ...opts});
+    current = await api("/api/scribe/read", {text, name: $("#saveName").value, ...opts});
     store.set("scribe.text", text);
+    store.set("scribe.name", $("#saveName").value);
     setMsg($("#listMsg"), "");
     render();
   } catch (e) {
@@ -380,7 +381,7 @@ document.addEventListener("keydown", e => {
 $("#saveObjBtn").addEventListener("click", async () => {
   setMsg($("#saveMsg"), "Saving…");
   try {
-    const r = await api("/api/scribe/save", {text: $("#listText").value, facing: +$("#spF").value});
+    const r = await api("/api/scribe/save", {text: $("#listText").value, name: $("#saveName").value, facing: +$("#spF").value});
     setMsg($("#saveMsg"), `Saved ${r.models} models to ${r.path}`, "ok");
   } catch (e) { setMsg($("#saveMsg"), e.message, "error"); }
 });
@@ -389,7 +390,7 @@ $("#spawnBtn").addEventListener("click", async () => {
   setMsg($("#spawnMsg"), "Spawning… models can take a while to load in TTS.");
   $("#spawnBtn").disabled = true;
   try {
-    const r = await api("/api/scribe/spawn", {text: $("#listText").value, x: +$("#spX").value, z: +$("#spZ").value,
+    const r = await api("/api/scribe/spawn", {text: $("#listText").value, name: $("#saveName").value, x: +$("#spX").value, z: +$("#spZ").value,
                                               width: +$("#spW").value, facing: +$("#spF").value});
     setMsg($("#spawnMsg"), [`Spawned ${r.spawned} models.`, ...r.notes].join(" "), "ok");
   } catch (e) { setMsg($("#spawnMsg"), e.message, "error"); }
@@ -413,13 +414,18 @@ $("#savedLists").addEventListener("change", async e => {
 $("#saveListBtn").addEventListener("click", async () => {
   try {
     const r = await api("/api/lists", {name: $("#saveName").value || current?.army.title || "", text: $("#listText").value});
-    setMsg($("#listMsg"), `Saved as ${r.saved}`, "ok");
+    $("#saveName").value = r.saved;
     loadSaved();
+    await read();   // the saved name is the army's name in TTS
+    setMsg($("#listMsg"), `Saved as ${r.saved}`, "ok");
   } catch (e) { setMsg($("#listMsg"), e.message, "error"); }
 });
 $("#readBtn").addEventListener("click", () => read());
 
+$("#saveName").addEventListener("change", () => { if (current) read(); });
+
 $("#listText").value = store.get("scribe.text");
+$("#saveName").value = store.get("scribe.name") || "";
 loadSaved();
 if ($("#listText").value.trim()) read();
 </script>
