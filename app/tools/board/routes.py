@@ -12,7 +12,6 @@ import json
 import threading
 
 import board
-import data
 import los
 import threat
 import tts_bridge
@@ -107,14 +106,8 @@ def threat_bands(i: int, v: int):
     """Unit i's threat bands, from its datasheet and the weapons its models carry (on the live
     table; board.json has no tooltips, so the datasheet's defaults)."""
     _, row = picked(i, v)
-    sheet = data.datasheets_by_id().get(row["datasheet"]) if row["datasheet"] else None
-    if not sheet:
-        raise ValueError(f"{row['unit']} has no cached datasheet"
-                         + ("" if row["datasheet"] else " (it wasn't spawned by tts-bridge)") + ".")
-    names = reach.weapon_names(row["guids"], reach.descriptions(row["guids"])) if last["source"] == "live" else []
-    p = threat.profile(sheet, weapons=names) if names else threat.profile(sheet)
-    return {"move": p["move"], "weapons": p["weapons"], "weapons_from": "models" if names else "datasheet defaults",
-            "bands": threat.bands(p)}
+    p, source = reach.row_profile(row, live=last["source"] == "live")
+    return {"move": p["move"], "weapons": p["weapons"], "weapons_from": source, "bands": threat.bands(p)}
 
 
 @router.get("/api/board/pair")
