@@ -2,7 +2,7 @@
 layout's exact terrain areas, objectives and deployment zones when it's one of layouts/."""
 
 import math
-from typing import NotRequired, TypedDict
+from typing_extensions import NotRequired, TypedDict   # typing has NotRequired from 3.11; pydantic wants this TypedDict before 3.12
 
 import board
 import layouts
