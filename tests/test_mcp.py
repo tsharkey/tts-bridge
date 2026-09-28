@@ -38,7 +38,7 @@ def test_tools_listed_and_described():
         async with Client(mcp_server.server()) as client:
             return await client.list_tools()
     tools = asyncio.run(main())
-    assert {"status", "board_summary", "measure"} <= set(names(tools))
+    assert {"status", "board_summary", "measure", "place_unit", "undo_place"} <= set(names(tools))
     assert all(t.description for t in tools.tools)
 
 
@@ -106,6 +106,36 @@ def test_measure_says_which_unit_it_cant_find(monkeypatch):
     assert same.is_error and "same unit" in same.content[0].text
     got = call("measure", {"unit": "Pathfinder"}).structured_content   # no layout asked for: nothing to measure to
     assert got["b"] is None and got["landmarks"] == [] and got["layout"] is None
+
+
+def test_place_unit(monkeypatch, tmp_path):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    monkeypatch.setattr(board, "UNDO_JSON", tmp_path / "undo.json")
+    sent = []
+    monkeypatch.setattr(board, "move", lambda moves: sent.append(moves) or float(len(moves)))   # TTS returns 3.0
+    args = {"unit": "Pathfinder", "x": 0, "z": 16, "facing": 180, "cols": 3}
+    checked = call("place_unit", {**args, "check_only": True}).structured_content
+    assert checked["moved"] == 0 and checked["problems"] == [] and not sent
+    assert checked["zones"] == ["red"] and checked["touching"] == ["Red deployment zone"]   # z 10..22
+    assert (checked["facing"], [p["x"] for p in checked["positions"]]) == (180, [1.66, 0.0, -1.66])
+    placed = call("place_unit", args).structured_content
+    assert placed["moved"] == 3 and len(sent) == 1
+    assert call("undo_place").structured_content == {"moved": 3, "left": 0}
+    assert call("undo_place").is_error
+
+
+def test_place_unit_refuses_problems_unless_forced(monkeypatch, tmp_path):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(board, "UNDO_JSON", tmp_path / "undo.json")
+    monkeypatch.setattr(board, "move", lambda moves: len(moves))
+    args = {"unit": "Pathfinder", "x": -5.25, "z": -16.5, "cols": 3}   # onto the Intercessors
+    refused = call("place_unit", args).structured_content
+    assert refused["moved"] == 0 and any("engagement range" in p or "overlaps" in p for p in refused["problems"])
+    assert call("place_unit", {**args, "force": True}).structured_content["moved"] == 3
+    reserves = call("place_unit", {"unit": "Stealth", "x": 0, "z": 16, "from_reserves": True}).structured_content
+    assert reserves["moved"] == 3
+    assert call("place_unit", {"unit": "Stealth", "x": 0, "z": 16}).is_error   # not on the table
 
 
 def test_board_summary_without_tts(no_tts):

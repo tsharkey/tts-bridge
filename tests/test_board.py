@@ -181,3 +181,48 @@ def test_unnamed_terrain_areas_are_named():
                                      piece("c", 0.0, ["obj_neutral"]), piece("d", 3.0), piece("e", 0.0, name="Crater")])
     assert [t["name"] for t in terrain] == ["Terrain area", "Terrain area (red home objective)",
                                             "Terrain area (expansion objective)", "Board", "Crater"]
+
+
+def test_plan_place_checks():
+    red = squad(1, 0, 0, n=4)
+    blue = [model(x, 10, army_tag="army.py:Enemy", guid=f"b{x}") for x in (0, 1.5)]
+    objs = red + blue
+    unit = board.find_unit(board.collect_units(objs), "Intercessor", army="Test")
+    ok = board.plan_place(objs, unit, -10, -10, 0, cols=2)
+    assert ok["problems"] == [] and ok["facing"] == 0 and len(ok["positions"]) == 4
+    assert ok["nearest_enemy"] > 15 and "zones" not in ok
+    assert [m[0] for m in ok["moves"]] == ["u1m0", "u1m1", "u1m2", "u1m3"]
+    bad = board.plan_place(objs, unit, 0, 8, 0, cols=4)            # right up to the enemy
+    assert any("engagement range of enemy Intercessor Squad" in p for p in bad["problems"])
+    off = board.plan_place(objs, unit, 29.5, 0, 0, cols=4)
+    assert any("off the table" in p for p in off["problems"])
+    onto = board.plan_place(objs, unit, 0.75, 10, 0, cols=2)
+    assert any("overlaps a model of Intercessor Squad" in p for p in onto["problems"])
+    with pytest.raises(board.UnitError, match="only moves models it spawned"):
+        board.plan_place(objs, {**unit, "army": "untagged"}, 0, 0)
+
+
+def test_plan_place_with_a_layout():
+    objs = squad(1, 0, 0, n=2)
+    unit = board.collect_units(objs)[0]
+    got = board.plan_place(objs, unit, 0.5, 16, 0, layout=LAYOUT)
+    assert got["zones"] == ["red"] and got["areas"] == [] and got["objectives"] == []
+    got = board.plan_place(objs, unit, 0.5, 0, 0, layout=LAYOUT)
+    assert got["zones"] == [] and got["areas"] == ["A1"] and got["objectives"] == ["central"]
+
+
+def test_undo_is_a_stack(tmp_path, monkeypatch):
+    monkeypatch.setattr(board, "UNDO_JSON", tmp_path / "undo.json")
+    sent = []
+    monkeypatch.setattr(board, "move", lambda moves: sent.append(list(moves)) or len(moves))
+    objs = squad(1, 0, 0, n=2) + squad(2, 5, 5, n=1)
+    first, second = board.collect_units(objs)
+    for u in (first, second):
+        assert board.apply_place(u, board.plan_place(objs, u, -10, -10, 0)) == len(u["models"])
+    assert board.undo() == (1, 1)
+    assert sent[-1] == [["u2m0", 5, 1, 5, 0]]          # back where it was
+    assert board.undo() == (2, 0)
+    with pytest.raises(board.UnitError, match="Nothing to undo"):
+        board.undo()
+    board.UNDO_JSON.write_text('[["old", 1, 2, 90]]')   # a file from before heights were kept
+    assert board.undo() == (1, 0) and sent[-1] == [["old", 1, board.DROP_Y, 2, 90]]
