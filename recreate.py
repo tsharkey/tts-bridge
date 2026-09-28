@@ -21,7 +21,6 @@ from pathlib import Path
 import army
 import bases
 import datasheets
-import sheetviewer
 import tooltips
 import tts_bridge as tts
 
@@ -92,11 +91,7 @@ def model_object(catalog, m, unit_name, tag, facing, tags=(), sheet=None):
     g, i = m["pick"].split(":")
     o = json.loads(json.dumps(catalog[g][int(i)]))
     o.pop("GUID", None)
-    o["GMNotes"] = tag
-    tooltips.describe(o, unit_name, m)
-    army.tag(o, list(tags))
-    if sheet:  # the unit's datasheet, in a viewer on the model (sheetviewer.py)
-        sheetviewer.attach(o, unit_name, sheet)
+    army.mark(o, unit_name, m, list(tags), tag, sheet)   # every state, and the datasheet viewer when there's a sheet
     o["Locked"] = True
     o["Transform"].update(rotX=0, rotY=facing, rotZ=0)
     return o
