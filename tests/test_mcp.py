@@ -14,10 +14,13 @@ import uvicorn
 from mcp import Client, StdioServerParameters
 
 import board
+import data
 import layouts
+import tooltips
 import tts_bridge
 from app import mcp_server, server
 from test_formats import figure, load, made_up_table
+from test_tooltips import SHEET, squad
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -38,7 +41,8 @@ def test_tools_listed_and_described():
         async with Client(mcp_server.server()) as client:
             return await client.list_tools()
     tools = asyncio.run(main())
-    assert {"status", "board_summary", "measure", "place_unit", "undo_place", "line_of_sight"} <= set(names(tools))
+    assert {"status", "board_summary", "measure", "place_unit", "undo_place", "line_of_sight", "threat_ranges",
+            "can_reach"} <= set(names(tools))
     assert all(t.description for t in tools.tools)
 
 
@@ -180,6 +184,51 @@ def test_line_of_sight_errors(monkeypatch):
     monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
     same = call("line_of_sight", {"unit": "Pathfinder", "target": "Pathfinder Team"})
     assert same.is_error and "same unit" in same.content[0].text
+
+
+@pytest.fixture
+def armed_table(monkeypatch):
+    """The sample table; the Pathfinders' datasheet is tooltips' test squad (M 6", bolt rifles:
+    24" Assault), and their models' tooltips list bolt rifles. The Intercessors have no datasheet."""
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    monkeypatch.setattr(data, "datasheets_by_id", lambda: {"c8b1-9d6c-4a53-b0e2": SHEET})
+    unit = squad()
+    trooper = tooltips.tooltip(unit, unit["models"][1], SHEET, lead=False)["text"]
+    descriptions = {f"a1b2c{i}": f"[Pathfinder Team]\n{trooper}" for i in range(3)}
+    monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: descriptions)
+    return descriptions
+
+
+def test_threat_ranges(armed_table):
+    got = call("threat_ranges", {"unit": "Pathfinder"}).structured_content
+    assert (got["move"], got["weapons_from"], got["datasheet"]) == (6, "models", "c8b1-9d6c-4a53-b0e2")
+    assert [w["name"] for w in got["weapons"]] == ["Bolt rifle"]
+    bands = {b["band"]: (b["avg"], b["max"]) for b in got["bands"]}
+    assert bands["charge"] == (15, 20) and bands["advance and shoot: Bolt rifle"] == (33.5, 36)
+    armed_table.clear()                               # models without tooltips: the datasheet's defaults
+    assert call("threat_ranges", {"unit": "Pathfinder"}).structured_content["weapons_from"] == "datasheet defaults"
+    untagged = call("threat_ranges", {"unit": "Intercessor"})
+    assert untagged.is_error and "wasn't spawned by tts-bridge" in untagged.content[0].text
+
+
+def test_can_reach(armed_table):
+    got = call("can_reach", {"unit": "Pathfinder"}).structured_content
+    [r] = got["reach"]                                # 31.63" away: only an advance and a bolt rifle get there
+    assert (r["target"]["unit"], r["gap"], r["visible"], r["charge"]) == ("Intercessor Squad", 31.63, True, None)
+    assert r["weapons"] == [{"weapon": "Bolt rifle", "range": 24, "now": False, "after_move": False,
+                             "after_advance": True}]
+    assert got["out_of_reach"] == [] and got["unknown"] == []
+    both = call("can_reach", {"unit": "Pathfinder", "target": "Intercessor"}).structured_content
+    assert both["reach"] == got["reach"]
+    against = call("can_reach", {"target": "Pathfinder"}).structured_content   # who reaches them: no datasheet
+    assert against["reach"] == [] and [u["unit"] for u in against["unknown"]] == ["Intercessor Squad"]
+
+
+def test_can_reach_errors(armed_table):
+    assert "Name a unit" in call("can_reach", {}).content[0].text
+    assert "same unit" in call("can_reach", {"unit": "Pathfinder", "target": "Pathfinder Team"}).content[0].text
+    assert "no cached datasheet" in call("can_reach", {"unit": "Intercessor"}).content[0].text
 
 
 def test_board_summary_without_tts(no_tts):

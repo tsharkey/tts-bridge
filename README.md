@@ -208,8 +208,11 @@ Claude Code or Claude Desktop's chat. Its tools so far:
 - `line_of_sight`: what a unit can see of an enemy unit, model by model and what blocks it, or of every enemy
   unit on the table. It uses the layout's terrain (Obscuring areas, dense features at ground level, Plunging Fire,
   Hidden and Gone to Ground ranges), worked out from footprints, so windows and doorways aren't modelled.
-
-Threat ranges are coming. Tools only run while the web app is
+- `threat_ranges`: how far a unit reaches this turn, from its datasheet and the weapons its models carry: move,
+  advance, charge and each gun's range, measured from its bases' edges.
+- `can_reach`: what one unit can do to another this turn (the charge roll it needs and its chance, which guns are
+  in range now, after moving or after advancing, and whether it can see the target), or which enemy units a unit
+  can reach, or which can reach it. Distances are straight lines: terrain in the way isn't counted. Tools only run while the web app is
 up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 

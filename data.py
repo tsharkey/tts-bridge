@@ -313,6 +313,16 @@ def datasheets(faction, cache=None):
     return out
 
 
+def datasheets_by_id(cache=None):
+    """Every cached datasheet unit, by id (what spawned models' tts-bridge:sheet: tags hold)."""
+    cache = cache or CACHE
+    out = {}
+    for name in (datasheet_index(cache) or {"catalogues": {}})["catalogues"]:
+        for u in (load_catalogue(name, cache) or {"units": []})["units"]:
+            out.setdefault(u["id"], u)
+    return out
+
+
 def status(cache=None):
     """-> {source: {...source.json, "datasheets": n, "catalogues": n}} for what's cached."""
     cache = cache or CACHE

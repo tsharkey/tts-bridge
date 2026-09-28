@@ -44,18 +44,25 @@ def default_wargear(unit):
     return list(dict.fromkeys(names))
 
 
-def profile(unit, wargear=None):
+def profile(unit, wargear=None, weapons=None):
     """A datasheet unit's reach: its Move (the slowest model's), and the weapons of `wargear`
-    (names from the datasheet's wargear; default: default_wargear)."""
+    (names from the datasheet's wargear; default: default_wargear). `weapons` instead picks
+    weapon profiles by name from all of its wargear (what spawned models list:
+    tooltips.weapon_names)."""
     moves = [inches((m.get("stats") or {}).get("M")) for m in unit["models"]]
     moves = [m for m in moves if m is not None]
-    weapons = []
-    for name in wargear if wargear is not None else default_wargear(unit):
+    names = list(unit.get("wargear", {})) if weapons is not None else \
+        wargear if wargear is not None else default_wargear(unit)
+    picked = set(weapons or [])
+    out = []
+    for name in names:
         for w in (unit.get("wargear", {}).get(name) or {}).get("weapons", []):
-            if not any(o["name"] == w["name"] for o in weapons):
-                weapons.append({"name": w["name"], "type": w["type"], "range": inches(w["range"]),
-                                "assault": any(k.lower() == "assault" for k in w.get("keywords") or [])})
-    return {"unit": unit["name"], "move": min(moves) if moves else None, "weapons": weapons}
+            if weapons is not None and w["name"] not in picked:
+                continue
+            if not any(o["name"] == w["name"] for o in out):
+                out.append({"name": w["name"], "type": w["type"], "range": inches(w["range"]),
+                            "assault": any(k.lower() == "assault" for k in w.get("keywords") or [])})
+    return {"unit": unit["name"], "move": min(moves) if moves else None, "weapons": out}
 
 
 def bands(p):
