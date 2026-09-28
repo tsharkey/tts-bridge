@@ -8,6 +8,7 @@ import pytest
 
 import army
 import board
+import layouts
 
 FORMATS = Path(__file__).parent / "fixtures" / "formats"
 DOCS = Path(__file__).resolve().parent.parent / "docs" / "formats"
@@ -72,10 +73,22 @@ def figure(x, z, unit, army_tag, guid, tags=()):
             "tags": list(tags)}
 
 
+def terrain_of(layout):
+    """The layout's areas (flat mats) and features as TTS would read them: boxes around each polygon."""
+    out = []
+    for a in layout["areas"]:
+        for piece, height in [(a, 0.1), *((f, f["height"]) for f in a["features"])]:
+            x, z, w, d = layouts.bounds(piece["polygon"])
+            out.append({"head": "", "notes": "", "locked": True, "guid": f"t-{piece['id']}", "tag": "Custom_Model",
+                        "name": piece.get("name", "Generic"), "tags": [], "rot": 0, "p": [x, 1, z],
+                        "c": [round(x, 2), 1 + height / 2, round(z, 2)], "s": [round(w, 2), height, round(d, 2)]})
+    return out
+
+
 def made_up_table():
     """The table the board state sample was made from, as board.READ_LUA returns it."""
     red = "army.py:Ret Cadre"
-    objs = [figure(4 + i * 1.5, 17, "Pathfinder Team", red, f"a1b2c{i}",
+    objs = [figure(-20 + i * 1.5, 13, "Pathfinder Team", red, f"a1b2c{i}",
                    army.unit_tags(2, {"datasheet": {"id": "c8b1-9d6c-4a53-b0e2"}})) for i in range(3)]
     objs += [figure(-40 + i * 1.5, 30, "Stealth Battlesuits", red, f"d4e5f{i}",   # off the table
                     army.unit_tags(5, {"datasheet": {"id": "f00d-1234-5678-9abc"}})) for i in range(3)]
@@ -84,8 +97,7 @@ def made_up_table():
     return objs + [
         {**fixed, "guid": "a064d7", "tag": "Custom_Model", "name": "", "tags": ["battlemaster_battlemat"], "rot": 0,
          "p": [0, 0.5, 0], "c": [0, 0.5, 0], "s": [60, 1.0, 44]},
-        {**fixed, "guid": "dc9993", "tag": "Custom_Assetbundle", "name": "Ruin (large)", "tags": [], "rot": 233,
-         "p": [5, 3.5, 17], "c": [5, 3.5, 17], "s": [9.2, 5.0, 8.1]},
+        *terrain_of(load("layout.json")),
         {**fixed, "guid": "5e5e5e", "tag": "Scripting", "name": "Red deployment zone", "tags": [], "rot": 0,
          "p": [0, 1, 16], "c": [0, 1, 16], "s": [60, 2, 12]},
     ]
@@ -93,7 +105,7 @@ def made_up_table():
 
 def test_board_state_sample_is_what_board_py_writes():
     """If this fails, board.py's output changed: update the sample and board-state.md together."""
-    assert board.board_state(made_up_table()) == load("board-state.json")
+    assert board.board_state(made_up_table(), [load("layout.json")]) == load("board-state.json")
 
 
 def test_tts_gateway_sample():

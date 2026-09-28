@@ -19,6 +19,7 @@ that layout in TTS once) to fill the gap. The output is committed; LCT's own dat
     layout = layouts.load("0c4960")   # one layout, by LCT's card GUID
 """
 
+import functools
 import json
 import math
 import re
@@ -110,6 +111,25 @@ def inside(point, poly):
         if (z1 > z) != (z2 > z) and x < (x2 - x1) * (z - z1) / (z2 - z1) + x1:
             hit = not hit
     return hit
+
+
+def distance(point, poly):
+    """How far a point is from a polygon's edge: 0 inside it."""
+    if inside(point, poly):
+        return 0.0
+    x, z = point
+    best = math.inf
+    for (x1, z1), (x2, z2) in zip(poly, poly[1:] + poly[:1]):
+        dx, dz = x2 - x1, z2 - z1
+        t = max(0.0, min(1.0, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz or 1)))
+        best = min(best, math.hypot(x - x1 - t * dx, z - z1 - t * dz))
+    return best
+
+
+def bounds(poly):
+    """(centre x, centre z, width, depth) of the box around a polygon."""
+    xs, zs = [x for x, _ in poly], [z for _, z in poly]
+    return (max(xs) + min(xs)) / 2, (max(zs) + min(zs)) / 2, max(xs) - min(xs), max(zs) - min(zs)
 
 
 def rounded(poly):
@@ -549,6 +569,35 @@ def check(log=print):
 
 def load(layout_id, folder=LAYOUTS):
     return json.loads((folder / f"{layout_id}.json").read_text())
+
+
+@functools.cache
+def load_all(folder=LAYOUTS):
+    return [json.loads(f.read_text()) for f in sorted(folder.glob("*.json")) if f.name != "index.json"]
+
+
+def identify(terrain, candidates=None, near=1.0, enough=0.7):
+    """Which layout is on the table, from board.py's terrain (TTS's bounds, so no meshes or
+    LCT cache needed): the one with the most areas and features that have a piece of terrain
+    centred within `near` inches of their own box's centre, and of those the closest in size
+    (a map comes in several terrain packs, with the same spots and different pieces).
+    `candidates` defaults to every layout in layouts/.
+    -> (layout, matched, total), or None when no layout has `enough` of its pieces there."""
+    pieces = [(t["x"], t["z"], t["w"], t["d"]) for t in terrain if t["kind"] == "terrain"]
+    best, best_key = None, None
+    for layout in load_all() if candidates is None else candidates:
+        boxes = [bounds(p) for a in layout["areas"] for p in [a["polygon"], *(f["polygon"] for f in a["features"])]]
+        matched, misfit = 0, 0.0
+        for x, z, w, d in boxes:
+            gaps = [(math.dist((x, z), (px, pz)), pw, pd) for px, pz, pw, pd in pieces]
+            gap, pw, pd = min(gaps, default=(math.inf, 0, 0))
+            if gap <= near:
+                matched += 1
+                misfit += gap + abs(w - pw) + abs(d - pd)
+        key = (matched / len(boxes), -misfit / max(matched, 1))
+        if boxes and matched / len(boxes) >= enough and (best_key is None or key > best_key):
+            best, best_key = (layout, matched, len(boxes)), key
+    return best
 
 
 def main(args):

@@ -194,8 +194,13 @@ python3 tts_bridge.py run "<lua>"      # run Lua in the game and print the resul
 ## Claude tools (MCP)
 
 The web app is also an [MCP](https://modelcontextprotocol.io) server, so Claude can use the game directly from
-Claude Code or Claude Desktop's chat. For now it has one tool, `status` (is TTS reachable, is LCT loaded); the
-rest (board summary, measuring, line of sight, placing units) are coming. Tools only run while the web app is
+Claude Code or Claude Desktop's chat. Its tools so far:
+
+- `status`: is TTS reachable, is LCT loaded.
+- `board_summary`: every unit on the table and in reserves, with each model's position; which LCT layout is loaded,
+  with its exact terrain areas, objectives and deployment zones; and which areas and objectives each unit is in.
+
+Measuring, line of sight and placing units are coming. Tools only run while the web app is
 up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 

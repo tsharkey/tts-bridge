@@ -1,5 +1,11 @@
 {
   "surface_y": 1.0,
+  "layout": {
+    "id": "0c4960",
+    "name": "TnH vs TnH 2 - Dawn of War - BTTF",
+    "matched": 6,
+    "pieces": 6
+  },
   "units": [
     {
       "army": "army.py:Ret Cadre",
@@ -10,21 +16,41 @@
       "unit_id": 2,
       "datasheet": "c8b1-9d6c-4a53-b0e2",
       "coherency": [],
-      "x": 5.5,
-      "z": 17.0,
-      "box": [4.0, 7.0, 17, 17],
+      "x": -18.5,
+      "z": 13.0,
+      "box": [-20.0, -17.0, 13, 13],
       "facing": 180,
-      "touching": [
-        "Ruin (large)"
+      "touching": ["Generic"],
+      "zones": ["Red deployment zone"],
+      "guids": ["a1b2c0", "a1b2c1", "a1b2c2"],
+      "positions": [
+        {
+          "guid": "a1b2c0",
+          "x": -20.0,
+          "z": 13,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        },
+        {
+          "guid": "a1b2c1",
+          "x": -18.5,
+          "z": 13,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        },
+        {
+          "guid": "a1b2c2",
+          "x": -17.0,
+          "z": 13,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        }
       ],
-      "zones": [
-        "Red deployment zone"
-      ],
-      "guids": [
-        "a1b2c0",
-        "a1b2c1",
-        "a1b2c2"
-      ]
+      "areas": ["A2"],
+      "objectives": ["expansion-red"]
     },
     {
       "army": "army.py:Ret Cadre",
@@ -41,11 +67,35 @@
       "facing": 180,
       "touching": [],
       "zones": [],
-      "guids": [
-        "d4e5f0",
-        "d4e5f1",
-        "d4e5f2"
-      ]
+      "guids": ["d4e5f0", "d4e5f1", "d4e5f2"],
+      "positions": [
+        {
+          "guid": "d4e5f0",
+          "x": -40.0,
+          "z": 30,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        },
+        {
+          "guid": "d4e5f1",
+          "x": -38.5,
+          "z": 30,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        },
+        {
+          "guid": "d4e5f2",
+          "x": -37.0,
+          "z": 30,
+          "height": 0.0,
+          "facing": 180,
+          "base": [1.26, 1.26]
+        }
+      ],
+      "areas": [],
+      "objectives": []
     },
     {
       "army": "army.py:Blue list",
@@ -62,23 +112,95 @@
       "facing": 0,
       "touching": [],
       "zones": [],
-      "guids": [
-        "0f0f01",
-        "0f0f00"
-      ]
+      "guids": ["0f0f01", "0f0f00"],
+      "positions": [
+        {
+          "guid": "0f0f01",
+          "x": -4.5,
+          "z": -18,
+          "height": 0.0,
+          "facing": 0,
+          "base": [1.26, 1.26]
+        },
+        {
+          "guid": "0f0f00",
+          "x": -6.0,
+          "z": -18,
+          "height": 0.0,
+          "facing": 0,
+          "base": [1.26, 1.26]
+        }
+      ],
+      "areas": [],
+      "objectives": []
     }
   ],
   "terrain": [
     {
-      "name": "Ruin (large)",
-      "guid": "dc9993",
+      "name": "Generic",
+      "guid": "t-A1",
       "kind": "terrain",
-      "x": 5,
-      "z": 17,
-      "w": 9.2,
-      "d": 8.1,
-      "height": 5.0,
-      "box": [0.4, 9.6, 12.95, 21.05]
+      "x": 0.0,
+      "z": 0.0,
+      "w": 11.7,
+      "d": 10.2,
+      "height": 0.1,
+      "box": [-5.83, 5.83, -5.1, 5.1]
+    },
+    {
+      "name": "Ruin (large)",
+      "guid": "t-A1a",
+      "kind": "terrain",
+      "x": 0.5,
+      "z": 0.5,
+      "w": 7.6,
+      "d": 6.1,
+      "height": 5.5,
+      "box": [-3.28, 4.28, -2.55, 3.55]
+    },
+    {
+      "name": "Generic",
+      "guid": "t-A2",
+      "kind": "terrain",
+      "x": -18.0,
+      "z": 12.0,
+      "w": 12.0,
+      "d": 6.0,
+      "height": 0.1,
+      "box": [-24.0, -12.0, 9.0, 15.0]
+    },
+    {
+      "name": "Barricade",
+      "guid": "t-A2a",
+      "kind": "terrain",
+      "x": -18.0,
+      "z": 11.0,
+      "w": 6.0,
+      "d": 1.0,
+      "height": 1.5,
+      "box": [-21.0, -15.0, 10.5, 11.5]
+    },
+    {
+      "name": "Generic",
+      "guid": "t-A3",
+      "kind": "terrain",
+      "x": 18.0,
+      "z": -12.0,
+      "w": 6.0,
+      "d": 4.0,
+      "height": 0.1,
+      "box": [15.0, 21.0, -14.0, -10.0]
+    },
+    {
+      "name": "Crater",
+      "guid": "t-A3a",
+      "kind": "terrain",
+      "x": 18.0,
+      "z": -12.0,
+      "w": 5.0,
+      "d": 3.0,
+      "height": 0.2,
+      "box": [15.5, 20.5, -13.5, -10.5]
     },
     {
       "name": "Red deployment zone",
