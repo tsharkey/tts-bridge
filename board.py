@@ -275,6 +275,13 @@ def box_hit(x, z, r, box):
     return dx * dx + dz * dz < r * r
 
 
+def positions(models, surface=0.0):
+    """Each model's base centre, its height above the table surface, facing and footprint."""
+    return [{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2),
+             "height": round(o["c"][1] - o["s"][1] / 2 - surface, 1), "facing": round(o["rot"]) % 360,
+             "base": [round(o["s"][0], 2), round(o["s"][2], 2)]} for o in models]
+
+
 def unit_row(u, terrain, surface=0.0, layout=None):
     """A unit as board.json lists it. With the layout on the table, also the terrain areas its
     models' bases overlap, and the objectives in those areas."""
@@ -294,9 +301,7 @@ def unit_row(u, terrain, surface=0.0, layout=None):
             "box": [round(min(xs), 1), round(max(xs), 1), round(min(zs), 1), round(max(zs), 1)],
             "facing": round(ms[0]["rot"]) % 360, "touching": inside, "zones": zones,
             "guids": [o["guid"] for o in ms],
-            "positions": [{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2),
-                           "height": round(o["c"][1] - o["s"][1] / 2 - surface, 1), "facing": round(o["rot"]) % 360,
-                           "base": [round(o["s"][0], 2), round(o["s"][2], 2)]} for o in ms],
+            "positions": positions(ms, surface),
             **({"areas": areas, "objectives": [ob["id"] for ob in layout["objectives"] if ob["area"] in areas]}
                if layout else {})}
 

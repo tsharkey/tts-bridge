@@ -17,7 +17,7 @@ import board
 import layouts
 import tts_bridge
 from app import mcp_server, server
-from test_formats import load, made_up_table
+from test_formats import figure, load, made_up_table
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -38,7 +38,7 @@ def test_tools_listed_and_described():
         async with Client(mcp_server.server()) as client:
             return await client.list_tools()
     tools = asyncio.run(main())
-    assert {"status", "board_summary", "measure", "place_unit", "undo_place"} <= set(names(tools))
+    assert {"status", "board_summary", "measure", "place_unit", "undo_place", "line_of_sight"} <= set(names(tools))
     assert all(t.description for t in tools.tools)
 
 
@@ -136,6 +136,50 @@ def test_place_unit_refuses_problems_unless_forced(monkeypatch, tmp_path):
     reserves = call("place_unit", {"unit": "Stealth", "x": 0, "z": 16, "from_reserves": True}).structured_content
     assert reserves["moved"] == 3
     assert call("place_unit", {"unit": "Stealth", "x": 0, "z": 16}).is_error   # not on the table
+
+
+def table_with_a_unit_behind_the_ruin():
+    """The sample table, and a Blue unit south-east of the central ruin (A1), which stands
+    between it and the Pathfinders."""
+    return made_up_table() + [figure(4 + i * 1.5, -7, "Hellblasters", "army.py:Blue list", f"h{i}") for i in range(2)]
+
+
+def test_line_of_sight_to_a_target(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    got = call("line_of_sight", {"unit": "Intercessor", "target": "Pathfinder"}).structured_content
+    assert got["layout"] == "0c4960" and got["unit"]["unit"] == "Intercessor Squad"
+    [t] = got["targets"]
+    assert (t["target"]["unit"], t["visible"], t["fully_visible"], t["distance"]) == ("Pathfinder Team", 3, 3, 31.63)
+    assert t["hidden_areas"] == ["A2"] and t["treated_as_hidden"] is False and t["plunging_fire"] is False
+    assert [m["visible"] for m in t["models_seen"]] == ["full"] * 3
+    assert t["models_seen"][0]["seen_by"] == ["0f0f01", "0f0f00"]
+    # Hidden in their barricade area: 31" is past detection range
+    hidden = call("line_of_sight", {"unit": "Intercessor", "target": "Pathfinder", "hidden_targets": True})
+    [t] = hidden.structured_content["targets"]
+    assert t["treated_as_hidden"] and t["visible"] == 0
+    assert t["models_seen"][0]["beyond_detection"] == ["0f0f01", "0f0f00"]
+
+
+def test_line_of_sight_blocked_and_every_enemy(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", table_with_a_unit_behind_the_ruin)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    got = call("line_of_sight", {"unit": "Hellblasters", "target": "Pathfinder"}).structured_content
+    [t] = got["targets"]
+    assert t["visible"] == 0 and all("A1" in m["blocked_by"] for m in t["models_seen"])
+    every = call("line_of_sight", {"unit": "Pathfinder"}).structured_content["targets"]
+    assert [(t["target"]["unit"], t["visible"]) for t in every] == [("Intercessor Squad", 2), ("Hellblasters", 0)]
+    assert all("models_seen" not in t for t in every)   # only for a named target
+
+
+def test_line_of_sight_errors(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [])
+    no_layout = call("line_of_sight", {"unit": "Pathfinder"})
+    assert no_layout.is_error and "layout" in no_layout.content[0].text
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    same = call("line_of_sight", {"unit": "Pathfinder", "target": "Pathfinder Team"})
+    assert same.is_error and "same unit" in same.content[0].text
 
 
 def test_board_summary_without_tts(no_tts):
