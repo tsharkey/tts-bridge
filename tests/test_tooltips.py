@@ -59,7 +59,7 @@ def test_every_model_has_the_same_sections():
     text = tip["text"]
     assert tip["name"] == "[2/2] Trooper"
     assert "InSv" in text.split("\n")[1] and "5+" in text.split("\n")[2]
-    assert '2× [e8b53e]Bolt rifle[-]\n24"  A2  BS3+  S4  AP-1  D1  [i]Assault, Heavy[/i]' in text
+    assert '2× [e8b53e]Bolt rifle[-]\n24"  A2  BS3+  S4  AP-1  D1\n[i][Assault, Heavy][/i]' in text   # keywords below
     assert "Hold Fast" in text and "Keywords" in text
     assert "Warlord" not in text and "Iron Will" not in text   # what the list chose shows on the leader only
 

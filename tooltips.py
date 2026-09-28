@@ -64,19 +64,19 @@ def stat_line(stats):
 def weapon_stats(w):
     melee = w.get("type") == "melee"
     kind = "WS" if melee else "BS"
-    stats = "  ".join(x for x in (
+    return "  ".join(x for x in (
         w.get("range") if w.get("range") and w["range"] != "Melee" else "Melee" if melee else None,
         f"A{w['A']}" if w.get("A") else None, f"{kind}{w['skill']}" if w.get("skill") else None,
         f"S{w['S']}" if w.get("S") else None, f"AP{w['AP']}" if w.get("AP") else None,
         f"D{w['D']}" if w.get("D") else None) if x)
-    keywords = f"  [i]{', '.join(w['keywords'])}[/i]" if w.get("keywords") else ""
-    return stats + keywords
 
 
 def weapon_lines(w, count=1):
-    """A weapon profile as two lines: its name (and how many), then its stats."""
+    """A weapon profile as lines: its name (and how many), its stats, then its
+    keywords in brackets ("[Assault, Heavy]") when it has any."""
     stats = weapon_stats(w)
-    return [f"{f'{count}× ' if count > 1 else ''}{colour(ACCENT, w['name'])}"] + ([stats] if stats else [])
+    keywords = f"[i][{', '.join(w['keywords'])}][/i]" if w.get("keywords") else None
+    return [f"{f'{count}× ' if count > 1 else ''}{colour(ACCENT, w['name'])}"] + [x for x in (stats, keywords) if x]
 
 
 def heading(hexcode, text):
