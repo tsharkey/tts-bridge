@@ -13,8 +13,11 @@ import pytest
 import uvicorn
 from mcp import Client, StdioServerParameters
 
+import board
+import layouts
 import tts_bridge
 from app import mcp_server, server
+from test_formats import load, made_up_table
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -35,7 +38,7 @@ def test_tools_listed_and_described():
         async with Client(mcp_server.server()) as client:
             return await client.list_tools()
     tools = asyncio.run(main())
-    assert "status" in names(tools)
+    assert {"status", "board_summary"} <= set(names(tools))
     assert all(t.description for t in tools.tools)
 
 
@@ -46,6 +49,46 @@ def test_status_without_tts(no_tts):
     result = asyncio.run(main())
     assert not result.is_error
     assert result.structured_content == {"connected": False, "lct": False}
+
+
+def call(name, args=None):
+    async def main():
+        async with Client(mcp_server.server()) as client:
+            return await client.call_tool(name, args or {})
+    return asyncio.run(main())
+
+
+def test_board_summary(monkeypatch):
+    """The board state sample's table, with the sample layout loaded."""
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [load("layout.json")])
+    result = call("board_summary")
+    assert not result.is_error
+    got = result.structured_content
+    state = load("board-state.json")
+    assert got["units"] == state["units"]
+    pathfinders = got["units"][0]
+    assert pathfinders["areas"] == ["A2"] and pathfinders["objectives"] == ["expansion-red"]
+    assert [p["x"] for p in pathfinders["positions"]] == [-20, -18.5, -17]
+    layout = got["layout"]
+    assert (layout["id"], layout["deployment"], layout["matched"], layout["pieces"]) == ("0c4960", "Dawn of War", 6, 6)
+    assert [o["id"] for o in layout["objectives"]][:2] == ["home-red", "home-blue"]
+    assert layout["areas"][0]["features"][0]["category"] == "dense"
+    assert [t["name"] for t in got["terrain"]] == ["Red deployment zone"]   # the layout has the rest exactly
+
+
+def test_board_summary_without_a_layout(monkeypatch):
+    monkeypatch.setattr(board, "read_objects", made_up_table)
+    monkeypatch.setattr(layouts, "load_all", lambda: [])
+    got = call("board_summary").structured_content
+    assert got["layout"] is None
+    assert "areas" not in got["units"][0]
+    assert len(got["terrain"]) == 7   # every piece TTS reports, as boxes
+
+
+def test_board_summary_without_tts(no_tts):
+    result = call("board_summary")
+    assert result.is_error and "39999" in result.content[0].text
 
 
 def test_unreachable_tts_is_an_error_not_an_exit(monkeypatch, no_tts):

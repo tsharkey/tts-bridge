@@ -185,3 +185,33 @@ def test_layout_file(path):
     assert sorted(z["side"] for z in layout["zones"]) == ["blue", "red"]
     for z in layout["zones"]:
         polygon_ok(z["polygon"])
+
+
+def test_distance_to_a_polygon():
+    square = [[0, 0], [4, 0], [4, 4], [0, 4]]
+    assert layouts.distance((2, 2), square) == 0
+    assert layouts.distance((7, 2), square) == 3
+    assert math.isclose(layouts.distance((7, 8), square), 5)
+    assert layouts.bounds(square) == (2, 2, 4, 4)
+
+
+def pieces(layout):
+    """A layout's areas and features as board.collect_terrain reads them from TTS."""
+    return [{"kind": "terrain", **dict(zip("xzwd", layouts.bounds(p)))}
+            for a in layout["areas"] for p in [a["polygon"], *(f["polygon"] for f in a["features"])]]
+
+
+@pytest.mark.parametrize("layout_id", ["33ce09", "fe8650", "3edf8d", "7e2c7f", "0c4960"])
+def test_identify_the_layout_on_the_table(layout_id):
+    """Terrain packs of one map share every spot (the first four are PtF vs Recon 3); size tells them apart."""
+    terrain = pieces(layouts.load(layout_id))
+    layout, matched, total = layouts.identify(terrain)
+    assert layout["id"] == layout_id and matched == total
+
+
+def test_identify_nothing_on_the_table():
+    assert layouts.identify([]) is None
+    few = pieces(layouts.load("33ce09"))[:10]   # a layout half cleared away isn't that layout
+    assert layouts.identify(few) is None
+    zones = [{**p, "kind": "zone"} for p in pieces(layouts.load("33ce09"))]
+    assert layouts.identify(zones) is None

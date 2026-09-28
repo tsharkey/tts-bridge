@@ -35,6 +35,7 @@ import re
 import sys
 from pathlib import Path
 
+import layouts
 import tts_bridge as tts
 
 ROOT = Path(__file__).parent
@@ -258,7 +259,9 @@ def box_hit(x, z, r, box):
     return dx * dx + dz * dz < r * r
 
 
-def unit_row(u, terrain):
+def unit_row(u, terrain, surface=0.0, layout=None):
+    """A unit as board.json lists it. With the layout on the table, also the terrain areas its
+    models' bases overlap, and the objectives in those areas."""
     ms = u["models"]
     xs = [o["c"][0] for o in ms]
     zs = [o["c"][2] for o in ms]
@@ -266,13 +269,20 @@ def unit_row(u, terrain):
                      for o in ms if box_hit(o["c"][0], o["c"][2], radius(o), t["box"])})
     zones = sorted({t["name"] for t in terrain if t["kind"] == "zone"
                     for o in ms if box_hit(o["c"][0], o["c"][2], 0.01, t["box"])})
+    areas = [a["id"] for a in (layout or {}).get("areas", [])
+             if u["on_table"] and any(layouts.distance((o["c"][0], o["c"][2]), a["polygon"]) < radius(o) for o in ms)]
     return {"army": u["army"], "unit": u["name"], "nth": u["nth"], "models": len(ms),
             "on_table": u["on_table"], "unit_id": u.get("unit_id"), "datasheet": u.get("datasheet"),
             "coherency": coherency(ms) if u["on_table"] else [],
             "x": round(sum(xs) / len(xs), 1), "z": round(sum(zs) / len(zs), 1),
             "box": [round(min(xs), 1), round(max(xs), 1), round(min(zs), 1), round(max(zs), 1)],
             "facing": round(ms[0]["rot"]) % 360, "touching": inside, "zones": zones,
-            "guids": [o["guid"] for o in ms]}
+            "guids": [o["guid"] for o in ms],
+            "positions": [{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2),
+                           "height": round(o["c"][1] - o["s"][1] / 2 - surface, 1), "facing": round(o["rot"]) % 360,
+                           "base": [round(o["s"][0], 2), round(o["s"][2], 2)]} for o in ms],
+            **({"areas": areas, "objectives": [ob["id"] for ob in layout["objectives"] if ob["area"] in areas]}
+               if layout else {})}
 
 
 def closest(a, b):
@@ -283,17 +293,24 @@ def closest(a, b):
 # --------------------------------------------------------------------------
 # Commands
 
-def board_state(objs):
-    """The table as units and terrain: what board.json holds (docs/formats/board-state.md)."""
-    terrain = collect_terrain(objs)
-    return {"surface_y": round(table_surface(objs), 2),
-            "units": [unit_row(u, terrain) for u in collect_units(objs)], "terrain": terrain}
+def board_state(objs, candidates=None):
+    """The table as units and terrain: what board.json holds (docs/formats/board-state.md).
+    `layout` is which of layouts/ (or `candidates`) is on the table, or None: its areas,
+    objectives and zones are in layouts/<id>.json."""
+    terrain, surface = collect_terrain(objs), table_surface(objs)
+    found = layouts.identify(terrain, candidates)
+    layout = found and found[0]
+    return {"surface_y": round(surface, 2),
+            "layout": found and {"id": layout["id"], "name": layout["name"], "matched": found[1], "pieces": found[2]},
+            "units": [unit_row(u, terrain, surface, layout) for u in collect_units(objs)], "terrain": terrain}
 
 
 def cmd_summary(_args):
     state = board_state(read_objects())
     rows, terrain, surface = state["units"], state["terrain"], state["surface_y"]
     BOARD_JSON.write_text(json.dumps(state, indent=2))
+    if state["layout"]:
+        print(f"Layout: {state['layout']['name']} (layouts/{state['layout']['id']}.json)")
 
     for army in sorted({r["army"] for r in rows}):
         print(f"\n== {army}")
@@ -303,7 +320,7 @@ def cmd_summary(_args):
                 print(f"  {label:38} {r['models']:>2} models  off the table (reserves / not deployed)")
                 continue
             where = f"({r['x']:6.1f}, {r['z']:6.1f})  facing {r['facing']:>3}"
-            extra = ", ".join(r["touching"] + r["zones"])
+            extra = ", ".join(r["touching"] + r["zones"] + [f"objective {o}" for o in r.get("objectives", [])])
             print(f"  {label:38} {r['models']:>2} models  {where}" + (f"  in: {extra}" if extra else ""))
             for problem in r["coherency"]:
                 print(f"  {'':38} out of coherency: {problem}")
