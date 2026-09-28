@@ -65,8 +65,11 @@ def show_on_table(unit: str, show: list[str] | None = None, army: str | None = N
 
 def clear_table_overlays() -> Cleared:
     """Remove the lines show_on_table (or a model's right-click menu) drew on the table."""
-    with tts.lock:
-        return {"removed": overlays.clear()}
+    try:
+        with tts.lock:
+            return {"removed": overlays.clear()}
+    except ValueError as e:
+        raise ToolError(str(e)) from None
 
 
 def menu_request(message):

@@ -17,9 +17,9 @@ import functools
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 
-from app.mcp_server import overlay, placing, reach, sight, status, table
+from app.mcp_server import overlay, placing, reach, shared, sight, status, table
 
-MODULES = [status, table, placing, sight, reach, overlay]
+MODULES = [status, table, placing, sight, reach, overlay, shared]
 
 INSTRUCTIONS = """Tools for a Warhammer 40,000 game in Tabletop Simulator (TTS), through the
 tts-bridge hub running on this computer. Coordinates are table inches, 0,0 at the centre, x along

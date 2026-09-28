@@ -57,6 +57,7 @@
   <aside>
     <section id="unitCard" hidden></section>
     <section id="pairCard" hidden></section>
+    <section id="claudeCard" hidden></section>
     <section id="tableCard"></section>
   </aside>
 </main>
@@ -209,6 +210,46 @@ function draw() {
     ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeText(label, (x0 + x1) / 2, (y0 + y1) / 2);
     ctx.fillStyle = "#fff"; ctx.fillText(label, (x0 + x1) / 2, (y0 + y1) / 2);
   }
+  drawHighlights(s);
+}
+
+// What Claude drew (the highlight MCP tool): on top of everything, in its own colours.
+const NAMED = {red: "#ff5d5d", blue: "#4aa8ff", green: "#4fe67a", yellow: "#ffd24a", orange: "#ff8c42",
+               purple: "#c38bff", cyan: "#4ad6d6", white: "#ffffff"};
+const hue = c => /^#[0-9a-f]{6}$/i.test(c || "") ? c : NAMED[c] || NAMED.yellow;
+function drawHighlights(s) {
+  for (const h of Object.values(marks.highlights)) for (const sh of h.shapes) {
+    const c = hue(sh.color);
+    ctx.save();
+    ctx.strokeStyle = c; ctx.fillStyle = c + "33"; ctx.lineWidth = 3; ctx.setLineDash([]);
+    let at = null;
+    if (sh.kind === "unit") {
+      ctx.setLineDash([8, 5]);
+      for (const arc of sh.outline) {
+        ctx.beginPath(); arc.forEach(([x, z], k) => { const [a, b] = px(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); }); ctx.stroke();
+      }
+      at = px(sh.x, sh.z + 0.9);
+    } else if (sh.kind === "point" || sh.kind === "circle") {
+      const [x, y] = px(sh.x, sh.z), r = (sh.r || 0.8) * s;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+      if (sh.kind === "point") {
+        ctx.beginPath(); ctx.moveTo(x - r, y); ctx.lineTo(x + r, y); ctx.moveTo(x, y - r); ctx.lineTo(x, y + r); ctx.stroke();
+      }
+      at = [x, y - r - 4];
+    } else {
+      ctx.beginPath(); sh.points.forEach(([x, z], k) => { const [a, b] = px(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+      if (sh.kind === "area") { ctx.closePath(); ctx.fill(); }
+      ctx.stroke();
+      const mid = sh.points[Math.floor(sh.points.length / 2)];
+      at = px(mid[0], mid[1]);
+    }
+    if (sh.text && at) {
+      ctx.font = `700 ${Math.max(11, 0.5 * s)}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.lineWidth = 4; ctx.strokeStyle = "#000"; ctx.strokeText(sh.text, at[0], at[1]);
+      ctx.fillStyle = c; ctx.fillText(sh.text, at[0], at[1]);
+    }
+    ctx.restore();
+  }
 }
 
 function bandColour(band) {
@@ -242,6 +283,8 @@ async function choose(i, j) {
   sel = i; other = j;
   selKey = i === null ? null : key(st.units[i]);
   otherKey = j === null ? null : key(st.units[j]);
+  // shared with Claude (get_selection)
+  api("/api/board/selection", {units: [i, j].filter(x => x !== null).map(x => st.units[x])}).catch(() => {});
   if (i === null) { sight = bands = pair = null; render(); return; }
   await loadOverlays();
 }
@@ -260,7 +303,32 @@ async function loadOverlays() {
 }
 let sightError = null, bandError = null;
 
-function render() { draw(); renderUnit(); renderPair(); renderTable(); }
+function render() { draw(); renderUnit(); renderPair(); renderClaude(); renderTable(); }
+
+function renderClaude() {
+  const card = $("#claudeCard"), all = Object.values(marks.highlights);
+  card.hidden = !all.length;
+  if (!all.length) return;
+  card.innerHTML = `<h2>From Claude</h2>` + all.map(h => `
+    <div class="row"><b>${esc(h.label)}</b><button class="n" data-clear="${esc(h.label)}" style="padding:2px 8px">Clear</button></div>
+    ${h.note ? `<div class="sub">${esc(h.note)}</div>` : ""}
+    ${h.shapes.filter(sh => sh.text).map(sh => `<div class="row"><span class="swatch" style="background:${hue(sh.color)}"></span>${esc(sh.text)}</div>`).join("")}`).join("");
+  $$("[data-clear]", card).forEach(el => el.addEventListener("click", async () => {
+    await fetch(`/api/board/highlights?label=${encodeURIComponent(el.dataset.clear)}`, {method: "DELETE"});
+    await watchHighlights(true);
+  }));
+}
+
+// Claude's highlights: polled whatever the source, since they don't need TTS.
+let marks = {v: -1, highlights: {}};
+async function watchHighlights(force = false) {
+  if (document.hidden && !force) return;
+  try {
+    const got = await api("/api/board/highlights");
+    if (got.v !== marks.v || force) { marks = got; draw(); renderClaude(); }
+  } catch {}
+}
+setInterval(watchHighlights, 1500);
 
 function renderUnit() {
   const card = $("#unitCard");
@@ -377,6 +445,7 @@ $("#refresh").addEventListener("click", load);
 window.addEventListener("resize", draw);
 render();
 load();
+watchHighlights(true);
 </script>
 </body>
 </html>

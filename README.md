@@ -85,6 +85,8 @@ keeps up with the game, redrawing within a couple of seconds when something move
   it can see, and to switch on its move, advance, charge and weapon ranges, measured from its bases' edges.
 - **Shift-click a second unit** for the distance between the two and how much each can see of the other.
 - **Saved board.json** shows the last `python3 board.py summary` instead, without TTS.
+- **With Claude:** Claude can read what you've selected ("where should this unit go?"), and what it draws with
+  `highlight` appears on the board, listed under **From Claude** with its note and a button to clear it.
 
 Line of sight is worked out from the terrain's footprints, so windows and doorways aren't counted, and ranges
 are straight lines that ignore terrain in the way.
@@ -250,6 +252,9 @@ Claude Code or Claude Desktop's chat. Its tools so far:
   can reach, or which can reach it. Distances are straight lines: terrain in the way isn't counted.
 - `show_on_table` / `clear_table_overlays`: draw a unit's line of sight and threat ranges on the TTS table for
   everyone to see, so Claude can show what it's talking about, and remove them.
+- `get_selection`: the units you've clicked in the Board view, so you can ask about "this unit".
+- `highlight` / `clear_highlights`: Claude draws on the Board view (units, spots, ranges, lanes, areas, with
+  labels and a note), and on the TTS table too if asked.
 
 Tools only run while the web app is up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.

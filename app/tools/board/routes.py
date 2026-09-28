@@ -15,6 +15,7 @@ import board
 import los
 import threat
 import tts_bridge
+from app.core import view
 from app.core.api import router as api_router
 from app.mcp_server import reach, table
 
@@ -124,3 +125,36 @@ def pair(a: int, b: int, v: int):
             got = los.unit_visibility(models(x), models(y), terrain)
             out[key] = {"visible": got["visible"], "fully_visible": got["fully_visible"], "of": y["models"]}
     return out
+
+
+# --------------------------------------------------------------------------
+# Shared with Claude (app/core/view.py, the MCP tools in app/mcp_server/shared.py)
+
+@router.post("/api/board/selection")
+def set_selection(body: dict):
+    """The page's selected units: {"units": [{"army", "unit", "nth", "on_table"}]}."""
+    view.select(body.get("units") or [])
+    return view.local_selection()
+
+
+@router.get("/api/board/selection")
+def get_selection():
+    return view.local_selection()
+
+
+@router.get("/api/board/highlights")
+def highlights():
+    """What Claude has drawn, by label, and its version; the page polls it."""
+    return view.page_polled()
+
+
+@router.post("/api/board/highlights")
+def set_highlights(body: dict):
+    if not body.get("label"):
+        raise ValueError("A highlight needs a label.")
+    return {"v": view.local_set(body["label"], body.get("shapes") or [], body.get("note"))}
+
+
+@router.delete("/api/board/highlights")
+def clear_highlights(label: str | None = None):
+    return {"cleared": view.local_clear(label)}
