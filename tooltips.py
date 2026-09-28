@@ -7,10 +7,10 @@ hover over one.
     parsed["units"][0]["models"][0]["tooltip"]   # {"name": ..., "text": ...}
 
 Every model's tooltip has the same sections, a blank line apart, as
-Yellowscribe's do: its stats (names over values), the weapons it carries (each
-name on its own line, its profile under it), the unit's abilities and rules by
-name (underlined), then keywords and base. One model per unit (its leader or sergeant, or its
-only model) also shows the warlord and enhancements. A model with more than one
+Yellowscribe's do: its stats (names over values), the weapons it carries,
+ranged then melee (each name on its own line, its profile under it), the unit's
+abilities and rules by name, then keywords and base. One model per unit (its
+leader or sergeant, or its only model) also shows the warlord and enhancements. A model with more than one
 wound is named "[<left>/<max>] <name>" for the wound tracker. The unit gets its
 whole datasheet as "card" text (card_text), with every rule explained, for the
 datasheet viewer on each of its models (sheetviewer.py). The text is TTS BBCode
@@ -84,24 +84,24 @@ def heading(hexcode, text):
 
 
 WEAPON_RE = re.compile(r"^(?:\d+× )?\[" + ACCENT + r"\](.+?)\[-\](?:  |$)")
-WEAPON_HEADINGS = (heading(WEAPONS, "Weapons"), colour(LABEL, "Weapons"))   # this template's, and the one before
+# this template's, then the ones before: one "Weapons" section, and the one-line template's
+WEAPON_HEADINGS = (heading(WEAPONS, "Ranged weapons"), heading(WEAPONS, "Melee weapons"),
+                   heading(WEAPONS, "Weapons"), colour(LABEL, "Weapons"))
 
 
 def weapon_names(description):
     """The weapon profiles a spawned model's tooltip lists (weapon_lines), by
     name. Reads the earlier one-line template too, for models already spawned."""
-    lines = (description or "").splitlines()
-    start = next((i for i, line in enumerate(lines) if line in WEAPON_HEADINGS), None)
-    if start is None:
-        return []
-    out = []
-    for line in lines[start + 1:]:
+    out, inside = [], False
+    for line in (description or "").splitlines():
         m = WEAPON_RE.match(line)
-        if m:
+        if line in WEAPON_HEADINGS:
+            inside = True
+        elif inside and m:
             out.append(m.group(1))
         elif not line or line.startswith("[") and not line.startswith("[i]"):
-            break   # the end of the section: a blank line or the next heading
-    return out
+            inside = False   # the end of a section: a blank line or the next heading
+    return list(dict.fromkeys(out))
 
 
 def base_line(model):
@@ -113,12 +113,18 @@ def base_line(model):
 
 def carried(model, sheet):
     """[(datasheet wargear name, count)] a model carries: its wargear and its
-    gear (drones included), matched to the datasheet."""
+    gear (drones included), matched to the datasheet, and whatever its
+    datasheet model is always equipped with that the list left out (an export
+    can drop a line: "5x Guardian spear" without its bullet)."""
     out = {}
     for g in model.get("gear") or [{"name": w, "count": 1} for w in model["wargear"]]:
         name = datasheets.match_wargear(g["name"], sheet)
         if name:
             out[name] = max(out.get(name, 0), g["count"])
+    sm = next((m for m in sheet["models"] if m["name"] == model.get("sheet_model")), None)
+    for e in (sm or {}).get("equipped", []):
+        if e["name"] in sheet["wargear"] and e["name"] not in out:
+            out[e["name"]] = e["count"]
     return list(out.items())
 
 
@@ -145,16 +151,19 @@ def tooltip(unit, model, sheet, lead):
     sm = next((m for m in sheet["models"] if m["name"] == model.get("sheet_model")), None)
     stats = sm and sm["stats"]
     sections = [[RULE] + (stat_table(stats) or [])]
-    weapons, gear = [], []
+    ranged, melee, gear = [], [], []
     for name, count in carried(model, sheet):
         w = sheet["wargear"][name]
-        weapons += [line for p in w["weapons"] for line in weapon_lines(p, count)]
+        for p in w["weapons"]:
+            (melee if p.get("type") == "melee" else ranged).extend(weapon_lines(p, count))
         gear += [a["name"] for a in w["abilities"]]
-    if weapons:
-        sections.append([heading(WEAPONS, "Weapons")] + weapons)
+    if ranged:
+        sections.append([heading(WEAPONS, "Ranged weapons")] + ranged)
+    if melee:
+        sections.append([heading(WEAPONS, "Melee weapons")] + melee)
     abilities = [a["name"] for a in sheet["abilities"]] + gear + list(sheet["rules"])
     if abilities:
-        sections.append([heading(ABILITIES, "Abilities")] + [f"[u]{a}[/u]" for a in dict.fromkeys(abilities)])
+        sections.append([heading(ABILITIES, "Abilities")] + list(dict.fromkeys(abilities)))
     chosen = ((["Warlord"] if unit.get("warlord") else [])
               + [f"Enhancement: {e}" for e in unit.get("enhancements") or []]) if lead else []
     footer = ([colour(ACCENT, " · ".join(chosen))] if chosen else []) + [x for x in (
