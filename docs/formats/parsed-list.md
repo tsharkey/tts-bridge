@@ -38,7 +38,8 @@ What every tool starts from: an army list export, parsed.
         {
           "name": "Terminator",
           "wargear": ["Power fist", "Storm bolter"],        // names, once each, no drones: pins are keyed on this
-          "gear": [{"name": "Power fist", "count": 1},      // everything carried, with counts, drones included
+          "gear": [{"name": "Power fist", "count": 1},      // everything carried, with counts: drones, and lines
+                                                            // that lost their bullet, which aren't in wargear
                    {"name": "Storm bolter", "count": 1}],
           "sheet_model": "Terminator w/ Power Fist",        // from datasheets (see datasheet.md)
           "sheet_wargear": ["Power fist", "Storm bolter"],

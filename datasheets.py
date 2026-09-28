@@ -156,7 +156,9 @@ def match_model(model, unit, sheet):
         if len(unit["models"]) == 1 and len(required) == 1:
             return required[0]
         return None
-    gear = {key(w) for w in model["wargear"]}
+    # everything it carries: wargear, and gear the list names without it being
+    # wargear (a line that lost its bullet), so the loadout picks the variant
+    gear = {key(w) for w in model["wargear"]} | {key(g["name"]) for g in model.get("gear") or []}
     best = None
     for m in models:
         coverage, fit = army.score(army.tokens_of(m["name"]), model, unit, set(), flat())

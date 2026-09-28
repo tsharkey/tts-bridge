@@ -247,3 +247,14 @@ def test_drones_and_uncounted_gear():
     assert not any("Drone" in w for m in fireknives for w in m["wargear"])
     stealth = next(u for u in parsed["units"] if u["name"] == "Stealth Battlesuits")
     assert sum(g["count"] for m in stealth["models"] for g in m["gear"] if g["name"] == "Homing beacon") == 1
+
+
+def test_unbulleted_gear_lines_are_carried():
+    """A GW export pasted with a line's bullet lost ("1x Heavy bolt pistol" under
+    "• 1x Claws of Severax"): the line is gear the model carries, not wargear,
+    so the pins keyed on wargear stay the same."""
+    text = (FIXTURES / "gw_app_raven_guard.txt").read_text().replace("• 1x Heavy bolt pistol", "1x Heavy bolt pistol")
+    shaan = next(u for u in army.parse_list(text, {"models": {}})["units"] if u["name"] == "Aethon Shaan")
+    [model] = shaan["models"]
+    assert model["wargear"] == ["Claws of Severax"]
+    assert {g["name"] for g in model["gear"]} == {"Claws of Severax", "Heavy bolt pistol"}

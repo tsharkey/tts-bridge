@@ -284,3 +284,19 @@ def test_attach_leaders_over_the_list():
     assert units[0]["attached_to"] == units[3]["attached_to"] == 2
     army.attach_leaders(units, {"Captain#1": None})
     assert (units[0]["role"], units[0]["attached_to"]) == (None, None) and units[2]["role"] == "bodyguard"
+
+
+def test_model_variant_by_everything_it_carries():
+    """Datasheet models that differ only by loadout ("Rider (Salvo Launcher)",
+    "Rider (Hurricane Bolter)") are told apart by the model's gear as well as its
+    wargear: a line that lost its bullet is gear only."""
+    def variant(name, gear):
+        return {"name": name, "min": 0, "max": 3, "stats": None, "options": [],
+                "equipped": [{"name": g, "count": 1} for g in gear]}
+    sheet = {"models": [variant("Rider (Salvo Launcher)", ["Lance", "Salvo launcher"]),
+                        variant("Rider (Hurricane Bolter)", ["Lance", "Hurricane bolter"])],
+             "wargear": {n: {"weapons": [], "abilities": []} for n in ("Lance", "Salvo launcher", "Hurricane bolter")}}
+    rider = {"name": "Rider", "wargear": ["Lance"],
+             "gear": [{"name": "Hurricane bolter", "count": 1}, {"name": "Lance", "count": 1}]}
+    unit = {"name": "Riders", "models": [rider]}
+    assert datasheets.match_model(rider, unit, sheet)["name"] == "Rider (Hurricane Bolter)"
