@@ -79,10 +79,10 @@ def test_describe_keeps_the_unit_line_first():
     assert obj["Nickname"] == "2/2 Squad Leader"
     head, rest = obj["Description"].split("\n", 1)
     assert board.UNIT_RE.match(head).group(1) == "Test Squad"  # board.py still finds the unit
-    assert rest.endswith("[i]By someone[/i]") and "Hold Fast" in rest
-    # without a datasheet: just the unit line and the catalogue's own description
+    assert "By someone" not in rest and "Hold Fast" in rest    # the catalogue's own text is dropped
+    # without a datasheet: just the unit line
     plain = tooltips.describe({"Description": "By someone"}, "Test Squad", {"name": "x", "wargear": []})
-    assert plain["Description"] == "[Test Squad]\nBy someone" and "Nickname" not in plain
+    assert plain["Description"] == "[Test Squad]" and "Nickname" not in plain
 
 
 def test_card_has_the_whole_datasheet():

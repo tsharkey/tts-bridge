@@ -267,13 +267,10 @@ def attach(parsed, cache=None):
 
 def describe(obj, unit_name, model):
     """Name a catalogue object for its model and put the tooltip in its
-    description, after the "[<unit>]" line board.py groups by. Keeps the
-    catalogue's own description (usually who made the model) at the end."""
-    credit = (obj.get("Description") or "").strip()
+    description, after the "[<unit>]" line board.py groups by. The catalogue's
+    own description (usually who made the model) is dropped: the tooltip is ours."""
     tip = model.get("tooltip")
     if tip:
         obj["Nickname"] = tip["name"]
-        obj["Description"] = f"[{unit_name}]\n{tip['text']}" + (f"\n\n[i]{credit}[/i]" if credit else "")
-    else:
-        obj["Description"] = f"[{unit_name}]\n" + credit
+    obj["Description"] = f"[{unit_name}]" + (f"\n{tip['text']}" if tip else "")
     return obj

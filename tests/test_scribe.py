@@ -5,6 +5,7 @@ temporary mappings.json and Saved Objects folders. TTS is faked where needed.
 """
 
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -160,15 +161,33 @@ def test_saved_objects_folder(monkeypatch, tmp_path):
     assert army.saved_objects_dir() == tmp_path / "Documents/My Games/Tabletop Simulator/Saves/Saved Objects"
 
 
-def test_pack_wraps_rows():
-    units = [("A", [0, 1, 2]), ("B", [3])]
-    dims = [[1, 1]] * 4
-    moves = army.pack(units, dims, 0, 0, width=3)  # two 1" models and their gaps per line
-    assert [k for k, _, _ in moves] == [0, 1, 2, 3]
-    xs = {k: x for k, x, _ in moves}
-    zs = {k: z for k, _, z in moves}
-    assert xs[0] < xs[1] and zs[2] < zs[0]  # a third model wraps to the next line
-    assert zs[3] < zs[2]                   # the next unit wraps to the next row
+def test_pack_is_compact():
+    units = [("Squad", list(range(10))), ("Leader", [10])] + [(f"Solo {i}", [11 + i]) for i in range(6)]
+    dims = [[1.26, 1.26]] * 17
+    blocks = army.groups({"units": [{}, {"attached_to": 0}] + [{}] * 6}, units)
+    assert blocks[0] == [0, 1] and [1] not in blocks
+    moves = army.pack(units, dims, 0, 0, width=110, blocks=blocks)
+    assert sorted(k for k, _, _ in moves) == list(range(17))
+    at = {k: (x, z) for k, x, z in moves}
+    xs, zs = [x for x, _ in at.values()], [z for _, z in at.values()]
+    assert max(xs) - min(xs) < 2 * (max(zs) - min(zs))            # a block, not a strip
+    squad = [at[k] for k in range(10)]
+    assert len({round(z, 2) for _, z in squad}) == 3               # 10 models: lines of 4, 4 and 2
+    near = min(math.dist(at[10], p) for p in squad)
+    assert near < 2.2                                              # the leader stands with its unit
+    others = [at[k] for k in range(11, 17)]
+    gap = min(math.dist(p, q) for p in squad + [at[10]] for q in others)
+    assert gap > 1.26 + 1.5                                        # other units are clearly apart
+
+
+def test_pack_keeps_to_the_width():
+    units = [(f"U{i}", [i]) for i in range(8)] + [("Squad", list(range(8, 18))), ("Leader", [18])]
+    dims = [[2, 2]] * 8 + [[1.26, 1.26]] * 10 + [[1.6, 1.6]]
+    blocks = army.groups({"units": [{}] * 9 + [{"attached_to": 8}]}, units)
+    moves = army.pack(units, dims, 0, 0, width=5, blocks=blocks)
+    assert all(x + dims[k][0] / 2 <= 5 + 1e-9 and x - dims[k][0] / 2 >= -1e-9 for k, x, _ in moves)  # base edges
+    at = {k: (x, z) for k, x, z in moves}
+    assert min(math.dist(at[18], at[k]) for k in range(8, 18)) < 2.5   # the leader still stands by its unit (below it)
 
 
 @pytest.mark.parametrize("faction,title,folder,name", [
@@ -191,6 +210,15 @@ def test_saved_models_have_tooltips(client, paths):
     assert farsight["Nickname"] == "Commander Farsight"
     head, rest = farsight["Description"].split("\n", 1)
     assert head == "[Commander Farsight]"
-    assert "Dawn Blade" in rest and rest.endswith("[i]A test figure[/i]")
+    assert "Dawn Blade" in rest and "A test figure" not in rest   # the catalogue's own text is dropped
     v = client.post("/api/scribe/read", json={"text": TOURNAMENT}).json()
     assert "Dawn Blade" in unit(v, "Commander Farsight")["groups"][0]["tooltip"]["text"]
+
+
+def test_saved_name_is_the_army_name(client, paths):
+    r = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Friday Tau"})
+    path = Path(r.json()["path"])
+    assert path.name == "Friday Tau.json"
+    assert json.loads(path.read_text())["ObjectStates"][0]["GMNotes"] == "army.py:Friday Tau"
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT, "name": "Friday Tau"}).json()
+    assert v["army"]["title"] == "Friday Tau" and v["saved_object"].endswith("Friday Tau.json")
