@@ -25,6 +25,8 @@ What every tool starts from: an army list export, parsed.
       "label": "Char1",            // the tournament format's CharN, else null
       "role": "leader",            // leader | bodyguard | support (from "Attached as:"), else null
       "attached_to": 1,            // index in "units" of the bodyguard a leader or support is attached to
+                                   // (army.attach_leaders applies a saved list's own choices over the list's)
+      "can_lead": [1, 4],          // units it can be attached to, from its datasheet's Leader ability (datasheets)
       "enhancements": ["Temporal Corridor"],
       "warlord": false,
       "complete": true,            // false for simple / short exports, which leave models out
@@ -55,5 +57,5 @@ What every tool starts from: an army list export, parsed.
 - Units keep the list's order. `n`, the nth unit of the same name, is counted in this order everywhere.
 - `wargear` is what `army.model_key` (and so every pin in `mappings.json`) is built from. New information goes in
   new fields; `wargear` doesn't change.
-- Fields from the data cache (`datasheet`, `sheet_model`, `sheet_wargear`, `composition`, `base`, `tooltip`) are only there
+- Fields from the data cache (`datasheet`, `sheet_model`, `sheet_wargear`, `composition`, `can_lead`, `base`, `tooltip`) are only there
   when the cache is. Tools must work without them.

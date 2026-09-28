@@ -1,5 +1,9 @@
-"""Scribe's API: read a list into what TTS will get, fix datasheets and models,
-then save it as a Saved Object (no TTS needed) or spawn it (TTS needed).
+"""Scribe's API: read a list into what TTS will get, review it (datasheets,
+models, which unit each leader leads), then save it (the list in lists/ and a
+Saved Object of the same name, no TTS needed) and optionally spawn it (TTS needed).
+
+Leader choices belong to the list: they're saved beside it (app.core.lists)
+and sent back with every call, not pinned in mappings.json.
 
 Reading doesn't write mappings.json; saving and spawning do, like
 `army.py build`, so the list comes out the same next time.
@@ -14,15 +18,17 @@ import datasheets
 import tooltips
 import tts_bridge as tts
 from app.core.api import router as api_router
+from app.core import lists
 from app.core.lists import entry_info
 from app.core.tts import lock as tts_lock
 
 router = api_router()
 
 
-def parse(text, mappings, prefer_static=False, repick=False, name=None):
+def parse(text, mappings, prefer_static=False, repick=False, name=None, leaders=None):
     """-> (parsed list, catalogue or None). `name`, the list's saved name, is its
-    title in TTS (the Saved Object and army tag) instead of the export's own.
+    title in TTS (the Saved Object and army tag) instead of the export's own;
+    `leaders` are the list's leader choices (army.attach_leaders).
     The list's parse errors come back as ValueError, so the page shows them as
     the list's problem, not TTS's."""
     if not (text or "").strip():
@@ -33,6 +39,7 @@ def parse(text, mappings, prefer_static=False, repick=False, name=None):
         raise ValueError(str(e)) from e
     if (name or "").strip():
         parsed["title"] = name.strip()
+    army.attach_leaders(parsed["units"], leaders)
     bases.attach(parsed, mappings)
     tooltips.attach(parsed)
     catalog = army.load_catalog() if army.CATALOG.exists() and any(army.CATALOG.glob("*.json")) else None
@@ -52,6 +59,7 @@ def view(parsed, catalog, mappings, prefer_static=False):
     liked = mappings.get("favorites", {})
     matcher = army.Matcher(catalog, parsed, mappings.get("aliases", {}).get(parsed["faction"])) if catalog else None
     seen, units = {}, []
+    keys = army.unit_keys(parsed["units"])
     for i, u in enumerate(parsed["units"]):
         seen[u["name"]] = seen.get(u["name"], 0) + 1
         groups = {}
@@ -74,7 +82,8 @@ def view(parsed, catalog, mappings, prefer_static=False):
                     opts.insert(0, g["pick"])
                 g["options"] = [entry_info(catalog, p) for p in opts]
         units.append({"i": i, "name": u["name"], "n": seen[u["name"]], "points": u.get("points"),
-                      "role": u.get("role"), "attached_to": u.get("attached_to"),
+                      "role": u.get("role"), "attached_to": u.get("attached_to"), "key": keys[i],
+                      "can_lead": u.get("can_lead", []),
                       "warlord": u.get("warlord", False), "enhancements": u.get("enhancements", []),
                       "complete": u.get("complete", True), "composition": u.get("composition"),
                       "datasheet": u.get("datasheet"), "pin_key": f"{scope}|{u['name']}",
@@ -110,7 +119,7 @@ def save_mappings(mappings):
 def read(body: dict):
     mappings = army.load_mappings()
     prefer_static, repick = bool(body.get("prefer_static")), bool(body.get("repick"))
-    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick, body.get("name"))
+    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick, body.get("name"), body.get("leaders"))
     if repick:
         save_mappings(mappings)
     return view(parsed, catalog, mappings, prefer_static)
@@ -145,7 +154,7 @@ def pin_datasheet(body: dict):
 def ready(body):
     """Parse for output, pinning every choice as `army.py build` does."""
     mappings = army.load_mappings()
-    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"))
+    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"))
     if not catalog:
         raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
     save_mappings(mappings)
@@ -154,9 +163,18 @@ def ready(body):
 
 @router.post("/api/scribe/save")
 def save(body: dict):
-    parsed, catalog = ready(body)
+    """Save the list (with its leader choices) and, once the model catalogue is
+    built, a Saved Object of the same name."""
+    mappings = army.load_mappings()
+    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"))
+    name = lists.save(body.get("name") or parsed["title"], body["text"], body.get("leaders") or {})
+    parsed["title"] = name
+    if not catalog:
+        return {"saved": name, "path": None, "models": 0}
+    save_mappings(mappings)
     path = army.build_saved_object(parsed, catalog, facing=float(body.get("facing", 180)))
-    return {"path": str(path), "models": sum(1 for u in parsed["units"] for m in u["models"] if m.get("pick"))}
+    return {"saved": name, "path": str(path),
+            "models": sum(1 for u in parsed["units"] for m in u["models"] if m.get("pick"))}
 
 
 def locked_lua(code, **kw):

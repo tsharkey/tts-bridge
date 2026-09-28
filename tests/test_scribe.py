@@ -12,6 +12,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import army
+from app.core import lists
 import data
 import tts_bridge
 from app import server
@@ -36,6 +37,7 @@ def paths(monkeypatch, tmp_path):
     monkeypatch.setattr(army, "MAPPINGS", tmp_path / "mappings.json")
     monkeypatch.setattr(data, "CACHE", FIXTURES / "datacache")
     monkeypatch.setenv("TTS_SAVED_OBJECTS", str(tmp_path / "Saved Objects"))
+    monkeypatch.setattr(lists, "LISTS", tmp_path / "lists")   # never the user's own lists
     return tmp_path
 
 
@@ -82,6 +84,30 @@ def test_roles_and_enhancements(client):
     assert v["units"][1]["role"] == "bodyguard"
 
 
+def test_leaders_chosen_for_a_list(client, paths):
+    text = (FIXTURES / "plus_format_tau.txt").read_text()
+    v = client.post("/api/scribe/read", json={"text": text}).json()
+    farsight, bodyguard = unit(v, "Commander Farsight"), v["units"][1]
+    assert farsight["key"] == "Commander Farsight#1" and farsight["can_lead"] == []   # no Leader ability in the test data
+    other = next(u for u in v["units"] if u["i"] not in (farsight["i"], bodyguard["i"]) and not u["role"])
+    # lead another unit instead: it becomes the bodyguard, the list's own one doesn't
+    leaders = {farsight["key"]: other["key"]}
+    v = client.post("/api/scribe/read", json={"text": text, "leaders": leaders}).json()
+    assert unit(v, "Commander Farsight")["attached_to"] == other["i"]
+    assert v["units"][other["i"]]["role"] == "bodyguard" and v["units"][1]["role"] is None
+    # saved with the list (not in mappings.json), and read back with it
+    r = client.post("/api/scribe/save", json={"text": text, "name": "Farsight's (test)", "leaders": leaders}).json()
+    assert r["saved"] == "Farsight's (test)"
+    assert client.get("/api/list", params={"name": r["saved"]}).json() == {"text": text, "leaders": leaders}
+    assert "leaders" not in json.loads(army.MAPPINGS.read_text())
+    # a page that doesn't make the choices (Board replay) keeps them when it saves the list
+    client.post("/api/lists", json={"name": r["saved"], "text": text + "\n"})
+    assert client.get("/api/list", params={"name": r["saved"]}).json()["leaders"] == leaders
+    # nobody: unattached, and the list's bodyguard is no longer one
+    v = client.post("/api/scribe/read", json={"text": text, "leaders": {farsight["key"]: None}}).json()
+    assert unit(v, "Commander Farsight")["attached_to"] is None and v["units"][1]["role"] is None
+
+
 def test_save_without_tts(client, paths, monkeypatch):
     def no_tts(*a, **kw):
         raise AssertionError("saving must not need TTS")
@@ -106,12 +132,13 @@ def test_save_without_tts(client, paths, monkeypatch):
     assert any(k.startswith("T'au Empire|Commander Farsight|") for k in mappings["models"])
 
 
-def test_save_needs_a_catalogue(client, paths, monkeypatch):
+def test_save_without_a_catalogue_saves_the_list(client, paths, monkeypatch):
     monkeypatch.setattr(army, "CATALOG", paths / "empty")
     v = client.post("/api/scribe/read", json={"text": TOURNAMENT}).json()
     assert v["cached"]["catalog"] is False and v["units"][0]["groups"][0]["options"] == []
-    r = client.post("/api/scribe/save", json={"text": TOURNAMENT})
-    assert r.status_code == 400 and "Data cache page" in r.json()["error"]
+    r = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Tau"})
+    assert r.json() == {"saved": "Tau", "path": None, "models": 0}   # the list is saved; no Saved Object yet
+    assert (paths / "lists" / "Tau.txt").read_text() == TOURNAMENT
 
 
 def test_pick_another_datasheet(client):

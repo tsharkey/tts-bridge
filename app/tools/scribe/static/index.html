@@ -13,6 +13,7 @@
   .row.tight { gap: 6px; margin-top: 8px; }
   .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .grid4 label { margin-top: 4px; }
+  .step { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 8px; }
   .army-head h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 4px; }
   .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
   .facts b { color: var(--text); font-weight: 500; }
@@ -23,6 +24,8 @@
   .unit { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel); }
   .unit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
   .unit-head h3 { margin: 0; font-size: 15px; }
+  .leads { font-size: 12px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .leads select { font-size: 12px; width: auto; }
   .muted { color: var(--muted); font-size: 12px; }
   .badge { font-size: 11px; padding: 2px 7px; border-radius: 10px; white-space: nowrap; background: var(--panel2);
            border: 1px solid var(--line); color: var(--muted); }
@@ -81,41 +84,43 @@
 <main>
   <div>
     <section>
-      <h2>List</h2>
-      <select id="savedLists"><option value="">Pick a saved list…</option></select>
-      <label for="listText">Paste a list from the GW app, New Recruit (any export) or a "+++" tournament list</label>
+      <h2>1 · Import</h2>
+      <select id="savedLists"><option value="">Open a saved list…</option></select>
+      <label for="listText">Or paste a list from the GW app, New Recruit (any export) or a "+++" tournament list</label>
       <textarea id="listText" spellcheck="false"></textarea>
-      <div class="row tight">
-        <button class="primary fit" id="readBtn">Read list</button>
-        <input id="saveName" placeholder="Name, to save it">
-        <button class="fit" id="saveListBtn">Save list</button>
-      </div>
+      <div class="row tight"><button class="primary fit" id="readBtn">Read list</button></div>
       <div class="msg" id="listMsg"></div>
     </section>
 
     <section id="output">
-      <h2>To TTS</h2>
-      <button class="primary" id="saveObjBtn" disabled>Save as Saved Object</button>
-      <p class="hint" id="savePath">Read a list first. Works with TTS closed: load it in any game from
-        Objects → Saved Objects.</p>
+      <h2>3 · Save</h2>
+      <div class="row tight">
+        <div><label for="saveName">Name</label><input id="saveName"></div>
+        <div class="fit"><label for="spF">Facing</label><input id="spF" type="number" value="180" step="90" style="width:80px"></div>
+      </div>
+      <button class="primary" id="saveBtn" disabled>Save</button>
+      <p class="hint" id="savePath">Saves the list, with the leaders you chose, and a Saved Object of the same name
+        (works with TTS closed: load it in any game from Objects → Saved Objects).</p>
       <div class="msg" id="saveMsg"></div>
-      <label>Or spawn it on the table now (TTS must be running)</label>
+    </section>
+
+    <section>
+      <h2>Load onto the table (optional)</h2>
       <div class="grid4">
         <div><label for="spX">x</label><input id="spX" type="number" value="-55" step="1"></div>
         <div><label for="spZ">z</label><input id="spZ" type="number" value="55" step="1"></div>
-        <div><label for="spW">Width</label><input id="spW" type="number" value="110" step="1"></div>
-        <div><label for="spF">Facing</label><input id="spF" type="number" value="180" step="90"></div>
+        <div><label for="spW">Max width</label><input id="spW" type="number" value="110" step="1"></div>
       </div>
-      <p class="hint">Top-left corner in table inches (0,0 is the centre; the table runs −30…30 by −22…22), rows up to
-        this wide, models turned to face this way (180 = towards −z). The defaults put it off the table's top-left.</p>
-      <button id="spawnBtn" disabled>Spawn on the table</button>
+      <p class="hint">Top-left corner in table inches (0,0 is the centre; the table runs −30…30 by −22…22). The army is
+        laid out as a compact block no wider than this. The defaults put it off the table's top-left. TTS must be running.</p>
+      <button id="spawnBtn" disabled>Load onto the table</button>
       <div class="msg" id="spawnMsg"></div>
     </section>
 
   </div>
 
   <div>
-    <div id="result"><div class="empty">Paste a list and press <b>Read list</b> to see what TTS will get.</div></div>
+    <div id="result"><div class="empty">Paste a list and press <b>Read list</b> to review what TTS will get.</div></div>
   </div>
 </main>
 
@@ -165,15 +170,19 @@ window.browseModels = (opts) => {
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
 let current = null;       // the last read: {army, units, problems, ...}
 let sheetChoices = null;  // datasheets for the picker, per army
+let leaders = {};         // this list's leader choices: {"<leader>#<n>": "<bodyguard>#<n>" or null}
+try { leaders = JSON.parse(store.get("scribe.leaders") || "{}"); } catch {}
 
 // ---------------------------------------------------------------- reading
 async function read(opts = {}) {
   const text = $("#listText").value;
   setMsg($("#listMsg"), "Reading…");
   try {
-    current = await api("/api/scribe/read", {text, name: $("#saveName").value, ...opts});
+    current = await api("/api/scribe/read", {text, name: $("#saveName").value, leaders, ...opts});
     store.set("scribe.text", text);
     store.set("scribe.name", $("#saveName").value);
+    store.set("scribe.leaders", JSON.stringify(leaders));
+    $("#saveName").placeholder = current.army.title;
     setMsg($("#listMsg"), "");
     render();
   } catch (e) {
@@ -182,11 +191,13 @@ async function read(opts = {}) {
     $("#result").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
   const can = !!(current && current.cached.catalog && current.totals.picked);
-  $("#saveObjBtn").disabled = !can;
+  $("#saveBtn").disabled = !current;
   $("#spawnBtn").disabled = !can;
   $("#savePath").textContent = current ? (current.cached.catalog
-    ? `Saves to ${current.saved_object}. Works with TTS closed: load it in any game from Objects → Saved Objects.`
-    : "Build the Force Org model catalogue on the Data cache page first.") : $("#savePath").textContent;
+    ? `Saves the list, with the leaders you chose, and a Saved Object to ${current.saved_object}. Works with TTS `
+      + "closed: load it in any game from Objects → Saved Objects."
+    : "Saves the list. Build the Force Org model catalogue on the Data cache page to save a Saved Object too.")
+    : $("#savePath").textContent;
 }
 
 function problemsHtml(c) {
@@ -207,7 +218,8 @@ function problemsHtml(c) {
 function badges(u) {
   const out = [];
   if (u.warlord) out.push(`<span class="badge good">Warlord</span>`);
-  if (u.role === "leader" || u.role === "support") {
+  if (u.can_lead.length) {}   // the Leads picker says it
+  else if (u.role === "leader" || u.role === "support") {
     const to = u.attached_to != null ? current.units[u.attached_to] : null;
     out.push(`<span class="badge">${esc(u.role[0].toUpperCase() + u.role.slice(1))}${to ? " → " + esc(to.name) : ""}</span>`);
   } else if (u.role === "bodyguard") out.push(`<span class="badge">Bodyguard</span>`);
@@ -252,6 +264,17 @@ function groupRow(u, g, gi) {
     <td>${pick}</td></tr>`;
 }
 
+function leadsHtml(u) {
+  const options = [...u.can_lead];
+  if (u.attached_to != null && !options.includes(u.attached_to)) options.push(u.attached_to);
+  if (!options.length) return "";
+  const label = i => `${esc(current.units[i].name)}${current.units[i].n > 1 ? " #" + current.units[i].n : ""}`;
+  return `<label class="leads">Leads <select class="leadSel" data-u="${u.i}">
+    <option value="">no unit</option>
+    ${options.map(i => `<option value="${i}" ${u.attached_to === i ? "selected" : ""}>${label(i)}</option>`).join("")}
+  </select></label>`;
+}
+
 function unitHtml(u) {
   const d = u.datasheet;
   const sheet = !current.cached.datasheets ? ""
@@ -261,7 +284,7 @@ function unitHtml(u) {
         <button class="fit pinSheet">Use it</button><button class="fit cancelSheet">Cancel</button></div></div>`;
   return `<div class="unit">
     <div class="unit-head"><h3>${esc(u.name)}${u.n > 1 ? ` <span class="muted">#${u.n}</span>` : ""}</h3>
-      ${u.points ? `<span class="muted">${u.points} pts</span>` : ""} ${badges(u)}
+      ${u.points ? `<span class="muted">${u.points} pts</span>` : ""} ${badges(u)} ${leadsHtml(u)}
       ${u.card ? `<a href="#" class="sheetBtn" data-u="${u.i}">Datasheet</a>` : ""}</div>
     ${sheet}
     <table><tr><th>Model</th><th>Gear</th><th>Base</th><th>TTS model</th></tr>
@@ -275,7 +298,7 @@ function render() {
                  ["Disposition", a.disposition], ["Size", a.battle_size], ["Points", a.points], ["Format", a.format]]
     .filter(([, v]) => v).map(([k, v]) => `<span>${k} <b>${esc(v)}</b></span>`).join("");
   $("#result").innerHTML = `
-    <section class="army-head"><h2>${esc(a.title)}</h2><div class="facts">${facts}</div>${problemsHtml(c)}
+    <section class="army-head"><div class="step">2 · Review</div><h2>${esc(a.title)}</h2><div class="facts">${facts}</div>${problemsHtml(c)}
       <div class="row tight"><button class="fit" id="staticBtn"
         title="Re-pick every model, favouring static meshes (they preview here and load faster)">Prefer static models</button></div>
     </section>
@@ -336,6 +359,11 @@ $("#result").addEventListener("click", async e => {
 });
 
 $("#result").addEventListener("change", async e => {
+  if (e.target.matches(".leadSel")) {
+    const u = current.units[e.target.dataset.u];
+    leaders[u.key] = e.target.value === "" ? null : current.units[+e.target.value].key;
+    return read();
+  }
   if (!e.target.matches(".pickSel") || !e.target.value) return;
   const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
   if (e.target.value === "@browse") {
@@ -378,11 +406,17 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------------------------------------------------------------- output
-$("#saveObjBtn").addEventListener("click", async () => {
+$("#saveBtn").addEventListener("click", async () => {
   setMsg($("#saveMsg"), "Saving…");
   try {
-    const r = await api("/api/scribe/save", {text: $("#listText").value, name: $("#saveName").value, facing: +$("#spF").value});
-    setMsg($("#saveMsg"), `Saved ${r.models} models to ${r.path}`, "ok");
+    const r = await api("/api/scribe/save", {text: $("#listText").value, name: $("#saveName").value, leaders,
+                                             facing: +$("#spF").value});
+    $("#saveName").value = r.saved;
+    store.set("scribe.name", r.saved);
+    loadSaved();
+    setMsg($("#saveMsg"), r.path ? `Saved "${r.saved}": the list, and ${r.models} models to ${r.path}`
+                                 : `Saved the list "${r.saved}".`, "ok");
+    if (current) current.army.title = r.saved;
   } catch (e) { setMsg($("#saveMsg"), e.message, "error"); }
 });
 
@@ -390,7 +424,7 @@ $("#spawnBtn").addEventListener("click", async () => {
   setMsg($("#spawnMsg"), "Spawning… models can take a while to load in TTS.");
   $("#spawnBtn").disabled = true;
   try {
-    const r = await api("/api/scribe/spawn", {text: $("#listText").value, name: $("#saveName").value, x: +$("#spX").value, z: +$("#spZ").value,
+    const r = await api("/api/scribe/spawn", {text: $("#listText").value, name: $("#saveName").value, leaders, x: +$("#spX").value, z: +$("#spZ").value,
                                               width: +$("#spW").value, facing: +$("#spF").value});
     setMsg($("#spawnMsg"), [`Spawned ${r.spawned} models.`, ...r.notes].join(" "), "ok");
   } catch (e) { setMsg($("#spawnMsg"), e.message, "error"); }
@@ -401,24 +435,17 @@ $("#spawnBtn").addEventListener("click", async () => {
 async function loadSaved() {
   try {
     const names = await api("/api/lists");
-    $("#savedLists").innerHTML = `<option value="">Pick a saved list…</option>` +
+    $("#savedLists").innerHTML = `<option value="">Open a saved list…</option>` +
       names.map(n => `<option>${esc(n)}</option>`).join("");
   } catch {}
 }
 $("#savedLists").addEventListener("change", async e => {
   if (!e.target.value) return;
-  $("#listText").value = (await api(`/api/list?name=${encodeURIComponent(e.target.value)}`)).text;
+  const saved = await api(`/api/list?name=${encodeURIComponent(e.target.value)}`);
+  $("#listText").value = saved.text;
+  leaders = saved.leaders || {};
   $("#saveName").value = e.target.value;
   read();
-});
-$("#saveListBtn").addEventListener("click", async () => {
-  try {
-    const r = await api("/api/lists", {name: $("#saveName").value || current?.army.title || "", text: $("#listText").value});
-    $("#saveName").value = r.saved;
-    loadSaved();
-    await read();   // the saved name is the army's name in TTS
-    setMsg($("#listMsg"), `Saved as ${r.saved}`, "ok");
-  } catch (e) { setMsg($("#listMsg"), e.message, "error"); }
 });
 $("#readBtn").addEventListener("click", () => read());
 

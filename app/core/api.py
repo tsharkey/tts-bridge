@@ -93,15 +93,12 @@ def saved_lists():
 
 @shared.get("/api/list")
 def saved_list(name: str):
-    return {"text": (lists.LISTS / f"{lists.safe_name(name)}.txt").read_text()}
+    return lists.load(name)
 
 
 @shared.post("/api/lists")
 def save_list(body: dict):
-    lists.LISTS.mkdir(exist_ok=True)
-    name = lists.safe_name(body["name"])
-    (lists.LISTS / f"{name}.txt").write_text(body["text"])
-    return {"saved": name}
+    return {"saved": lists.save(body["name"], body["text"], body.get("leaders"))}
 
 
 @shared.post("/api/parse")
