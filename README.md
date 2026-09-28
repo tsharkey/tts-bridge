@@ -202,8 +202,11 @@ Claude Code or Claude Desktop's chat. Its tools so far:
 - `measure`: the closest base-to-base distance between two units, and optionally how far each is from every
   objective and deployment zone (and whether a base overlaps the objective's terrain area, or every base is wholly
   within the zone).
+- `place_unit`: set a unit up in rows at a spot and facing, from the table or from reserves. It checks first (off
+  the table, overlapping, engagement range, coherency) and only moves with no problems unless forced; it also says
+  which objectives and deployment zone the spot is in. `undo_place` puts units back, the last one first.
 
-Line of sight, threat ranges and placing units are coming. Tools only run while the web app is
+Line of sight and threat ranges are coming. Tools only run while the web app is
 up, and a tool that changes the game only moves objects this project spawned. Like `/api/tts/lua`, the server
 only answers requests from this computer.
 

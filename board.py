@@ -7,7 +7,7 @@ place a unit in formation. Built for planning deployment (see
     python3 board.py dist "<unit A>" "<unit B>"  # closest base-to-base distance, in inches
     python3 board.py place "<unit>" x z [facing] [--cols N] [--y H] [--army TEXT] [--nth N] [--check]
                                                  # move a unit into a block centred on x, z
-    python3 board.py undo                        # put the last placed unit back
+    python3 board.py undo                        # put the last placed unit back (again for the one before)
 
 Coordinates are table inches with 0,0 at the centre: x runs along the 60"
 edge (-30..30), z along the 44" edge (-22..22), y is height. Which side each
@@ -492,78 +492,118 @@ def formation(cx, cz, sizes, facing, cols):
     return out
 
 
-def cmd_place(args):
-    objs = read_objects()
+def plan_place(objs, unit, x, z, facing=None, cols=None, y=DROP_Y, layout=None):
+    """Where a unit (from collect_units(objs)) would stand in rows of `cols`, centred on x, z and
+    facing `facing` (default: as it faces now), and what's wrong with that: off the table,
+    overlapping, within engagement range of an enemy, out of coherency. Also the nearest enemy,
+    the terrain it would touch and, with a layout, the areas and objectives it would overlap and
+    the zones it would be wholly within. `moves` is what apply_place sends to TTS."""
+    if unit["army"] == "untagged":
+        raise UnitError(f'{unit["name"]} has no army tag (army.py: or recreate:), so tts-bridge didn\'t '
+                        "spawn it; it only moves models it spawned.")
     units = collect_units(objs)
-    unit = find_unit(units, args.unit, args.army, args.nth, on_table=not args.from_reserves)
     ms = unit["models"]
-    facing = round(args.facing if args.facing is not None else ms[0]["rot"]) % 360
+    facing = round(facing if facing is not None else ms[0]["rot"]) % 360
 
     def new_foot(o):
         turn = (facing - o["rot"]) % 180
         return foot(o)[::-1] if 45 < turn < 135 else foot(o)
     feet = [new_foot(o) for o in ms]
-    spots = formation(args.x, args.z, feet, facing, args.cols)
-    terrain = collect_terrain(objs)
+    spots = formation(x, z, feet, facing, cols)
+    # the unit where it would stand, as models for the measuring helpers
+    placed = [{**o, "c": [sx, o["c"][1], sz], "s": [f[0], o["s"][1], f[1]]} for o, f, (sx, sz) in zip(ms, feet, spots)]
 
-    problems, notes = [], []
+    problems = []
     mine = {o["guid"] for o in ms}
     others = [o for u in units if u["on_table"] for o in u["models"] if o["guid"] not in mine]
     overlaps, engaged = set(), {}
-    for f, (x, z) in zip(feet, spots):
-        if abs(x) + f[0] / 2 > HALF_X or abs(z) + f[1] / 2 > HALF_Z:
-            problems.append(f"a model at ({x:.1f}, {z:.1f}) would be off the table")
+    for o in placed:
+        (px, _, pz), (w, _, d) = o["c"], o["s"]
+        if abs(px) + w / 2 > HALF_X or abs(pz) + d / 2 > HALF_Z:
+            problems.append(f"a model at ({px:.1f}, {pz:.1f}) would be off the table")
         for q in others:
-            other = unit_name(q)
-            g = gap(x, z, f, q["c"][0], q["c"][2], foot(q))
+            g = model_gap(o, q)
             if g < 0:
-                overlaps.add(other)
+                overlaps.add(unit_name(q))
             elif g < ENGAGEMENT and army_of(q) != unit["army"]:
-                engaged[other] = min(g, engaged.get(other, g))
+                engaged[unit_name(q)] = min(g, engaged.get(unit_name(q), g))
     problems += [f"overlaps a model of {u}" for u in sorted(overlaps)]
     problems += [f"within engagement range of enemy {u} ({g:.1f}\")" for u, g in sorted(engaged.items())]
-    # coherency, edge to edge: every model within 2" of another and within 9" of all of them
-    gaps = [[gap(*spots[i], feet[i], *spots[j], feet[j]) for j in range(len(ms))]
-            for i in range(len(ms))]
-    if len(ms) > 1:
-        loose = max(min(g for j, g in enumerate(row) if j != i) for i, row in enumerate(gaps))
-        if loose > 2.0:
-            problems.append(f"a model would be {loose:.1f}\" from the rest of its unit (coherency is 2\"); "
-                            "place it separately or change --cols")
-        span = max(max(row) for row in gaps)
-        if span > COHERENCY_MAX:
-            problems.append(f"models would be {span:.1f}\" apart, more than 9\" coherency; use more --cols or rows")
+    problems += [p.replace("a model is", "a model would be").replace("models are", "models would be")
+                 + "; place it in more rows or columns" for p in coherency(placed)]
     enemies = [o for o in others if army_of(o) != unit["army"]]
-    if enemies:
-        fake = [{"c": [x, 0, z], "s": [f[0], 0, f[1]]} for f, (x, z) in zip(feet, spots)]
-        notes.append(f"nearest enemy model {closest(fake, enemies):.1f}\" away")
-    inside = sorted({t["name"] for t in terrain for f, (x, z) in zip(feet, spots)
-                     if box_hit(x, z, (f[0] + f[1]) / 4 if t["kind"] == "terrain" else 0.01, t["box"])})
-    if inside:
-        notes.append("touching: " + ", ".join(inside))
-
-    for p in problems:
-        print("PROBLEM:", p)
-    for n in notes:
-        print("note:", n)
-    print(f'{unit["name"]}: {len(ms)} models to ({args.x}, {args.z}) facing {facing}, '
-          f'{len(problems)} problems')
-    if args.check or (problems and not args.force):
-        if problems and not args.check:
-            print("Not moved. Fix the problems, or pass --force to move anyway.")
-        return
-
+    terrain = collect_terrain(objs)
+    touching = sorted({t["name"] for t in terrain for o in placed
+                       if box_hit(o["c"][0], o["c"][2], radius(o) if t["kind"] == "terrain" else 0.01, t["box"])})
+    out = {"unit": unit_ref(unit), "x": x, "z": z, "facing": facing, "problems": problems,
+           "nearest_enemy": round(closest(placed, enemies), 2) if enemies else None, "touching": touching,
+           "positions": [{"guid": o["guid"], "x": round(o["c"][0], 2), "z": round(o["c"][2], 2)} for o in placed]}
+    if layout:
+        areas = [a["id"] for a in layout["areas"] if any(base_gap(o, a["polygon"]) == 0 for o in placed)]
+        out.update(areas=areas, objectives=[ob["id"] for ob in layout["objectives"] if ob["area"] in areas],
+                   zones=[zn["side"] for zn in layout["zones"] if all(base_within(o, zn["polygon"]) for o in placed)])
     # spots are where each base's centre goes; TTS positions the object's pivot, which
-    # can sit off the base centre, so shift by the same offset
-    UNDO_JSON.write_text(json.dumps([[o["guid"], *o["p"], o["rot"]] for o in ms]))
-    moves = []
-    for o, (x, z) in zip(ms, spots):
-        # offset from pivot to base centre, turned by the change in facing
+    # can sit off the base centre, so shift by the same offset, turned by the change in facing
+    out["moves"] = []
+    for o, (sx, sz) in zip(ms, spots):
         t = math.radians(facing - o["rot"])
         ox, oz = o["c"][0] - o["p"][0], o["c"][2] - o["p"][2]
         ox, oz = ox * math.cos(t) + oz * math.sin(t), -ox * math.sin(t) + oz * math.cos(t)
-        moves.append((o["guid"], x - ox, args.y, z - oz, facing))
-    moved = move(moves)
+        out["moves"].append((o["guid"], sx - ox, y, sz - oz, facing))
+    return out
+
+
+UNDO_STEPS = 20
+
+
+def undo_steps():
+    """Placements that can be undone, oldest first: each a list of [guid, x, y, z, facing]."""
+    if not UNDO_JSON.exists():
+        return []
+    steps = json.loads(UNDO_JSON.read_text())
+    if steps and not isinstance(steps[0][0], list):   # files from before undo kept more than one
+        steps = [steps]
+    # files from before undo kept heights hold [guid, x, z, facing]
+    return [[m if len(m) == 5 else [m[0], m[1], DROP_Y, m[2], m[3]] for m in step] for step in steps]
+
+
+def apply_place(unit, plan):
+    """Move the unit as planned, remembering where it was for undo. -> models moved."""
+    steps = undo_steps() + [[[o["guid"], *o["p"], o["rot"]] for o in unit["models"]]]
+    UNDO_JSON.write_text(json.dumps(steps[-UNDO_STEPS:]))
+    return move(plan["moves"])
+
+
+def undo():
+    """Put the last placed unit back. -> (models moved, placements left to undo)."""
+    steps = undo_steps()
+    if not steps:
+        raise UnitError("Nothing to undo.")
+    moved = move(steps.pop())
+    if steps:
+        UNDO_JSON.write_text(json.dumps(steps))
+    else:
+        UNDO_JSON.unlink()
+    return moved, len(steps)
+
+
+def cmd_place(args):
+    objs = read_objects()
+    unit = find_unit(collect_units(objs), args.unit, args.army, args.nth, on_table=not args.from_reserves)
+    plan = plan_place(objs, unit, args.x, args.z, args.facing, args.cols, args.y)
+    for p in plan["problems"]:
+        print("PROBLEM:", p)
+    if plan["nearest_enemy"] is not None:
+        print(f"note: nearest enemy model {plan['nearest_enemy']:.1f}\" away")
+    if plan["touching"]:
+        print("note: touching: " + ", ".join(plan["touching"]))
+    print(f'{unit["name"]}: {len(unit["models"])} models to ({args.x}, {args.z}) facing {plan["facing"]}, '
+          f'{len(plan["problems"])} problems')
+    if args.check or (plan["problems"] and not args.force):
+        if plan["problems"] and not args.check:
+            print("Not moved. Fix the problems, or pass --force to move anyway.")
+        return
+    moved = apply_place(unit, plan)
     print(f"Moved {moved} models. `python3 board.py undo` puts them back.")
 
 
@@ -578,13 +618,8 @@ def move(moves):
 
 
 def cmd_undo(_args):
-    if not UNDO_JSON.exists():
-        sys.exit("Nothing to undo.")
-    moves = json.loads(UNDO_JSON.read_text())
-    # files from before undo kept heights hold [guid, x, z, facing]
-    moves = [m if len(m) == 5 else [m[0], m[1], DROP_Y, m[2], m[3]] for m in moves]
-    print("Moved back", move(moves), "models")
-    UNDO_JSON.unlink()
+    moved, left = undo()
+    print("Moved back", moved, "models" + (f"; {left} more placements to undo" if left else ""))
 
 
 def main():
