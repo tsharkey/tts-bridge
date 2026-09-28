@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layouts · TTS Bridge</title>
+<link rel="stylesheet" href="/shared.css">
+<style>
+  main { max-width: 1500px; padding: 14px 20px; display: grid; grid-template-columns: 270px minmax(0, 1fr) 300px; gap: 16px; }
+  aside section, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+  .list { max-height: calc(100vh - 230px); overflow: auto; margin-top: 8px; }
+  .item { padding: 5px 6px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  .item:hover { background: var(--panel2); }
+  .item.on { background: var(--panel2); outline: 1px solid var(--accent); }
+  .item .sub { display: block; }
+  .badge { font-size: 11px; padding: 0 6px; border-radius: 8px; background: rgba(232,181,62,.15); color: var(--accent); margin-left: 4px; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+  .bar h2 { margin: 0 auto 0 0; font-size: 15px; }
+  canvas#map { width: 100%; display: block; border-radius: 6px; background: #22261f; }
+  h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 10px 0 4px; }
+  .row { display: flex; gap: 6px; align-items: center; font-size: 13px; padding: 2px 0; }
+  .row .n { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+  label.row { margin: 0; color: var(--text); }
+  .row input[type=checkbox] { margin: 0; padding: 0; flex: none; }
+  .fields label { margin-top: 6px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  pre.log { background: var(--panel2); border: 1px solid var(--line); border-radius: 5px; padding: 6px; font-size: 11px;
+            max-height: 140px; overflow: auto; white-space: pre-wrap; margin: 6px 0; }
+  .diffs { font-size: 11px; color: var(--muted); margin: 0 0 4px 22px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  button.danger { border-color: rgba(255,93,93,.5); color: var(--bad); }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr; } .list { max-height: 260px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="/">TTS Bridge</a> › Layouts</h1>
+  <div class="status"><span class="dot" id="ttsDot"></span><span id="ttsText">Checking TTS…</span></div>
+  <div class="spacer"></div>
+</header>
+
+<main>
+  <aside>
+    <section>
+      <input id="filter" placeholder="Filter: map, deployment, pack…" aria-label="Filter layouts">
+      <div class="sub" id="count" style="margin-top:6px"></div>
+      <div class="list" id="list"></div>
+    </section>
+    <section>
+      <button id="importBtn">Import a new LCT version…</button>
+      <p class="hint">Builds every layout from LCT's cached data aside (run <code>python3 data.py mods lct</code>
+        first for a new LCT version) and shows what would change before anything is written.</p>
+    </section>
+  </aside>
+
+  <div>
+    <div class="bar">
+      <h2 id="title">Pick a layout</h2>
+      <label class="row" id="artToggle" hidden><input type="checkbox" id="art"> LCT's diagram</label>
+      <button id="compare" disabled>Compare with the table</button>
+      <button id="revert" disabled>Revert</button>
+      <button id="save" class="primary" disabled>Save</button>
+    </div>
+    <canvas id="map" width="1200" height="880"></canvas>
+    <p class="hint">Click an area or a feature to select it; drag its corners to reshape it. Save writes
+      <code>layouts/&lt;id&gt;.json</code> in this folder, to commit in a PR, and marks it as edited so an import
+      leaves it alone.</p>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <aside>
+    <div class="panel" id="selection"><div class="sub">Nothing selected.</div></div>
+    <div class="panel" id="side" hidden></div>
+    <div class="panel" id="layoutCard" hidden></div>
+  </aside>
+</main>
+
+<script src="/shared.js"></script>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+const canvas = $("#map"), ctx = canvas.getContext("2d");
+const W = 60, H = 44, HANDLE = 7;
+const CAT = {dense: "#8a6a50", light: "#5f7050", exposed: "#4a4f45"};
+
+let index = null, layout = null, saved = null, sel = null, drag = null, dirty = false;
+let art = null, artUrl = null, checked = null;
+
+const scale = () => canvas.width / W;
+const px = (x, z) => [(x + W / 2) * scale(), (H / 2 - z) * scale()];
+const table = (u, v) => [u / scale() - W / 2, H / 2 - v / scale()];
+
+function fit() {
+  const w = Math.round(canvas.clientWidth * (window.devicePixelRatio || 1));
+  if (w && canvas.width !== w) { canvas.width = w; canvas.height = Math.round(w * H / W); }
+}
+function path(poly) {
+  ctx.beginPath();
+  poly.forEach(([x, z], k) => { const [a, b] = px(x, z); k ? ctx.lineTo(a, b) : ctx.moveTo(a, b); });
+  ctx.closePath();
+}
+function inside([x, z], poly) {
+  let hit = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [x1, z1] = poly[i], [x2, z2] = poly[j];
+    if ((z1 > z) !== (z2 > z) && x < (x2 - x1) * (z - z1) / (z2 - z1) + x1) hit = !hit;
+  }
+  return hit;
+}
+function selected() {
+  if (!sel || !layout) return null;
+  const a = layout.areas[sel.area];
+  return sel.feature === null ? a : a.features[sel.feature];
+}
+
+function draw() {
+  fit();
+  const s = scale();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!layout) return;
+  if (art && $("#art").checked) drawArt(s);
+  ctx.lineWidth = 1;
+  for (let x = -30; x <= 30; x += 6) { ctx.strokeStyle = x === 0 ? "#555c50" : "#33382f"; ctx.beginPath(); ctx.moveTo(...px(x, 22)); ctx.lineTo(...px(x, -22)); ctx.stroke(); }
+  for (let z = -22; z <= 22; z += 2) {
+    if (z % 6 && z) continue;
+    ctx.strokeStyle = z === 0 ? "#555c50" : "#33382f"; ctx.beginPath(); ctx.moveTo(...px(-30, z)); ctx.lineTo(...px(30, z)); ctx.stroke();
+  }
+  for (const zn of layout.zones) {
+    path(zn.polygon); ctx.fillStyle = zn.side === "red" ? "rgba(255,93,93,.13)" : "rgba(74,168,255,.13)"; ctx.fill();
+  }
+  layout.areas.forEach((a, i) => {
+    path(a.polygon); ctx.fillStyle = "rgba(90,98,80,.55)"; ctx.fill();
+    ctx.strokeStyle = sel && sel.area === i && sel.feature === null ? "#fff" : "#7a8270"; ctx.lineWidth = sel && sel.area === i && sel.feature === null ? 2 : 1; ctx.stroke();
+    a.features.forEach((f, k) => {
+      path(f.polygon); ctx.fillStyle = CAT[f.category] || "#666"; ctx.fill();
+      const on = sel && sel.area === i && sel.feature === k;
+      ctx.strokeStyle = on ? "#fff" : "#161814"; ctx.lineWidth = on ? 2 : 1; ctx.stroke();
+    });
+  });
+  ctx.font = `600 ${Math.max(10, 0.4 * s)}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const a of layout.areas) {
+    const xs = a.polygon.map(p => p[0]), zs = a.polygon.map(p => p[1]);
+    const [x, y] = px((Math.min(...xs) + Math.max(...xs)) / 2, Math.max(...zs) - 0.6);
+    ctx.fillStyle = "#c9cfbf"; ctx.fillText(a.id, x, y);
+  }
+  for (const ob of layout.objectives) {
+    const [x, y] = px(ob.x, ob.z);
+    ctx.beginPath(); ctx.arc(x, y, 0.75 * s, 0, 7); ctx.fillStyle = "#e8b53e"; ctx.fill();
+    ctx.fillStyle = "#1b1d19"; ctx.fillText(ob.kind[0].toUpperCase(), x, y);
+  }
+  if (checked) for (const r of checked.pieces) {
+    const [x, y] = px(r.x, r.z);
+    ctx.beginPath(); ctx.arc(x, y, 0.45 * s, 0, 7);
+    ctx.fillStyle = !r.found ? "#9aa1ad" : r.ok ? "#4fc47b" : "#ff5d5d"; ctx.fill();
+    ctx.strokeStyle = "#000"; ctx.lineWidth = 1; ctx.stroke();
+  }
+  const piece = selected();
+  if (piece) for (const [x, z] of piece.polygon) {
+    const [a, b] = px(x, z);
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 1;
+    ctx.fillRect(a - HANDLE / 2, b - HANDLE / 2, HANDLE, HANDLE); ctx.strokeRect(a - HANDLE / 2, b - HANDLE / 2, HANDLE, HANDLE);
+  }
+}
+
+// LCT's layout cards share one template: a portrait card with the 44" x 60" table in this
+// rectangle (fractions of the image), turned so the card's top is the table's +x edge and its
+// left the +z edge (x = 30 - 60v, z = 22 - 44u across the rectangle).
+const ART_BOARD = {left: 113 / 1170, top: 143 / 1512, right: 1060 / 1170, bottom: 1430 / 1512};
+function drawArt(s) {
+  const iw = art.naturalWidth, ih = art.naturalHeight;
+  const x0 = ART_BOARD.left * iw, y0 = ART_BOARD.top * ih;
+  const bw = (ART_BOARD.right - ART_BOARD.left) * iw, bh = (ART_BOARD.bottom - ART_BOARD.top) * ih;
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  // image (ix, iy) -> canvas: cx = 60s * (1 - (iy - y0) / bh), cy = 44s * (ix - x0) / bw
+  ctx.setTransform(0, 44 * s / bw, -60 * s / bh, 0, 60 * s + y0 * 60 * s / bh, -x0 * 44 * s / bw);
+  ctx.drawImage(art, 0, 0);
+  ctx.restore();
+}
+
+function pos(e) {
+  const r = canvas.getBoundingClientRect(), k = canvas.width / r.width;
+  return [(e.clientX - r.left) * k, (e.clientY - r.top) * k];
+}
+canvas.addEventListener("mousedown", e => {
+  if (!layout) return;
+  const [u, v] = pos(e), piece = selected();
+  if (piece) {
+    const k = piece.polygon.findIndex(([x, z]) => { const [a, b] = px(x, z); return Math.abs(a - u) <= HANDLE && Math.abs(b - v) <= HANDLE; });
+    if (k >= 0) { drag = {piece, k}; return; }
+  }
+  const p = table(u, v);
+  let hit = null;
+  layout.areas.forEach((a, i) => a.features.forEach((f, k) => { if (inside(p, f.polygon)) hit = {area: i, feature: k}; }));
+  if (!hit) layout.areas.forEach((a, i) => { if (inside(p, a.polygon)) hit = {area: i, feature: null}; });
+  sel = hit; renderSelection(); draw();
+});
+canvas.addEventListener("mousemove", e => {
+  if (!drag) return;
+  const [x, z] = table(...pos(e));
+  const snap = v => Math.round(v * 20) / 20;   // 0.05"
+  drag.piece.polygon[drag.k] = [snap(Math.max(-30, Math.min(30, x))), snap(Math.max(-22, Math.min(22, z)))];
+  changed(); draw();
+});
+window.addEventListener("mouseup", () => { if (drag) { drag = null; renderSelection(); } });
+
+function changed() { dirty = true; $("#save").disabled = $("#revert").disabled = false; }
+window.addEventListener("beforeunload", e => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+function renderSelection() {
+  const box = $("#selection");
+  if (!sel) { box.innerHTML = `<div class="sub">Nothing selected. Click an area or feature.</div>`; return; }
+  const a = layout.areas[sel.area];
+  if (sel.feature === null) {
+    const obj = layout.objectives.filter(o => o.area === a.id).map(o => o.id);
+    box.innerHTML = `<h2 style="font-size:14px;margin:0">Area ${esc(a.id)}</h2>
+      <div class="sub">${a.polygon.length} corners${obj.length ? ` · objective ${esc(obj.join(", "))}` : ""}</div>
+      <h3>Features</h3>
+      ${a.features.map((f, k) => `<div class="row item" data-f="${k}"><span style="width:10px;height:10px;border-radius:2px;background:${CAT[f.category]}"></span>
+        ${esc(f.id)} ${esc(f.name)}<span class="n">${esc(f.category)} · ${f.height}"</span></div>`).join("") || `<div class="sub">None.</div>`}`;
+    $$("[data-f]", box).forEach(el => el.addEventListener("click", () => { sel = {area: sel.area, feature: +el.dataset.f}; renderSelection(); draw(); }));
+    return;
+  }
+  const f = a.features[sel.feature];
+  box.innerHTML = `<h2 style="font-size:14px;margin:0">Feature ${esc(f.id)} <span class="sub">in area ${esc(a.id)}</span></h2>
+    <div class="fields">
+      <label for="fName">Name</label><input id="fName" value="${esc(f.name)}">
+      <label for="fCat">Category</label>
+      <select id="fCat">${["dense", "light", "exposed"].map(c => `<option ${c === f.category ? "selected" : ""}>${c}</option>`).join("")}</select>
+      <label for="fHeight">Height (inches above the table)</label><input id="fHeight" type="number" step="0.1" min="0.1" value="${f.height}">
+      <label for="fFloors">Floors models can stand on (inches, comma-separated)</label><input id="fFloors" value="${f.floors.join(", ")}">
+    </div>
+    <div class="sub" style="margin-top:6px">${f.polygon.length} corners · <a href="#" id="toArea" style="color:var(--accent)">select its area</a></div>`;
+  $("#fName").addEventListener("input", e => { f.name = e.target.value; changed(); });
+  $("#fCat").addEventListener("change", e => { f.category = e.target.value; changed(); draw(); });
+  $("#fHeight").addEventListener("input", e => { f.height = +e.target.value; changed(); });
+  $("#fFloors").addEventListener("input", e => {
+    f.floors = e.target.value.split(",").map(s => s.trim()).filter(Boolean).map(Number); changed();
+  });
+  $("#toArea").addEventListener("click", e => { e.preventDefault(); sel = {area: sel.area, feature: null}; renderSelection(); draw(); });
+}
+
+function renderLayoutCard() {
+  const card = $("#layoutCard");
+  if (!layout) { card.hidden = true; return; }
+  card.hidden = false;
+  const src = layout.source || {};
+  const probs = index.problems[layout.id] || [];
+  card.innerHTML = `<h3 style="margin-top:0">This layout</h3>
+    <div class="row">Map<span class="n">${esc(layout.map)}</span></div>
+    <div class="row">Deployment<span class="n">${esc(layout.deployment)}</span></div>
+    <div class="row">Terrain pack<span class="n">${esc(layout.pack || "")}</span></div>
+    <div class="row">From LCT<span class="n">${esc((src.lct_updated || "").slice(0, 10))}</span></div>
+    ${src.edited ? `<div class="row">Edited here<span class="n">${esc(src.edited.slice(0, 16).replace("T", " "))}</span></div>` : ""}
+    ${probs.length ? `<h3>When it was built</h3>${probs.map(p => `<div class="sub">${esc(p)}</div>`).join("")}` : ""}
+    <h3>Retire</h3>
+    <button class="danger" id="delete">Delete this layout</button>
+    <div class="sub" style="margin-top:4px">Removes the file; imports won't bring it back.</div>`;
+  $("#delete").addEventListener("click", async () => {
+    if (!confirm(`Delete ${layout.name}? Imports won't bring it back.`)) return;
+    const r = await fetch(`/api/layouts/${layout.id}`, {method: "DELETE"});
+    const d = await r.json();
+    if (!r.ok) return setMsg($("#msg"), d.error, "error");
+    setMsg($("#msg"), `Deleted ${layout.name}.`, "ok");
+    layout = null; dirty = false; sel = null; await loadIndex(); render();
+  });
+}
+
+function renderList() {
+  const q = $("#filter").value.toLowerCase().trim();
+  const rows = index.layouts.filter(lo => !q || lo.name.toLowerCase().includes(q));
+  $("#count").textContent = `${rows.length} of ${index.layouts.length} layouts` + (index.retired.length ? `, ${index.retired.length} retired` : "");
+  $("#list").innerHTML = rows.map(lo => `<div class="item ${layout && lo.id === layout.id ? "on" : ""}" data-id="${lo.id}">
+      ${esc(lo.map)}${lo.edited ? `<span class="badge">edited</span>` : ""}
+      <span class="sub">${esc(lo.deployment)} · ${esc(lo.pack || "")}</span></div>`).join("");
+  $$("#list .item").forEach(el => el.addEventListener("click", () => open(el.dataset.id)));
+}
+
+function render() {
+  $("#title").textContent = layout ? layout.name : "Pick a layout";
+  $("#compare").disabled = !layout;
+  $("#save").disabled = $("#revert").disabled = !dirty;
+  renderList(); renderSelection(); renderLayoutCard(); draw();
+}
+
+async function loadIndex() { index = await api("/api/layouts"); }
+
+async function open(id) {
+  if (dirty && !confirm("Discard your unsaved changes to this layout?")) return;
+  try {
+    saved = await api(`/api/layouts/${id}`);
+    layout = structuredClone(saved); sel = null; dirty = false; checked = null; art = null;
+    $("#artToggle").hidden = true; $("#side").hidden = true;
+    setMsg($("#msg"), "");
+    store.set("layouts.open", id);
+    render();
+    const {url} = await api(`/api/layouts/${id}/art`).catch(() => ({url: null}));
+    if (url && layout && layout.id === id) {
+      const img = new Image();
+      img.onload = () => { art = img; $("#artToggle").hidden = false; draw(); };
+      img.src = url;
+    }
+  } catch (e) { setMsg($("#msg"), e.message, "error"); }
+}
+
+$("#save").addEventListener("click", async () => {
+  try {
+    saved = await api(`/api/layouts/${layout.id}`, layout);
+    layout = structuredClone(saved); dirty = false;
+    setMsg($("#msg"), `Saved layouts/${layout.id}.json.`, "ok");
+    await loadIndex(); render();
+  } catch (e) { setMsg($("#msg"), e.message, "error"); }
+});
+$("#revert").addEventListener("click", () => { layout = structuredClone(saved); dirty = false; sel = null; setMsg($("#msg"), ""); render(); });
+$("#art").addEventListener("change", draw);
+$("#filter").addEventListener("input", renderList);
+window.addEventListener("resize", draw);
+
+$("#compare").addEventListener("click", async () => {
+  const side = $("#side");
+  side.hidden = false; side.innerHTML = `<div class="sub">Reading the table…</div>`;
+  try {
+    checked = await api(`/api/layouts/${layout.id}/check`);
+    const [inches, degrees] = index.tolerance;
+    const bad = checked.pieces.filter(r => r.found && !r.ok), gone = checked.pieces.filter(r => !r.found);
+    side.innerHTML = `<h3 style="margin-top:0">Compared with the table</h3>
+      <div class="row"><span class="ok">●</span> within ${inches}" / ${degrees}°<span class="n">${checked.ok}</span></div>
+      <div class="row"><span class="bad">●</span> further off<span class="n">${bad.length}</span></div>
+      <div class="row"><span class="sub">●</span> not on the table<span class="n">${gone.length}</span></div>
+      ${bad.map(r => `<div class="sub">${esc(r.name)} at (${r.x}, ${r.z}): ${r.position}" off, turned ${r.rotation}°, size ${r.bounds}"</div>`).join("")}
+      ${gone.length === checked.pieces.length ? `<div class="sub">None of it is on the table: is this layout loaded in TTS?</div>` : ""}
+      <div class="sub" style="margin-top:6px">Compares LCT's pieces for this layout with what's on the table.</div>`;
+    draw();
+  } catch (e) { side.innerHTML = `<div class="msg error">${esc(e.message)}</div>`; }
+});
+
+$("#importBtn").addEventListener("click", async () => {
+  try { await api("/api/layouts/import", {}); } catch (e) { setMsg($("#msg"), e.message, "error"); }
+  watchImport();
+});
+async function watchImport() {
+  const side = $("#side");
+  side.hidden = false;
+  const job = await api("/api/layouts/import");
+  if (job.running) {
+    side.innerHTML = `<h3 style="margin-top:0">Importing from LCT…</h3><div class="sub">Building every layout aside; about a minute and a half.</div>
+      <pre class="log">${esc(job.log.slice(-8).join("\n"))}</pre>`;
+    setTimeout(watchImport, 1500);
+    return;
+  }
+  if (job.error) { side.innerHTML = `<h3 style="margin-top:0">Import</h3><div class="msg error">${esc(job.error)}</div>`; return; }
+  const p = job.preview;
+  if (!p) { side.hidden = true; return; }
+  const row = (lo, on, extra = "") => `<label class="row"><input type="checkbox" data-id="${lo.id}" ${on ? "checked" : ""}>${esc(lo.name)}${extra}</label>`;
+  side.innerHTML = `<h3 style="margin-top:0">Import from LCT (updated ${esc((p.source?.lct_updated || "").slice(0, 10))})</h3>
+    <div class="sub">${p.unchanged} unchanged${p.retired.length ? `, ${p.retired.length} retired here (skipped)` : ""}.</div>
+    ${p.added.length ? `<h3>New (${p.added.length})</h3>${p.added.map(lo => row(lo, true)).join("")}` : ""}
+    ${p.changed.length ? `<h3>Changed (${p.changed.length})</h3>${p.changed.map(lo => row(lo, !lo.edited, lo.edited ? `<span class="badge">edited here</span>` : "")
+        + `<div class="diffs">${lo.differences.slice(0, 5).map(esc).join("<br>")}${lo.differences.length > 5 ? `<br>and ${lo.differences.length - 5} more` : ""}</div>`).join("")}` : ""}
+    ${p.removed.length ? `<h3>No longer in LCT (${p.removed.length})</h3>${p.removed.map(lo => row(lo, false, `<span class="badge">remove</span>`)).join("")}` : ""}
+    ${p.added.length + p.changed.length + p.removed.length ? `<button class="primary" id="applyImport" style="margin-top:8px">Write the ticked ones</button>`
+      : `<div class="sub" style="margin-top:6px">Nothing to change: layouts/ matches this LCT version.</div>`}`;
+  $("#applyImport")?.addEventListener("click", async () => {
+    const ids = $$("input[data-id]", side).filter(el => el.checked).map(el => el.dataset.id);
+    try {
+      const done = await api("/api/layouts/import/apply", {ids});
+      setMsg($("#msg"), `Wrote ${done.written.length} layouts, removed ${done.removed.length}.`, "ok");
+      side.hidden = true; await loadIndex(); render();
+    } catch (e) { setMsg($("#msg"), e.message, "error"); }
+  });
+}
+
+(async () => {
+  try {
+    await loadIndex(); render();
+    const last = store.get("layouts.open", "");
+    if (last && index.layouts.some(lo => lo.id === last)) await open(last);
+    const job = await api("/api/layouts/import");
+    if (job.running || job.preview) watchImport();
+  } catch (e) { setMsg($("#msg"), e.message, "error"); }
+})();
+</script>
+</body>
+</html>

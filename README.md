@@ -148,6 +148,21 @@ first when you choose a model in Scribe.
 Each send is saved to `scenes/` (the lists, positions, frame and image) and can be reloaded from the
 **Load a saved scene** menu.
 
+### Layouts
+
+The exact terrain of every LCT layout (`layouts/`), which line of sight, the board view and Claude's tools use.
+Pick one to see its terrain areas, features and objectives on a 60" × 44" grid, over LCT's diagram of the map
+when LCT is loaded in TTS.
+
+- **Fix a piece:** click a feature to change its category (dense, light, exposed), height or floors, or drag
+  the corners of a feature or area. **Save** checks it against the format and writes `layouts/<id>.json`, to
+  commit in a PR. A layout saved here is marked as edited, and an import leaves it alone.
+- **Compare with the table:** with that layout loaded in TTS, each piece is marked green when the table has it
+  within 0.25" and 2°, red when it's further off, and grey when it isn't there.
+- **Import a new LCT version:** after `python3 data.py mods lct`, builds every layout aside and lists what's new,
+  changed (with what changed) and gone from LCT. Nothing is written until you tick what to take.
+- **Delete** a layout LCT no longer uses; imports won't bring it back.
+
 ### Data cache
 
 Shows what's in the local data cache: where the datasheets came from, which version, when they were fetched, and
@@ -200,6 +215,8 @@ updates (with TTS closed; needs `requirements-dev.txt` for LCT's asset bundles):
 python3 data.py mods lct                   # read LCT's layouts from its mod file
 python3 layouts.py build --download        # rebuild layouts/, fetching any terrain mesh TTS hasn't downloaded
 python3 layouts.py check                   # with a layout loaded in TTS: compare it with its file
+python3 layouts.py import                  # after `data.py mods lct`: what a new LCT version would change
+python3 layouts.py import --apply          # take the new and changed layouts (not ones edited here)
 ```
 
 **Talk to TTS directly:**

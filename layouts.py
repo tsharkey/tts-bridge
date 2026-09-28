@@ -7,6 +7,13 @@ footprints, their categories and heights, objectives and deployment zones.
     python3 layouts.py build       # writes layouts/<id>.json for every matchup layout
     python3 layouts.py build --download   # also fetch meshes TTS hasn't downloaded, into cache/meshes/
     python3 layouts.py check       # compare the layout on the table in TTS with what build made
+    python3 layouts.py list        # the layouts we have ("edited" when changed by hand)
+    python3 layouts.py import      # build a new LCT version aside and show what would change
+    python3 layouts.py import --apply [id ...]   # take the new and changed ones (or just these)
+    python3 layouts.py delete <id> # remove one; import won't bring it back
+
+The layouts tool in the web app (Layouts) does the same, and edits a layout's areas and
+features over a 60" x 44" grid.
 
 Everything comes from files TTS already has, so it runs offline with TTS
 closed: each layout's objects from cache/lct/, and each object's mesh from
@@ -23,6 +30,7 @@ import functools
 import json
 import math
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -479,24 +487,41 @@ def matchup_layouts(cache=None):
 
 
 def build_all(cache=None, out=LAYOUTS, meshes=None, fetch=False, log=print):
+    """Build every layout LCT offers into `out`, except ones saved by hand there ("edited",
+    which are kept as they are) and ones retired there (which aren't brought back)."""
     index, wanted = matchup_layouts(cache)
     meshes = meshes or Meshes(fetch, log)
     out.mkdir(exist_ok=True)
+    before = read_index(out)
+    retired = {r["id"] for r in before.get("retired", [])}
     source = {"from": "lct", "lct_updated": index["source"].get("updated")}
-    listing, all_problems = [], {}
+    listing, all_problems, kept = [], {}, []
     for lo in wanted:
+        if lo["guid"] in retired:
+            continue
+        path = out / f"{lo['guid']}.json"
+        old = json.loads(path.read_text()) if path.exists() else None
+        if old and old.get("source", {}).get("edited"):
+            listing.append(entry(old))
+            kept.append(lo["guid"])
+            continue
         layout = data.read_json(mods.lct_dir(cache) / lo["file"])
         terrain, problems = build(layout, meshes)
         terrain = {**{k: terrain[k] for k in ("version", "id", "name", "map", "deployment", "pack")},
                    "source": source, **{k: terrain[k] for k in ("areas", "objectives", "zones")}}
-        (out / f"{lo['guid']}.json").write_text(dumps(terrain) + "\n")
+        path.write_text(dumps(terrain) + "\n")
         listing.append({"id": lo["guid"], "name": lo["name"], "map": lo["map"], "deployment": lo["deployment"],
                         "pack": lo["pack"], "areas": len(terrain["areas"]), "problems": len(problems)})
         if problems:
             all_problems[lo["guid"]] = problems
     listing.sort(key=lambda lo: (lo["pack"] or "", lo["map"], lo["deployment"] or ""))
-    (out / "index.json").write_text(dumps({"source": source, "layouts": listing, "problems": all_problems}) + "\n")
-    log(f"Wrote {len(listing)} layouts to {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}/")
+    written = {"source": source, "layouts": listing, "problems": all_problems}
+    if before.get("retired"):
+        written["retired"] = before["retired"]
+    (out / "index.json").write_text(dumps(written) + "\n")
+    load_all.cache_clear()
+    log(f"Wrote {len(listing) - len(kept)} layouts to {out.relative_to(ROOT) if out.is_relative_to(ROOT) else out}/"
+        + (f"; kept {len(kept)} edited by hand" if kept else ""))
     if all_problems:
         log(f"{len(all_problems)} have problems (listed in index.json), e.g. {next(iter(all_problems.values()))[0]}")
     return listing
@@ -547,36 +572,65 @@ def box_corners(o, meshes, parents=()):
     return out
 
 
-def compare(layout, live, meshes):
-    """Match a layout's objects to the live table's (same mesh, nearest spot)
-    -> (matched, missing, worst position gap, worst rotation gap, worst bounds gap)."""
-    matched, missing, worst = 0, 0, [0.0, 0.0, 0.0]
+def compare_objects(layout, live, meshes):
+    """Match an LCT layout's objects (cache/lct/) to the live table's (same mesh, nearest spot):
+    one row per object, {"name", "x", "z", "found", "position", "rotation", "bounds"} (the gaps,
+    in inches and degrees; None when it isn't on the table) and "ok" (within TOLERANCE)."""
+    rows = []
     for o, _, _, _ in placed_objects(layout, meshes):
         t, url = o["Transform"], mesh_source(o)[0]
+        row = {"name": o.get("Nickname") or " + ".join(o.get("Tags") or []) or "piece",
+               "x": round(t["posX"], 2), "z": round(t["posZ"], 2), "found": False,
+               "position": None, "rotation": None, "bounds": None, "ok": False}
         near = [lv for lv in live if lv["url"] == url and math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])) < 1]
-        if not near:
-            missing += 1
-            continue
-        lv = min(near, key=lambda lv: math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])))
-        corners = box_corners(o, meshes)
-        xs, zs = [x for x, _, _ in corners], [z for _, _, z in corners]
-        box = ((max(xs) + min(xs)) / 2, (max(zs) + min(zs)) / 2, max(xs) - min(xs), max(zs) - min(zs))
-        worst[0] = max(worst[0], math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])))
-        worst[1] = max(worst[1], angle_gap(lv["r"][1], t["rotY"]))
-        worst[2] = max(worst[2], *(abs(a - b) for a, b in zip(box, (*lv["c"], *lv["s"]))))
-        matched += 1
-    return matched, missing, *worst
+        if near:
+            lv = min(near, key=lambda lv: math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])))
+            corners = box_corners(o, meshes)
+            xs, zs = [x for x, _, _ in corners], [z for _, _, z in corners]
+            box = ((max(xs) + min(xs)) / 2, (max(zs) + min(zs)) / 2, max(xs) - min(xs), max(zs) - min(zs))
+            row.update(found=True, position=round(math.dist((lv["p"][0], lv["p"][2]), (t["posX"], t["posZ"])), 3),
+                       rotation=round(angle_gap(lv["r"][1], t["rotY"]), 2),
+                       bounds=round(max(abs(a - b) for a, b in zip(box, (*lv["c"], *lv["s"]))), 3))
+            row["ok"] = (row["position"] <= TOLERANCE[0] and row["rotation"] <= TOLERANCE[1]
+                         and row["bounds"] <= TOLERANCE[0])
+        rows.append(row)
+    return rows
+
+
+TOLERANCE = (0.25, 2.0)   # inches, degrees: how far the table may be from a layout's geometry
+
+
+def compare(layout, live, meshes):
+    """-> (matched, missing, worst position gap, worst rotation gap, worst bounds gap)."""
+    rows = compare_objects(layout, live, meshes)
+    found = [r for r in rows if r["found"]]
+    return (len(found), len(rows) - len(found), *(max((r[k] for r in found), default=0.0)
+                                                  for k in ("position", "rotation", "bounds")))
+
+
+def read_live():
+    """What compare_objects needs of every custom object on the table (TTS must be running)."""
+    import tts_bridge
+    raw = tts_bridge.run_lua(READ_LUA, timeout=30)
+    if raw is None:
+        sys.exit("Couldn't read the table.")
+    live = json.loads(raw) if isinstance(raw, str) else raw
+    return list(live.values()) if isinstance(live, dict) else live
+
+
+def check_layout(layout_id, cache=None, log=print):
+    """compare_objects for one of layouts/ against the live table."""
+    lct = data.read_json(mods.lct_dir(cache) / "layouts" / f"{layout_id}.json")
+    if not lct:
+        raise data.DataError(f"LCT's objects for {layout_id} aren't cached. Run `python3 data.py mods lct`.")
+    return compare_objects(lct, read_live(), Meshes(log=log))
 
 
 def check(log=print):
     """Which built layout is on the table, and how closely build's geometry matches it."""
     import tts_bridge
     tts_bridge.start_listener()
-    raw = tts_bridge.run_lua(READ_LUA, timeout=30)
-    if raw is None:
-        sys.exit("Couldn't read the table.")
-    live = json.loads(raw) if isinstance(raw, str) else raw
-    live = list(live.values()) if isinstance(live, dict) else live
+    live = read_live()
     urls = {lv["url"] for lv in live}
     meshes = Meshes()
     best = None
@@ -590,13 +644,14 @@ def check(log=print):
     if not best or not best[1][0]:
         sys.exit("No LCT layout on the table.")
     lo, (matched, missing, pos, rot, bounds) = best
-    ok = not missing and pos <= 0.25 and rot <= 2 and bounds <= 0.25
+    ok = not missing and pos <= TOLERANCE[0] and rot <= TOLERANCE[1] and bounds <= TOLERANCE[0]
     log(f"{lo['name']} ({lo['id']}): {matched} objects matched, {missing} not on the table")
     log(f"  worst gaps: position {pos:.2f}\", rotation {rot:.1f}°, bounds {bounds:.2f}\"  ->  {'OK' if ok else 'CHECK'}")
     return ok
 
 
-def load(layout_id, folder=LAYOUTS):
+def load(layout_id, folder=None):
+    folder = folder or LAYOUTS
     return json.loads((folder / f"{layout_id}.json").read_text())
 
 
@@ -629,15 +684,280 @@ def identify(terrain, candidates=None, near=1.0, enough=0.7):
     return best
 
 
+# --------------------------------------------------------------------------
+# Managing layouts/ (the layouts tool, app/tools/layouts/, and `layouts.py list|import|delete`).
+# A layout saved by hand is marked "edited" in its source, and import leaves it alone unless
+# asked; a deleted one is listed as retired in index.json, so import doesn't bring it back.
+
+STAGING = data.CACHE / "layouts-import"
+
+
+def read_index(folder=None):
+    folder = folder or LAYOUTS
+    return json.loads((folder / "index.json").read_text()) if (folder / "index.json").exists() else \
+        {"source": None, "layouts": [], "problems": {}}
+
+
+def write_index(index, folder=None):
+    folder = folder or LAYOUTS
+    index["layouts"].sort(key=lambda lo: (lo["pack"] or "", lo["map"], lo["deployment"] or ""))
+    (folder / "index.json").write_text(dumps(index) + "\n")
+    load_all.cache_clear()
+
+
+def entry(layout):
+    return {"id": layout["id"], "name": layout["name"], "map": layout["map"], "deployment": layout["deployment"],
+            "pack": layout["pack"], "areas": len(layout["areas"]), "problems": 0,
+            **({"edited": layout["source"]["edited"]} if layout.get("source", {}).get("edited") else {})}
+
+
+def polygon_problems(poly, what):
+    out = []
+    if len(poly) < 3 or poly[0] == poly[-1]:
+        out.append(f"{what}: needs 3 or more corners, without repeating the first")
+    elif signed_area(poly) <= 0:
+        out.append(f"{what}: corners should run counter-clockwise seen from above (or it crosses itself)")
+    if any(abs(x) > HALF_X or abs(z) > HALF_Z for x, z in poly):
+        out.append(f"{what}: goes off the table")
+    edges = list(zip(poly, poly[1:] + poly[:1]))
+    for i, (a, b) in enumerate(edges):
+        for c, d in edges[i + 2:]:
+            if c != b and d != a and _crosses(a, b, c, d):
+                out.append(f"{what}: its edges cross")
+                return out
+    return out
+
+
+def _crosses(p1, p2, q1, q2):
+    def side(a, b, c):
+        return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    return side(q1, q2, p1) * side(q1, q2, p2) < 0 and side(p1, p2, q1) * side(p1, p2, q2) < 0
+
+
+def problems(layout):
+    """What's wrong with a layout against the format (docs/formats/layout-terrain.md), in words."""
+    out = []
+    ids = [a["id"] for a in layout["areas"]]
+    if not ids:
+        out.append("no terrain areas")
+    if len(ids) != len(set(ids)):
+        out.append("two areas share an id")
+    for a in layout["areas"]:
+        out += polygon_problems(a["polygon"], f"area {a['id']}")
+        for f in a["features"]:
+            what = f"feature {f['id']} ({f.get('name')})"
+            if f.get("category") not in ("dense", "light", "exposed"):
+                out.append(f"{what}: category is dense, light or exposed")
+            out += polygon_problems(f["polygon"], what)
+            if not isinstance(f.get("height"), (int, float)) or f["height"] <= 0:
+                out.append(f"{what}: height must be above 0")
+            elif any(not 0 < h <= f["height"] for h in f.get("floors") or []):
+                out.append(f"{what}: floors must be above 0 and no higher than the feature")
+    kinds = [o["kind"] for o in layout["objectives"]]
+    if kinds.count("home") != 2 or "central" not in kinds:
+        out.append("objectives: needs a home for each side and a central one")
+    for o in layout["objectives"]:
+        if o["area"] is not None and o["area"] not in ids:
+            out.append(f"objective {o['id']}: its area {o['area']} isn't in the layout")
+    if sorted(z["side"] for z in layout["zones"]) != ["blue", "red"]:
+        out.append("zones: needs a red and a blue deployment zone")
+    for z in layout["zones"]:
+        out += polygon_problems(z["polygon"], f"{z['side']} zone")
+    return out
+
+
+def save(layout, folder=None, edited=True):
+    """Write one layout (checked first) and its index entry. edited: mark it as changed by
+    hand, so import leaves it alone. -> the layout as written."""
+    folder = folder or LAYOUTS
+    found = problems(layout)
+    if found:
+        raise ValueError("Not saved: " + "; ".join(found))
+    path = folder / f"{layout['id']}.json"
+    layout = same_numbers({**layout, "version": VERSION}, json.loads(path.read_text()) if path.exists() else None)
+    if edited:
+        layout["source"] = {**(layout.get("source") or {}), "edited": data.now()}
+    (folder / f"{layout['id']}.json").write_text(dumps(layout) + "\n")
+    index = read_index(folder)
+    index["layouts"] = [lo for lo in index["layouts"] if lo["id"] != layout["id"]] + [entry(layout)]
+    index.get("problems", {}).pop(layout["id"], None)
+    write_index(index, folder)
+    return layout
+
+
+def same_numbers(new, old):
+    """A layout that came back through JSON from a browser, with its numbers as the file had
+    them: 4 is 4.0 again, and a value that didn't change keeps its old spelling (-0.0), so a
+    saved edit only shows what was edited in a diff."""
+    if isinstance(new, bool) or new is None:
+        return new
+    if isinstance(new, (int, float)):
+        if isinstance(old, (int, float)) and not isinstance(old, bool) and old == new:
+            return old
+        return new if isinstance(new, float) else float(new)
+    if isinstance(new, dict):
+        return {k: same_numbers(v, old.get(k) if isinstance(old, dict) else None) for k, v in new.items()}
+    if isinstance(new, list):
+        return [same_numbers(v, old[i] if isinstance(old, list) and i < len(old) else None) for i, v in enumerate(new)]
+    return new
+
+
+def delete(layout_id, folder=None):
+    """Remove a layout, and list it as retired so import doesn't bring it back."""
+    folder = folder or LAYOUTS
+    path = folder / f"{layout_id}.json"
+    if not path.exists():
+        raise ValueError(f"No layout {layout_id}.")
+    gone = json.loads(path.read_text())
+    path.unlink()
+    index = read_index(folder)
+    index["layouts"] = [lo for lo in index["layouts"] if lo["id"] != layout_id]
+    index.get("problems", {}).pop(layout_id, None)
+    index["retired"] = [r for r in index.get("retired", []) if r["id"] != layout_id] + \
+        [{"id": layout_id, "name": gone["name"], "retired": data.now()}]
+    write_index(index, folder)
+
+
+def differences(old, new, tolerance=TOLERANCE[0]):
+    """How two versions of a layout differ, in words: areas, features, objectives and zones
+    added, removed or changed (a corner moved more than `tolerance` inches)."""
+    out = []
+
+    def moved(a, b):
+        return len(a) != len(b) or any(math.dist(p, q) > tolerance for p, q in zip(a, b))
+
+    old_areas, new_areas = {a["id"]: a for a in old["areas"]}, {a["id"]: a for a in new["areas"]}
+    out += [f"area {i} added" for i in new_areas.keys() - old_areas.keys()]
+    out += [f"area {i} removed" for i in old_areas.keys() - new_areas.keys()]
+    for i in sorted(old_areas.keys() & new_areas.keys()):
+        a, b = old_areas[i], new_areas[i]
+        if moved(a["polygon"], b["polygon"]):
+            out.append(f"area {i} reshaped")
+        fa, fb = {f["id"]: f for f in a["features"]}, {f["id"]: f for f in b["features"]}
+        out += [f"feature {f} added ({fb[f]['name']})" for f in sorted(fb.keys() - fa.keys())]
+        out += [f"feature {f} removed ({fa[f]['name']})" for f in sorted(fa.keys() - fb.keys())]
+        for f in sorted(fa.keys() & fb.keys()):
+            x, y = fa[f], fb[f]
+            for k in ("name", "category", "height", "floors"):
+                if x.get(k) != y.get(k):
+                    out.append(f"feature {f} {k}: {x.get(k)} -> {y.get(k)}")
+            if moved(x["polygon"], y["polygon"]):
+                out.append(f"feature {f} reshaped")
+    if [(o["id"], o["area"]) for o in old["objectives"]] != [(o["id"], o["area"]) for o in new["objectives"]]:
+        out.append("objectives changed")
+    if any(moved(a["polygon"], b["polygon"]) for a, b in zip(old["zones"], new["zones"])):
+        out.append("deployment zones changed")
+    for k in ("name", "map", "deployment", "pack"):
+        if old.get(k) != new.get(k):
+            out.append(f"{k}: {old.get(k)} -> {new.get(k)}")
+    return out
+
+
+def import_preview(cache=None, folder=None, staging=None, meshes=None, log=print):
+    """Build every layout LCT offers into a staging folder (not layouts/), and say what would
+    change: {"added", "changed" (with their differences; "edited" when changed by hand here),
+    "removed" (ours, no longer in LCT), "unchanged" (a count), "retired" (skipped), "source"}."""
+    folder = folder or LAYOUTS
+    staging = staging or STAGING
+    shutil.rmtree(staging, ignore_errors=True)
+    staging.mkdir(parents=True)
+    build_all(cache, out=staging, meshes=meshes, log=log)
+    ours, theirs = read_index(folder), read_index(staging)
+    retired = {r["id"] for r in ours.get("retired", [])}
+    have = {lo["id"] for lo in ours["layouts"]}
+    out = {"added": [], "changed": [], "removed": [], "unchanged": 0, "retired": [], "source": theirs["source"]}
+    for lo in theirs["layouts"]:
+        if lo["id"] in retired:
+            out["retired"].append({"id": lo["id"], "name": lo["name"]})
+        elif lo["id"] not in have:
+            out["added"].append({"id": lo["id"], "name": lo["name"]})
+        else:
+            old, new = load(lo["id"], folder), load(lo["id"], staging)
+            found = differences(old, new)
+            if found:
+                out["changed"].append({"id": lo["id"], "name": lo["name"], "differences": found,
+                                       "edited": bool(old.get("source", {}).get("edited"))})
+            else:
+                out["unchanged"] += 1
+    offered = {lo["id"] for lo in theirs["layouts"]}
+    out["removed"] = [{"id": lo["id"], "name": lo["name"]} for lo in ours["layouts"] if lo["id"] not in offered]
+    return out
+
+
+def import_apply(ids, folder=None, staging=None):
+    """Take these layouts from the last import_preview's staging folder into layouts/ (added or
+    changed ones), or remove them (ones LCT no longer has). -> {"written", "removed"}."""
+    folder = folder or LAYOUTS
+    staging = staging or STAGING
+    theirs = read_index(staging)
+    if not theirs["layouts"]:
+        raise ValueError("Nothing staged. Preview the import first.")
+    offered = {lo["id"]: lo for lo in theirs["layouts"]}
+    index, written, removed = read_index(folder), [], []
+    for i in ids:
+        if i in offered:
+            shutil.copyfile(staging / f"{i}.json", folder / f"{i}.json")
+            index["layouts"] = [lo for lo in index["layouts"] if lo["id"] != i] + [offered[i]]
+            if i in theirs.get("problems", {}):
+                index.setdefault("problems", {})[i] = theirs["problems"][i]
+            else:
+                index.get("problems", {}).pop(i, None)
+            written.append(i)
+        elif (folder / f"{i}.json").exists():
+            (folder / f"{i}.json").unlink()
+            index["layouts"] = [lo for lo in index["layouts"] if lo["id"] != i]
+            removed.append(i)
+    if written:
+        index["source"] = theirs["source"]
+    write_index(index, folder)
+    return {"written": written, "removed": removed}
+
+
+def print_preview(found, log=print):
+    log(f"From LCT updated {(found['source'] or {}).get('lct_updated')}: {len(found['added'])} new, "
+        f"{len(found['changed'])} changed, {len(found['removed'])} gone from LCT, {found['unchanged']} unchanged"
+        + (f", {len(found['retired'])} retired here (skipped)" if found["retired"] else ""))
+    for lo in found["added"]:
+        log(f"  + {lo['id']}  {lo['name']}")
+    for lo in found["changed"]:
+        log(f"  ~ {lo['id']}  {lo['name']}" + ("  (edited here: kept unless named)" if lo["edited"] else ""))
+        for d in lo["differences"][:6]:
+            log(f"      {d}")
+    for lo in found["removed"]:
+        log(f"  - {lo['id']}  {lo['name']}  (not in LCT any more: kept unless named)")
+
+
 def main(args):
     try:
         if args[:1] == ["build"]:
             build_all(fetch="--download" in args)
         elif args[:1] == ["check"]:
             check()
+        elif args[:1] == ["list"]:
+            index = read_index()
+            for lo in index["layouts"]:
+                print(f"{lo['id']}  {lo['name']}" + ("  (edited)" if lo.get("edited") else ""))
+            print(f"{len(index['layouts'])} layouts" + (f", {len(index.get('retired', []))} retired"
+                                                         if index.get("retired") else ""))
+        elif args[:1] == ["import"]:
+            found = import_preview(log=lambda *a: None)
+            print_preview(found)
+            named = [a for a in args[1:] if not a.startswith("--")]
+            if "--apply" in args:
+                # new and changed ones LCT has, except those edited here; those gone from LCT only when named
+                ids = named or [lo["id"] for lo in found["added"]] + \
+                    [lo["id"] for lo in found["changed"] if not lo["edited"]]
+                done = import_apply(ids)
+                print(f"Wrote {len(done['written'])}, removed {len(done['removed'])}.")
+            elif found["added"] or found["changed"] or found["removed"]:
+                print("Nothing written. `python3 layouts.py import --apply` takes the new and changed ones "
+                      "(or name ids after --apply).")
+        elif args[:1] == ["delete"] and len(args) == 2:
+            delete(args[1])
+            print(f"Deleted {args[1]}; import won't bring it back.")
         else:
             print(__doc__)
-    except data.DataError as e:
+    except (data.DataError, ValueError) as e:
         sys.exit(str(e))
 
 

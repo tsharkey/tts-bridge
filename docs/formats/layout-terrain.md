@@ -20,7 +20,8 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
   "id": "0c4960",                   // LCT's layout card GUID (the file is layouts/<id>.json)
   "name": "TnH vs TnH 2 - Dawn of War - BTTF",
   "map": "TnH vs TnH 2", "deployment": "Dawn of War", "pack": "BTTF",   // as in cache/lct/index.json
-  "source": {"from": "lct", "lct_updated": "2026-09-17T16:29:16+00:00"},   // which LCT version it came from
+  "source": {"from": "lct", "lct_updated": "2026-09-17T16:29:16+00:00",   // which LCT version it came from
+             "edited": "2026-09-28T01:49:46+00:00"},   // only when saved by hand (the layouts tool): imports leave it alone
   "areas": [
     {
       "id": "A1",                   // unique in the file; objectives refer to it
@@ -48,6 +49,11 @@ axis-aligned boxes `board.py` gets from TTS's `getBounds()`.
   ]
 }
 ```
+
+`layouts/index.json` lists every file (`id`, `name`, `map`, `deployment`, `pack`, `areas`, `problems`, and `edited`
+when saved by hand), the LCT version they came from (`source`), what the build noticed per layout (`problems`), and
+`retired`: layouts deleted with the layouts tool or `layouts.py delete` (`[{"id", "name", "retired"}]`), which
+imports skip. `layouts.problems(layout)` checks a layout against the rules below.
 
 ## Invariants
 
