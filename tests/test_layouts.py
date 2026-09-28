@@ -259,5 +259,10 @@ def test_the_table_meshes_pick_the_terrain_pack(tmp_path):
 
 
 def test_board_reads_meshes_for_identify():
-    objs = [{"mesh": "http://example.test/a.obj"}, {"mesh": None}, {}]
+    """Only terrain on the table counts: not a pack parked beside it, loose pieces or models."""
+    def piece(guid, x, mesh, locked=True):
+        return {"guid": guid, "tag": "Custom_Model", "name": "Ruin", "head": "", "notes": "", "tags": [],
+                "locked": locked, "rot": 0, "p": [x, 1, 0], "c": [x, 2, 0], "s": [4, 2, 3], "mesh": mesh}
+    objs = [piece("a1", 0, "http://example.test/a.obj"), piece("b1", 45, "http://example.test/b.obj"),
+            piece("c1", 5, "http://example.test/c.obj", locked=False), piece("d1", 10, None)]
     assert board.table_meshes(objs) == {"http://example.test/a.obj"}

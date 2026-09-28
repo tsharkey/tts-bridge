@@ -399,15 +399,18 @@ def measure(a, b=None, layout=None):
 # --------------------------------------------------------------------------
 # Commands
 
-def table_meshes(objs):
-    """The mesh and asset bundle URLs of the objects on the table."""
-    return {o["mesh"] for o in objs if o.get("mesh")}
+def table_meshes(objs, terrain=None):
+    """The mesh and asset bundle URLs of the terrain on the table: the objects collect_terrain
+    counts (`terrain`, if already collected), so a pack parked off the table can't sway it."""
+    guids = {t["guid"] for t in (terrain if terrain is not None else collect_terrain(objs)) if t["kind"] == "terrain"}
+    return {o["mesh"] for o in objs if o.get("mesh") and o["guid"] in guids}
 
 
 def find_layout(objs, candidates=None):
     """Which of layouts/ (or `candidates`) is on the table: layouts.identify, with the table's
     meshes to tell a map's terrain packs apart."""
-    return layouts.identify(collect_terrain(objs), candidates, meshes=table_meshes(objs))
+    terrain = collect_terrain(objs)
+    return layouts.identify(terrain, candidates, meshes=table_meshes(objs, terrain))
 
 
 def board_state(objs, candidates=None):
@@ -415,7 +418,7 @@ def board_state(objs, candidates=None):
     `layout` is which of layouts/ (or `candidates`) is on the table, or None: its areas,
     objectives and zones are in layouts/<id>.json."""
     terrain, surface = collect_terrain(objs), table_surface(objs)
-    found = layouts.identify(terrain, candidates, meshes=table_meshes(objs))
+    found = layouts.identify(terrain, candidates, meshes=table_meshes(objs, terrain))
     layout = found and found[0]
     return {"surface_y": round(surface, 2),
             "layout": found and {"id": layout["id"], "name": layout["name"], "matched": found[1], "pieces": found[2]},
