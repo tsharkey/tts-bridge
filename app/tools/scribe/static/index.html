@@ -157,6 +157,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "
 let current = null;       // the last read: {army, units, problems, ...}
 let sheetChoices = null;  // datasheets for the picker, per army
 let leaders = {};         // this list's leader choices: {"<leader>#<n>": "<bodyguard>#<n>" or null}
+let savedAs = "";         // the name this list was opened or last saved as: saving over it needs no asking
 try { leaders = JSON.parse(store.get("scribe.leaders") || "{}"); } catch {}
 
 // ---------------------------------------------------------------- reading
@@ -393,8 +394,18 @@ document.addEventListener("keydown", e => {
 $("#saveBtn").addEventListener("click", async () => {
   setMsg($("#saveMsg"), "Saving…");
   try {
-    const r = await api("/api/scribe/save", {text: $("#listText").value, name: $("#saveName").value, leaders,
-                                             facing: +$("#spF").value});
+    const body = {text: $("#listText").value, name: $("#saveName").value, leaders, facing: +$("#spF").value,
+                  overwrite: !!savedAs && $("#saveName").value.trim() === savedAs};
+    let r = await api("/api/scribe/save", body);
+    if (r.exists) {
+      if (!confirm(`There's already a ${r.exists.join(" and a ")} called "${r.name}". Replace ${r.exists.length > 1 ? "them" : "it"}?`)) {
+        setMsg($("#saveMsg"), "Not saved. Change the name to keep both.");
+        return;
+      }
+      r = await api("/api/scribe/save", {...body, overwrite: true});
+    }
+    savedAs = r.saved;
+    store.set("scribe.savedAs", savedAs);
     $("#saveName").value = r.saved;
     store.set("scribe.name", r.saved);
     loadSaved();
@@ -418,6 +429,8 @@ $("#savedLists").addEventListener("change", async e => {
   $("#listText").value = saved.text;
   leaders = saved.leaders || {};
   $("#saveName").value = e.target.value;
+  savedAs = e.target.value;
+  store.set("scribe.savedAs", savedAs);
   read();
 });
 $("#readBtn").addEventListener("click", () => read());
@@ -426,6 +439,7 @@ $("#saveName").addEventListener("change", () => { if (current) read(); });
 
 $("#listText").value = store.get("scribe.text");
 $("#saveName").value = store.get("scribe.name") || "";
+savedAs = store.get("scribe.savedAs") || "";
 loadSaved();
 if ($("#listText").value.trim()) read();
 </script>

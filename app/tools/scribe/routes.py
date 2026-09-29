@@ -153,11 +153,17 @@ def pin_datasheet(body: dict):
 @router.post("/api/scribe/save")
 def save(body: dict):
     """Save the list (with its leader choices) and, once the model catalogue is
-    built, a Saved Object of the same name."""
+    built, a Saved Object of the same name. When that name's list or Saved Object
+    is already there, nothing is saved unless "overwrite" is true: -> {"exists"}."""
     mappings = army.load_mappings()
     parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"))
-    name = lists.save(body.get("name") or parsed["title"], body["text"], body.get("leaders") or {})
+    name = lists.list_name(body.get("name") or parsed["title"])
     parsed["title"] = name
+    there = [what for what, path in (("list", lists.LISTS / f"{name}.txt"), ("Saved Object", army.saved_object_path(parsed)))
+             if path.exists()]
+    if there and not body.get("overwrite"):
+        return {"exists": there, "name": name}
+    lists.save(name, body["text"], body.get("leaders") or {})
     if not catalog:
         return {"saved": name, "path": None, "models": 0}
     save_mappings(mappings)

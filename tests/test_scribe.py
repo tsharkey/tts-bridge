@@ -224,3 +224,14 @@ def test_saved_name_is_the_army_name(client, paths):
     assert json.loads(path.read_text())["ObjectStates"][0]["GMNotes"] == "army.py:Friday Tau"
     v = client.post("/api/scribe/read", json={"text": TOURNAMENT, "name": "Friday Tau"}).json()
     assert v["army"]["title"] == "Friday Tau" and v["saved_object"].endswith("Friday Tau.json")
+
+
+def test_saving_over_a_list_asks_first(client, paths):
+    first = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Friday"}).json()
+    assert first["saved"] == "Friday"
+    other = (FIXTURES / "plus_format_tau.txt").read_text()
+    again = client.post("/api/scribe/save", json={"text": other, "name": "Friday"}).json()
+    assert again == {"exists": ["list", "Saved Object"], "name": "Friday"}
+    assert (paths / "lists" / "Friday.txt").read_text() == TOURNAMENT          # nothing was replaced
+    done = client.post("/api/scribe/save", json={"text": other, "name": "Friday", "overwrite": True}).json()
+    assert done["saved"] == "Friday" and (paths / "lists" / "Friday.txt").read_text() == other
