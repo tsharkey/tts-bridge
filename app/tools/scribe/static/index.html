@@ -20,6 +20,9 @@
   .problems.ok { border-color: var(--ok); }
   .problems ul { margin: 4px 0 0; padding-left: 18px; }
   .unit { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel); }
+  .attached { border-left: 3px solid var(--accent); padding: 4px 0 2px 10px; margin-bottom: 14px; }
+  .attached-head { font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+  .attached .unit { margin-bottom: 6px; }
   .unit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
   .unit-head h3 { margin: 0; font-size: 15px; }
   .leads { font-size: 12px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
@@ -287,7 +290,22 @@ function render() {
         title="Re-pick every model, favouring static meshes (they preview here and load faster)">Prefer static models</button></div>
     </section>
     <datalist id="sheetList"></datalist>
-    ${c.units.map(unitHtml).join("")}`;
+    ${unitsHtml(c.units)}`;
+}
+
+// Units in list order, each leader framed with the unit it leads (leaders first, as the GW app
+// lists an attached unit), where the bodyguard's own place in the list is.
+function unitsHtml(units) {
+  const led = i => units.filter(u => u.attached_to === i);
+  const out = [];
+  for (const u of units) {
+    if (u.attached_to != null && units[u.attached_to]) continue;   // drawn with its bodyguard
+    const leaders = led(u.i);
+    if (!leaders.length) { out.push(unitHtml(u)); continue; }
+    out.push(`<div class="attached"><div class="attached-head">${leaders.map(l => esc(l.name)).join(" and ")}
+      leading ${esc(u.name)}${u.n > 1 ? ` #${u.n}` : ""}</div>${[...leaders, u].map(unitHtml).join("")}</div>`);
+  }
+  return out.join("");
 }
 
 // ---------------------------------------------------------------- fixing
