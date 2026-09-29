@@ -119,8 +119,9 @@ print(ttsbRefresh({color = "Green"}))   -- cleared: nothing to refresh
     fill = int(drawn[0].split()[1])
     assert drawn[0] == f"fill {fill} outline 1 seen {' '.join(seen)}" and fill > 20   # a see-through fill too
     told = [line for line in out if line.startswith("told")]
-    assert told == [f"told Green: tts-bridge: line of sight: it sees {len(seen)} enemy models "
-                    f"({sum(s.endswith(f'{overlays.COLOURS['full'][1]:.2f}') for s in seen)} fully)."] * 2
+    full = ":%.2f" % overlays.COLOURS["full"][1]
+    fully = sum(s.endswith(full) for s in seen)
+    assert told == [f"told Green: tts-bridge: line of sight: it sees {len(seen)} enemy models ({fully} fully)."] * 2
     assert out[-1] == "0"
 
 
