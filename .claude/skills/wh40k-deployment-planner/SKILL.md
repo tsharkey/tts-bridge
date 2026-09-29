@@ -40,6 +40,9 @@ wrong map makes every recommendation wrong.
 
 Read what you can from the table yourself (§2) before asking for it: `board.py summary`
 gives the units and terrain; the mission, lists and battle formations still come from the user.
+The game is the source of truth, and the user moves models between your turns: read the table
+fresh (`board.py summary`, or the `board_summary` tool) before every recommendation or decision,
+never from an earlier read.
 
 ---
 

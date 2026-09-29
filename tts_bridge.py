@@ -249,9 +249,11 @@ def run_lua(script: str, timeout=10):
 
 
 def lua_str(s: str) -> str:
-    """Quote a Python string as a Lua long-bracket literal."""
+    """Quote a Python string as a Lua long-bracket literal: at the first level whose closing
+    bracket doesn't appear in it, counting its last characters with that bracket ("[Unit]"
+    can't be [[...]], whose "]]]" would close a character early)."""
     level = 0
-    while f"]{'=' * level}]" in s:
+    while f"]{'=' * level}]" in s + f"]{'=' * level}":
         level += 1
     eq = "=" * level
     return f"[{eq}[\n{s}]{eq}]"

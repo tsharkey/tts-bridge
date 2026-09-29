@@ -49,6 +49,7 @@ GAP = 0.4          # space between bases in a placed block
 DROP_Y = 1.6       # drop height onto the table; raise it with --y for upper floors
 LINK = 2.0         # same-named models within this (edge to edge) are one unit: coherency distance
 MAX_TERRAIN = 40   # anything wider than this is the table or mat, not terrain
+TERRAIN_NOTES = "tts-bridge:terrain:"   # terrain.NOTES: the terrain object's GM Notes, + its layout
 IGNORE_TAGS = {"Card", "Deck", "Tile", "Hand", "Dice", "Chip", "Bag", "Infinite", "Calculator",
                "Notecard", "Tablet", "Counter", "Fog", "FogOfWar", "Surface", "Clock"}
 
@@ -255,8 +256,8 @@ def collect_terrain(objs):
     surface = table_surface(objs)
     out = []
     for o in objs:
-        if unit_name(o) or o["tag"] in IGNORE_TAGS or not on_table(o):
-            continue
+        if unit_name(o) or o["tag"] in IGNORE_TAGS or not on_table(o) or (o.get("notes") or "").startswith("tts-bridge:"):
+            continue   # (tts-bridge's own helpers under the table: overlays, terrain)
         sx, sy, sz = o["s"]
         if max(sx, sz) < 0.5 or (o["tag"] != "Scripting" and max(sx, sz) > MAX_TERRAIN):
             continue
@@ -406,6 +407,16 @@ def table_meshes(objs, terrain=None):
     return {o["mesh"] for o in objs if o.get("mesh") and o["guid"] in guids}
 
 
+def written_layout(objs, candidates=None):
+    """[the layout] the terrain object on the table holds (terrain.py), when there is one and
+    it's in layouts/ (or `candidates`); else `candidates`. The game says which layout it has."""
+    held = next((o["notes"][len(TERRAIN_NOTES):] for o in objs if (o.get("notes") or "").startswith(TERRAIN_NOTES)), None)
+    if held is None:
+        return candidates
+    found = [lo for lo in (layouts.load_all() if candidates is None else candidates) if lo["id"] == held]
+    return found or candidates
+
+
 def find_layout(objs, candidates=None):
     """Which of layouts/ (or `candidates`) is on the table: layouts.identify, with the table's
     meshes to tell a map's terrain packs apart."""
@@ -418,7 +429,7 @@ def board_state(objs, candidates=None):
     `layout` is which of layouts/ (or `candidates`) is on the table, or None: its areas,
     objectives and zones are in layouts/<id>.json."""
     terrain, surface = collect_terrain(objs), table_surface(objs)
-    found = layouts.identify(terrain, candidates, meshes=table_meshes(objs, terrain))
+    found = layouts.identify(terrain, written_layout(objs, candidates), meshes=table_meshes(objs, terrain))
     layout = found and found[0]
     return {"surface_y": round(surface, 2),
             "layout": found and {"id": layout["id"], "name": layout["name"], "matched": found[1], "pieces": found[2]},

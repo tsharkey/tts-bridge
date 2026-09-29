@@ -2,9 +2,10 @@
 working without TTS), and for the units the page selects: line of sight (los.py), threat bands
 (threat.py), and the distance and sight between two units.
 
-The page reads the state, then polls GET /api/board/fingerprint (a cheap sum of where the
-armies' models stand) and reads the state again when it changes: TTS sends no event when a
-model moves. Units are picked by their place in the last state read ("i"), with its version
+The page reads the state when it opens and on Refresh. With "Follow the table" ticked (off by
+default: each read runs in TTS, and moving models while it reads makes them stutter) it also
+polls GET /api/board/fingerprint (a cheap sum of where the armies' models stand) and reads the
+state again when it changes: TTS sends no event when a model moves. Units are picked by their place in the last state read ("i"), with its version
 ("v"), so a query can't land on a different unit after a refresh.
 """
 
@@ -13,10 +14,12 @@ import threading
 
 import board
 import los
+import terrain
 import threat
 import tts_bridge
 from app.core import view
 from app.core.api import router as api_router
+from app.core.tts import lock as tts_lock
 from app.mcp_server import reach, table
 
 router = api_router()
@@ -54,6 +57,14 @@ def state(source: str = "live"):
     with last_lock:
         last.update(state=st, source=source, v=last["v"] + 1)
         return {**st, "source": source, "v": last["v"], "fingerprint": mark}
+
+
+@router.post("/api/board/terrain")
+def send_terrain():
+    """Write the layout on the table onto tts-bridge's terrain object, for the models' line of
+    sight in the game (terrain.py)."""
+    with tts_lock:
+        return terrain.send()
 
 
 @router.get("/api/board/fingerprint")

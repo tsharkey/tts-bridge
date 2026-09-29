@@ -6,6 +6,7 @@ Start Menu object's own functions, exactly like clicking its buttons.
 import json
 import time
 
+import terrain
 import tts_bridge as tts
 from app.core.tts import lock as tts_lock
 
@@ -126,5 +127,9 @@ def lct_setup(red, blue, layout):
         guid, name = card.split("|", 1)
         tts.run_lua(f'local c = getObjectFromGUID("{guid}") c.call("loadMap", {{c, "Red", false}}) return 1')
         time.sleep(2.5)  # terrain spawns ~0.5s after the wipe; zones and objectives just after
-    return {"loaded": name, "matchup": matchup["label"],
+        try:   # the terrain the models' line of sight works from (terrain.py)
+            written = terrain.send()["name"]
+        except (ValueError, SystemExit) as e:
+            written = f"not written: {e}"
+    return {"loaded": name, "matchup": matchup["label"], "terrain": written,
             "red_mission": matchup["red_mission"], "blue_mission": matchup["blue_mission"]}

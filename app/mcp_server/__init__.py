@@ -24,7 +24,9 @@ MODULES = [status, table, placing, sight, reach, overlay, shared]
 INSTRUCTIONS = """Tools for a Warhammer 40,000 game in Tabletop Simulator (TTS), through the
 tts-bridge hub running on this computer. Coordinates are table inches, 0,0 at the centre, x along
 the 60" edge (-30..30), z along the 44" edge (-22..22); facing in degrees, 0 = +z, 90 = +x.
-Call status first if a tool says TTS isn't reachable. Use line_of_sight for what a unit can see
+Call status first if a tool says TTS isn't reachable. The game is the source of truth and players
+move models between your calls: call board_summary for the table as it is now before every
+recommendation or decision, never from an earlier read. Use line_of_sight for what a unit can see
 rather than judging it from board_summary's footprints; it works in 2D from the layout's terrain, so
 mention that when a call is close."""
 

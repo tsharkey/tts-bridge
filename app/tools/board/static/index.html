@@ -12,6 +12,8 @@
   .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; font-size: 13px; }
   .bar select { width: auto; }
   .bar .when { color: var(--muted); font-size: 12px; }
+  .bar .follow { display: inline-flex; gap: 4px; align-items: center; margin: 0; white-space: nowrap; }
+  .bar .follow input { width: auto; margin: 0; }
   aside section { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
   aside h2 { font-size: 14px; margin: 0 0 6px; }
   aside h3 { font-size: 12px; color: var(--muted); font-weight: 500; margin: 10px 0 4px; }
@@ -45,6 +47,9 @@
         <option value="file">Saved board.json</option>
       </select>
       <button id="refresh">Refresh</button>
+      <label class="follow" title="Read the table again whenever models move. Each read runs in TTS and can make moving models stutter.">
+        <input type="checkbox" id="follow"> Follow the table</label>
+      <button id="sendTerrain" title="Put this layout's terrain on the TTS table, for the models' Line of sight">Send terrain to TTS</button>
       <span class="when" id="when"></span>
     </div>
     <div class="board-wrap"><canvas id="board" width="1200" height="880"></canvas></div>
@@ -429,10 +434,14 @@ async function load() {
   }
 }
 
-// TTS sends nothing when a model moves: poll a cheap fingerprint of where the armies stand.
+// TTS sends nothing when a model moves. Only when asked ("Follow the table"): poll a cheap
+// fingerprint of where the armies stand, and read the table again when it changes. Each read
+// runs in TTS, so it's off by default: moving models while it reads makes them stutter.
 let mark = null;
+$("#follow").checked = store.get("board.follow") === "1";
+$("#follow").addEventListener("change", e => store.set("board.follow", e.target.checked ? "1" : ""));
 async function watch() {
-  if ($("#source").value !== "live" || document.hidden || loading || !st) return;
+  if (!$("#follow").checked || $("#source").value !== "live" || document.hidden || loading || !st) return;
   try {
     const f = (await api("/api/board/fingerprint")).fingerprint;
     if (f !== mark) await load();
@@ -443,6 +452,12 @@ setInterval(watch, 1500);
 $("#source").value = store.get("board.source", "live");
 $("#source").addEventListener("change", e => { store.set("board.source", e.target.value); sel = other = null; selKey = otherKey = null; load(); });
 $("#refresh").addEventListener("click", load);
+$("#sendTerrain").addEventListener("click", async () => {
+  try {
+    const r = await api("/api/board/terrain", {});
+    $("#when").textContent = `${r.name}: terrain on the table`;
+  } catch (e) { $("#when").textContent = e.message; }
+});
 window.addEventListener("resize", draw);
 render();
 load();

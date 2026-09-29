@@ -16,7 +16,8 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
 | `board.py` | Reads the table as units and terrain, measures between units, places a unit in formation. |
 | `los.py` | Line of sight from layout terrain, in 2D and offline: model to model, unit to unit (Hidden, Plunging Fire), and the table a model can see. |
 | `threat.py` | How far a unit reaches from its datasheet: Move, Advance, Charge and weapon ranges from base edges, and what it can do to a unit at a distance. |
-| `overlays.py` | Draws line of sight and threat ranges on the TTS table as vector lines, on a helper object it spawns (never Global's lines). |
+| `overlays.py` | The hub's drawings on the TTS table (Claude's line of sight, threat ranges and highlights) as vector lines, on a helper object it spawns (never Global's lines). |
+| `terrain.py` | Writes the layout's terrain onto a tts-bridge object on the table, whose script works out line of sight in the game (a Lua copy of `los.py`, kept in step by tests). |
 | `recreate.py` | Rebuilds a board state from a scene (unit positions per army). |
 | `app/server.py` | The hub: mounts the shared routes and each tool (`TOOLS`), serves the homepage. |
 | `app/core/` | Shared by every tool: TTS access, its lock and the event stream (`tts.py`), LCT setup, lists and model picks, the API error handling (`api.py`). |
@@ -57,6 +58,10 @@ The command-line tools use only the standard library; FastAPI, `numpy` and `open
   to distance for untagged models. Don't put other data in `tts-bridge:` tags without adding it here.
 - **Write tooltip names to `Nickname`, never `Name`**, which is the TTS object type. Build spawned objects with
   `army.model_objects` (or `tooltips.describe`) so the `[<unit>]` line and tooltip stay consistent.
+- **The game is the source of truth.** In-game features (threat rings, line of sight, the datasheet window) run in
+  the game's own scripts, from what's on the table. The hub reads the table and acts only when asked: by a page, by
+  Claude, or by a script in the game asking for something only it has (like the layout's terrain). It doesn't drive
+  scripts or redraw things on its own.
 - **Our script on a model is appended, never replacing its own** (`sheetviewer.attach`), and our screen UI is added
   beside the table's (`UI.getXmlTable` + insert), never replacing it: LCT and other mods have their own.
 - **Coordinates are table inches**, 0,0 at the centre, x along the 60" edge (−30…30), z along the 44" edge
