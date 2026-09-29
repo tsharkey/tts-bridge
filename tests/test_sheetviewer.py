@@ -38,10 +38,18 @@ function self.setVectorLines(lines)
                                                       lines[1].points[1][2], strokes, top) or ""))
 end
 function self.call(fn, params) _G[fn](params) end
-function getObjects() return {self} end
+local objects = {self}
+function getObjects() return objects end
+-- the terrain object (terrain.py), once the hub has put it on the table
+local terrain = {getVar = function(k) if k == "TTSB_TERRAIN_VERSION" then return 1 end end,
+                 call = function(fn, p) note("terrain", fn .. ":" .. (p.guid or "-") .. ":" .. (p.color or "-")) end}
+Player = {Green = {seated = true}}
+function broadcastToColor(text, color) note("told " .. color, text) end
 self.menus = {}
 function self.addContextMenuItem(label, fn) note("menu", label); self.menus[label] = fn end
-function sendExternalMessage(t) note("external", t.ttsBridge .. ":" .. t.guid .. ":" .. t.show .. ":" .. t.color) end
+function sendExternalMessage(t)
+  note("external", t.ttsBridge .. ":" .. (t.guid or "-") .. ":" .. (t.show or "-") .. ":" .. t.color)
+end
 local vars = {}
 Global = {getVar = function(k) return vars[k] end, setVar = function(k, v) vars[k] = v end}
 local xml = {{tag = "Panel", attributes = {id = "lctStartMenu"}}}
@@ -64,7 +72,10 @@ self.menus["Datasheet"]("Red")
 self.menus["Threat range on/off"]()     -- on
 self.menus["Threat range on/off"]()     -- off
 self.menus["Threat range on/off"]()     -- on again: Clear overlays turns it off
-self.menus["Show line of sight"]("Green")
+self.menus["Line of sight"]("Green")          -- no terrain on the table yet: the hub's asked for it
+table.insert(objects, terrain)
+self.menus["Line of sight"]("Green")          -- the terrain object works it out, in the game
+self.menus["Refresh line of sight"]("Green")
 self.menus["Clear overlays"]("Green")
 ttsBridgeShow({color = "Blue"})
 for _ = 1, 4 do self.menus["Take a wound"]() end   -- never below 0
@@ -117,9 +128,12 @@ def test_script_runs_in_lua(tmp_path):
     drawn = f"rings=2 dashes {math.floor(2 * math.pi * 20.5)} 20.50 y0.05 labels {labels} to 21.20"
     assert [line for line in log if line.startswith("rings=")] == [drawn, "rings=0", drawn, "rings=0"]
     assert "hotkey=Threat range on/off" in log
-    # line of sight and clearing ask the hub to draw (app/mcp_server/overlay.py menu_request)
-    assert [line for line in log if line.startswith("external=")] == [
-        "external=overlay:abc123:los:Green", "external=overlay:abc123:clear:Green"]
+    # line of sight: from the terrain object in the game; the hub's only asked for the terrain
+    # when there's none, and to clear its own lines
+    assert [line for line in log if line.startswith(("external=", "terrain=", "told"))] == [
+        "external=terrain:-:-:Green", "told Green=tts-bridge: getting the terrain from the hub...",
+        "terrain=ttsbLineOfSight:abc123:Green", "terrain=ttsbRefresh:abc123:Green",
+        "terrain=ttsbClear:-:-", "external=overlay:abc123:clear:Green"]
     # the first opening adds the window beside the mod's own UI; the second reuses it
     assert log.count("setXmlTable=2") == 1 and "panels=2" in log and "first panel=lctStartMenu" in log
     assert "value:ttsBridgeSheetTitle=Crisis Sunforge Battlesuits" in log

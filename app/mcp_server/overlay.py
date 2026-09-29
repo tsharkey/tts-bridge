@@ -1,8 +1,6 @@
 """show_on_table and clear_table_overlays: draw a unit's line of sight and threat ranges on the
 TTS table (overlays.py), and remove them. Also what a spawned model's right-click menu asks
-the hub for, and the overlay helper's reports of models moving (menu_request)."""
-
-import threading
+the hub for (menu_request)."""
 
 from mcp.server.mcpserver.exceptions import ToolError
 from typing_extensions import TypedDict   # see table.py
@@ -54,11 +52,11 @@ def show_on_table(unit: str, show: list[str] | None = None, army: str | None = N
     enemy model the unit sees: green fully, yellow partly), "move", "advance", "charge", and
     "shoot: <weapon>" for its ranged weapons (names as threat_ranges lists them); default
     ["los"]. Bands are rings round the whole unit at that reach from its bases' edges. dice:
-    "max" or "avg" for advance and charge. Bands are drawn where the unit is now; the line of
-    sight is redrawn when its models or the enemy's move. Lines stay until
-    clear_table_overlays, anything else is drawn, or a save is loaded; only tts-bridge's own
-    lines are touched. (Players can also ring a single model with its threat range from its
-    right-click menu; clear_table_overlays turns those off too.)"""
+    "max" or "avg" for advance and charge. Drawn where the unit is now: call board_summary and
+    draw again after anything moves. Lines stay until clear_table_overlays, anything else is
+    drawn, or a save is loaded; only tts-bridge's own lines are touched. (Players also draw
+    a model's threat rings and its unit's line of sight from its right-click menu, in the
+    game; clear_table_overlays clears those too.)"""
     if dice not in ("max", "avg"):
         raise ToolError('dice is "max" or "avg".')
     with tts.lock:
@@ -77,39 +75,11 @@ def clear_table_overlays() -> Cleared:
         raise ToolError(str(e)) from None
 
 
-moves = {"next": None, "busy": False}   # the newest report of models moving, and whether one is being drawn
-moves_lock = threading.Lock()
-
-
-def moved(message):
-    """The overlay helper saying models it watches moved: redraw the line of sight
-    (overlays.moved). Reports come faster than a redraw while a model is dragged, so only
-    the newest waiting one is drawn, one at a time."""
-    with moves_lock:
-        moves["next"] = message
-        if moves["busy"]:
-            return
-        moves["busy"] = True
-    while True:
-        with moves_lock:
-            message, moves["next"] = moves["next"], None
-            if message is None:
-                moves["busy"] = False
-                return
-        try:
-            with tts.lock:
-                overlays.moved(message.get("models") or [])
-        except (ValueError, SystemExit):
-            pass   # TTS busy or gone: the next move redraws it
-
-
 def menu_request(message):
     """sendExternalMessage({ttsBridge = "overlay", guid, show = "threat" | "los" | "clear", color})
-    from a spawned model's right-click menu (sheetviewer.py), or {show = "moved", models}
-    from the overlay helper (moved); run by the hub. Problems go to the player who asked,
-    in TTS."""
-    if message.get("show") == "moved":
-        return moved(message)
+    from a spawned model's right-click menu (sheetviewer.py; "threat" and "los" from models
+    spawned before those moved into the game); run by the hub. Problems go to the player who
+    asked, in TTS."""
     try:
         with tts.lock:
             if message.get("show") == "clear":

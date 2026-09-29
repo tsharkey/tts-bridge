@@ -45,6 +45,7 @@
         <option value="file">Saved board.json</option>
       </select>
       <button id="refresh">Refresh</button>
+      <button id="sendTerrain" title="Put this layout's terrain on the TTS table, for the models' Line of sight">Send terrain to TTS</button>
       <span class="when" id="when"></span>
     </div>
     <div class="board-wrap"><canvas id="board" width="1200" height="880"></canvas></div>
@@ -443,6 +444,12 @@ setInterval(watch, 1500);
 $("#source").value = store.get("board.source", "live");
 $("#source").addEventListener("change", e => { store.set("board.source", e.target.value); sel = other = null; selKey = otherKey = null; load(); });
 $("#refresh").addEventListener("click", load);
+$("#sendTerrain").addEventListener("click", async () => {
+  try {
+    const r = await api("/api/board/terrain", {});
+    $("#when").textContent = `${r.name}: terrain on the table`;
+  } catch (e) { $("#when").textContent = e.message; }
+});
 window.addEventListener("resize", draw);
 render();
 load();

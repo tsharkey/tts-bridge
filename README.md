@@ -116,11 +116,13 @@ where it stands; dashed rings are what it reaches after moving. They're part of 
 goes, and they work without the web app. Bind a key to "Threat range on/off" in Options → Game Keys to toggle the
 model under your cursor.
 
-With the web app running, **Show line of sight** draws what the unit can see and a line to each enemy model it sees.
-It's redrawn as you move the unit's models or the enemy's: a few times a second while you drag, and once when you
-let go. **Clear overlays** turns off every model's threat rings and the line of sight. Everyone at the table sees
-the lines. Line of sight is drawn on a hidden helper object, not on the table's own lines, and is gone when a save
-is loaded.
+**Line of sight** shades the area the model's unit can see from where its models are now, outlines it, and draws a
+line to each enemy model it sees: green when fully visible, yellow when partly. It's worked out in the game, from the
+layout's terrain, which tts-bridge puts on the table once: when the hub sets up the LCT table, when you press **Send
+terrain to TTS** on the Board page, or the first time you choose Line of sight (with the web app running). After
+that it works without the web app, and it's saved with the game. Nothing redraws on its own: after moving models,
+choose **Refresh line of sight**. **Clear overlays** turns off every model's threat rings and the line of sight.
+Everyone at the table sees the lines.
 
 - **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
   from **Objects → Saved Objects**.

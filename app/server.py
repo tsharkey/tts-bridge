@@ -24,6 +24,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware  # noqa: E402
 from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
+import terrain  # noqa: E402
 import tts_bridge as tts  # noqa: E402
 from app import mcp_server  # noqa: E402
 from app.mcp_server import overlay  # noqa: E402
@@ -65,13 +66,16 @@ def create_app(hosts=None):
 
     @contextlib.asynccontextmanager
     async def lifespan(app):
-        # spawned models' right-click "Show line of sight" and "Clear overlays", and the overlay helper (sheetviewer.py, overlays.py)
+        # spawned models' right-click "Clear overlays" (and older models' overlay items), and a
+        # model asking for the terrain its line of sight needs (sheetviewer.py, terrain.py)
         tts.commands["overlay"] = overlay.menu_request
+        tts.commands["terrain"] = terrain.request
         try:
             async with mcp.session_manager.run():
                 yield
         finally:
             tts.commands.pop("overlay", None)
+            tts.commands.pop("terrain", None)
 
     app = FastAPI(title="TTS Bridge", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if hosts:

@@ -7,10 +7,12 @@ scrollable, draggable window with its unit's whole datasheet (tooltips.card_text
 shown only to the player who opened it. **Threat range on/off** (or the hotkey
 of that name) rings the model with how far it moves, advances and charges, from
 its base's edge: lines on the model itself, so they go where it goes, worked out
-when it was spawned (tooltips.reach), with no hub needed. **Show line of sight**
-asks the hub to draw on the table (overlays.py), through
-sendExternalMessage({ttsBridge = "overlay", ...}); **Clear overlays** turns off
-every model's rings and the hub's lines. A model with more
+when it was spawned (tooltips.reach), with no hub needed. **Line of sight** asks
+the terrain object on the table (terrain.py) to draw what the model's unit sees from
+where its models are now, in the game; **Refresh line of sight** draws it again
+after things have moved. With no terrain on the table yet, it asks the hub to put it
+there (sendExternalMessage({ttsBridge = "terrain"})). **Clear overlays** turns off
+every model's rings, the line of sight and the hub's lines. A model with more
 than one wound is named "[<left>/<max>] <name>" (tooltips.py): **Take a wound** and
 **Heal a wound** in its menu, or the hotkeys of those names, count them.
 
@@ -86,13 +88,15 @@ function onLoad(state)
   if TTSB_REACH then
     self.addContextMenuItem("Threat range on/off", function() ttsBridgeThreat({}) end)
   end
-  -- drawn by the tts-bridge hub (overlays.py), when it's running
-  self.addContextMenuItem("Show line of sight", function(color) ttsBridgeOverlay(color, "los") end)
+  -- worked out in the game by the terrain object (terrain.py)
+  self.addContextMenuItem("Line of sight", function(color) ttsBridgeSight(color, "ttsbLineOfSight") end)
+  self.addContextMenuItem("Refresh line of sight", function(color) ttsBridgeSight(color, "ttsbRefresh") end)
   self.addContextMenuItem("Clear overlays", function(color)
     for _, o in ipairs(getObjects()) do
       if o.getVar("TTSB_REACH") then o.call("ttsBridgeThreat", {on = false}) end
+      if o.getVar("TTSB_TERRAIN_VERSION") then o.call("ttsbClear", {}) end
     end
-    ttsBridgeOverlay(color, "clear")
+    ttsBridgeOverlay(color, "clear")   -- the hub's lines (Claude's), when it's running
   end)
   -- the wound tracker, on models named "[<left>/<max>] <name>" (tooltips.py); the menu stays open
   if ttsbWounds() then
@@ -198,6 +202,21 @@ function ttsBridgeThreat(params)
     end
   end
   self.setVectorLines(lines)
+end
+
+-- line of sight, from the terrain object on the table; with none there yet, the hub is
+-- asked to put it there (it's the one that can tell which layout is on the table)
+function ttsBridgeSight(color, fn)
+  for _, o in ipairs(getObjects()) do
+    if o.getVar("TTSB_TERRAIN_VERSION") then
+      o.call(fn, {guid = self.getGUID(), color = color})
+      return
+    end
+  end
+  sendExternalMessage({ttsBridge = "terrain", color = color})
+  if color and Player[color] and Player[color].seated then
+    broadcastToColor("tts-bridge: getting the terrain from the hub...", color, {0.8, 0.85, 0.95})
+  end
 end
 
 function ttsBridgeOverlay(color, show)

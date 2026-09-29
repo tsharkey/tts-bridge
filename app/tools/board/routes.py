@@ -13,10 +13,12 @@ import threading
 
 import board
 import los
+import terrain
 import threat
 import tts_bridge
 from app.core import view
 from app.core.api import router as api_router
+from app.core.tts import lock as tts_lock
 from app.mcp_server import reach, table
 
 router = api_router()
@@ -54,6 +56,14 @@ def state(source: str = "live"):
     with last_lock:
         last.update(state=st, source=source, v=last["v"] + 1)
         return {**st, "source": source, "v": last["v"], "fingerprint": mark}
+
+
+@router.post("/api/board/terrain")
+def send_terrain():
+    """Write the layout on the table onto tts-bridge's terrain object, for the models' line of
+    sight in the game (terrain.py)."""
+    with tts_lock:
+        return terrain.send()
 
 
 @router.get("/api/board/fingerprint")
