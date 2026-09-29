@@ -134,7 +134,10 @@ def convert(path, out):
         parts.append(part)
     if not parts:
         raise ValueError("That asset bundle has no meshes to show.")
-    (out / "parts.json").write_text(json.dumps(parts))
+    # written last, and whole or not at all: it's what says the conversion is done
+    tmp = out / "parts.json.tmp"
+    tmp.write_text(json.dumps(parts))
+    tmp.replace(out / "parts.json")
     return parts
 
 
@@ -144,7 +147,10 @@ def bundle_preview(url):
     out = PREVIEWS / key
     done = out / "parts.json"
     if done.exists():
-        return {"id": key, "parts": json.loads(done.read_text())}
+        try:
+            return {"id": key, "parts": json.loads(done.read_text())}
+        except ValueError:
+            pass   # unreadable: convert it again
     path = layouts.cached_path(url, "bundle")
     if not path.exists():
         try:

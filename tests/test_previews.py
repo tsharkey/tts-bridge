@@ -82,6 +82,9 @@ def test_a_converted_bundle_is_kept(monkeypatch, tmp_path):
     first = previews.bundle_preview("https://steam/x.unity3d")
     assert first == previews.bundle_preview("https://steam/x.unity3d") and len(made) == 1   # converted once
     assert first["id"] == previews.bundle_id("https://steam/x.unity3d")
+    (tmp_path / first["id"] / "parts.json").write_text('[{"mesh": "par')              # cut off part way
+    monkeypatch.setattr(previews, "convert", lambda path, out: made.append(path) or [{"mesh": "part0.bin"}])
+    assert previews.bundle_preview("https://steam/x.unity3d")["parts"] == [{"mesh": "part0.bin"}] and len(made) == 2
 
 
 def test_bundle_routes(monkeypatch, tmp_path):

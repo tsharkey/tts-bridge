@@ -45,6 +45,7 @@ export function modelBrowser(root, options = {}) {
   let opts = {}, tiles = [], selected = null, timer = null, found = [], favourites = [];
   let inTTS = null;   // the last "Find selected in TTS": [{name, matches}], or null
   let counted = "";   // the list's count line, put back after a message from "Find selected in TTS"
+  let asked = 0;      // the latest model or state asked for: an older answer arriving later is dropped
   const liked = m => favourites.some(f => f.pick === m.pick);
 
   const row = (m, i, section) => `<div class="mb-row ${selected && selected.pick === m.pick ? "on" : ""}"
@@ -130,15 +131,19 @@ export function modelBrowser(root, options = {}) {
   }
 
   async function select(m) {
+    const mine = ++asked;
     selected = m;
     root.querySelectorAll(".mb-row.on").forEach(r => r.classList.remove("on"));
     showStar();
     $(".mb-name").textContent = m.name;
     $(".mb-msg").textContent = "";
     $(".mb-states").innerHTML = "";
-    const info = m.preview !== undefined && m.states !== undefined ? m
-      : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
-    if (selected !== m) return;
+    let info;
+    try {
+      info = m.preview !== undefined && m.states !== undefined ? m
+        : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
+    } catch (err) { if (mine === asked) $(".mb-msg").textContent = err.message; return; }
+    if (mine !== asked) return;
     if (info.states) { selected = info; showStar(); }   // the state shown is the one chosen
     showStates(info);
     const status = t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`;
@@ -160,7 +165,12 @@ export function modelBrowser(root, options = {}) {
   $(".mb-states").addEventListener("click", async e => {
     const b = e.target.closest(".mb-state");
     if (!b || b.classList.contains("on")) return;
-    const info = await api(`/api/catalog/entry?pick=${encodeURIComponent(b.dataset.pick)}`);
+    const mine = ++asked;
+    $(".mb-msg").textContent = "";
+    let info;
+    try { info = await api(`/api/catalog/entry?pick=${encodeURIComponent(b.dataset.pick)}`); }
+    catch (err) { if (mine === asked) $(".mb-msg").textContent = err.message; return; }
+    if (mine !== asked) return;
     selected = info;
     $(".mb-name").textContent = info.name;
     showStar();

@@ -793,6 +793,30 @@ class Matcher:
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored
 
+    def favourite_forms(self, g, i, favourites):
+        """The ways entry (or state) `i` of tile `g` is a favourite, as the index part of a
+        pick: itself, when its pick is starred ("<tile>:<index>:<shown>" counts as the entry),
+        else the entry's starred states that are named like it."""
+        entry = int(str(i).split(":")[0])
+        shown = next(n for n, s in states_of(self.catalog[g][entry]) if s is self.catalog[g][entry])
+        mine = str(i) if ":" in str(i) else f"{i}:{shown}"
+        own = {f"{g}:{i}", f"{g}:{mine}"}
+        if own & set(favourites):
+            return [i]
+        if ":" in str(i):
+            return []   # a differently named state stands for itself only
+        return [f"{entry}:{s}" for s in sorted(int(p.split(":")[2]) for p in favourites
+                                               if p.startswith(f"{g}:{entry}:") and p.count(":") == 2
+                                               and int(p.split(":")[2]) != shown and not self.named_apart(g, p))]
+
+    def named_apart(self, g, pick):
+        """Whether a state has a name of its own (it's matched as itself, not through its entry)."""
+        _, i, n = split_pick(pick)
+        entry = self.catalog[g][i]
+        state = (entry.get("States") or {}).get(str(n)) or {}
+        name = (state.get("Nickname") or "").strip()
+        return bool(name) and name != (entry.get("Nickname") or "").strip()
+
     def candidates(self, unit, model, allied, prefer_static=False, favourites=()):
         """The best entries for a model: -> ([(key, tile, index, nickname)], best key). Of
         those whose names match it as well as any, the favourites (picks) come first; only
@@ -806,7 +830,12 @@ class Matcher:
         if not scored:
             return [], None
         best = scored[0][0]
-        liked = [x for x in scored if x[0][0] == best[0] and f"{x[1]}:{x[2]}" in favourites]
+        liked = []
+        for key, g, i, nick in (x for x in scored if x[0][0] == best[0]):
+            # this entry (or state), or a favourite state of the entry that's named like it
+            # (a recolour or pose isn't matched by name, so it's found through its entry)
+            wanted = self.favourite_forms(g, i, favourites)
+            liked += [(key, g, form, nick) for form in wanted]
         if liked:
             return liked[:4], liked[0][0]
         # equally good variants (e.g. two Intercessor sculpts) are all kept

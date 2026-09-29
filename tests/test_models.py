@@ -213,3 +213,19 @@ def test_entry_info_lists_states(client):
     heavy = lists.entry_info(cat, "5e90c0:0:2")
     assert (heavy["name"], heavy["state"], heavy["preview"]["mesh"]) == ("Sternguard Veteran w/ Heavy Bolter", 2, "heavy.obj")
     assert "states" not in lists.entry_info({"5e90c0": [{"Name": "Custom_Model", "Nickname": "X"}]}, "5e90c0:0")
+
+
+def test_a_starred_state_is_picked_through_its_entry(monkeypatch):
+    """A state named like its entry (a recolour, a pose) isn't matched by name, so starring it
+    works through the entry; the shown state's own pick counts as the entry."""
+    cat = {"5e90c0": [sternguard()]}
+    monkeypatch.setitem(army.FACTIONS, "Space Marines", ["5e90c0"])
+    parsed = {"faction": "Space Marines", "sub": None, "title": "Test", "units": [
+        {"name": "Sternguard Veteran Squad", "allied": False, "models": [
+            {"name": "Sternguard Veteran", "wargear": ["Auto-plasma"]}]}]}
+    army.resolve(parsed, cat, {"favorites": ["5e90c0:0:4"]})                 # the recolour
+    assert parsed["units"][0]["models"][0]["pick"] == "5e90c0:0:4"
+    matcher = army.Matcher(cat, parsed)
+    assert matcher.favourite_forms("5e90c0", 0, {"5e90c0:0:1"}) == [0]     # the state it shows: the entry
+    assert matcher.favourite_forms("5e90c0", 0, {"5e90c0:0:2"}) == []      # named apart: matched as itself
+    assert matcher.favourite_forms("5e90c0", "0:2", {"5e90c0:0:2"}) == ["0:2"]
