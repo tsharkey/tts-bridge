@@ -123,3 +123,34 @@ def test_scribe_shows_favourites(client, mappings, monkeypatch):
     farsight = next(u for u in v["units"] if u["name"] == "Commander Farsight")
     assert [f["pick"] for f in farsight["favorites"]] == ["e598e0:4"]
     assert farsight["groups"][0]["picks"][0]["pick"] == "e598e0:4"   # picked because it's a favourite
+
+
+# Finding the models selected in TTS in the catalogue, by the meshes and bundles they use.
+
+def test_find_selected_in_tts(monkeypatch, tmp_path):
+    import tts_bridge
+    from app.core import lists
+    catalog = tmp_path / "catalog"
+    catalog.mkdir()
+    base = {"Name": "Custom_Model", "Nickname": "Base", "CustomMesh": {"MeshURL": "base.obj"}}
+    tiles = {"e598e0": [{**base, "Nickname": "Commander Farsight", "ChildObjects": [{**base, "CustomMesh": {"MeshURL": "farsight.obj"}}]},
+                        {**base, "Nickname": "Crisis Battlesuit", "CustomMesh": {"MeshURL": "crisis.obj"},
+                         "States": {"2": {**base, "CustomAssetbundle": {"AssetbundleURL": "crisis-alt.unity3d"}}}},
+                        {**base, "Nickname": "Pathfinder"}]}
+    (catalog / "e598e0.json").write_text(json.dumps({"tile": "e598e0", "sha1": "x", "objects": tiles["e598e0"]}))
+    monkeypatch.setattr(army, "CATALOG", catalog)
+    # the one sharing the most: the base alone is on Farsight and the Pathfinder, the figure only on Farsight
+    assert [m["pick"] for m in lists.find_by_urls(["base.obj", "farsight.obj"])] == ["e598e0:0"]
+    assert [m["pick"] for m in lists.find_by_urls(["base.obj"])] == ["e598e0:0", "e598e0:1", "e598e0:2"]   # all have it
+    assert [m["pick"] for m in lists.find_by_urls(["crisis-alt.unity3d"])] == ["e598e0:1"]   # another state's bundle
+    assert lists.find_by_urls(["nowhere.obj"]) == []
+    selected = [{"guid": "a1", "name": "[4/4] Commander Farsight", "player": "Red", "urls": ["farsight.obj", "base.obj"]},
+                {"guid": "b2", "name": "Dice", "player": "Red", "urls": {}}]
+    monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: selected)
+    client = TestClient(server.create_app())
+    got = client.get("/api/catalog/selected").json()
+    assert [(o["name"], [m["name"] for m in o["matches"]]) for o in got] == [
+        ("[4/4] Commander Farsight", ["Commander Farsight"]), ("Dice", [])]
+    monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: [])
+    r = client.get("/api/catalog/selected")
+    assert r.status_code == 400 and "Nothing is selected in TTS" in r.json()["error"]

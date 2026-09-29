@@ -183,6 +183,48 @@ def find_models(tiles=None, query="", static_only=False, limit=2000):
     return {"models": out[:limit], "total": len(out)}
 
 
+def object_urls(o):
+    """Every mesh and asset bundle an object's data uses: its own, its attached parts' and its
+    other states'. What a model on the table can be matched to the catalogue by."""
+    out = []
+    for url in ((o.get("CustomMesh") or {}).get("MeshURL"), (o.get("CustomAssetbundle") or {}).get("AssetbundleURL")):
+        if url:
+            out.append(url)
+    for c in (o.get("ChildObjects") or []) + list((o.get("States") or {}).values()):
+        out += object_urls(c)
+    return list(dict.fromkeys(out))
+
+
+_urls = {"stamp": None, "index": None}
+
+
+def url_index(cat):
+    """{url: [picks]} over the catalogue: which entries use each mesh or bundle."""
+    if _urls["stamp"] is not cat:
+        index = {}
+        for g, objs in cat.items():
+            for i, o in enumerate(objs):
+                if o.get("Name") in army.SPAWNABLE:
+                    for url in object_urls(o):
+                        index.setdefault(url, []).append(f"{g}:{i}")
+        _urls.update(stamp=cat, index=index)
+    return _urls["index"]
+
+
+def find_by_urls(urls):
+    """The catalogue entries a model on the table is, from the meshes and bundles it uses: those
+    sharing the most of them, best first. -> [entry_info]."""
+    cat = catalog()
+    if cat is None:
+        raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
+    index, shared = url_index(cat), {}
+    for url in dict.fromkeys(urls):
+        for pick in index.get(url, []):
+            shared[pick] = shared.get(pick, 0) + 1
+    best = max(shared.values(), default=0)
+    return [entry_info(cat, p) for p, n in sorted(shared.items()) if n == best]
+
+
 def unit_summary(parsed):
     seen, out = {}, []
     for u in parsed["units"]:

@@ -149,6 +149,44 @@ def model_preview_file(key: str, name: str):
     return FileResponse(previews.preview_file(key, name))
 
 
+# What each player has selected in TTS, with the meshes and bundles each object uses (its own,
+# its attached parts' and its other states', as lists.object_urls reads them), read-only.
+SELECTED_LUA = """
+local function urls(d, out)
+  if d.CustomMesh and d.CustomMesh.MeshURL and d.CustomMesh.MeshURL ~= "" then table.insert(out, d.CustomMesh.MeshURL) end
+  if d.CustomAssetbundle and d.CustomAssetbundle.AssetbundleURL and d.CustomAssetbundle.AssetbundleURL ~= "" then
+    table.insert(out, d.CustomAssetbundle.AssetbundleURL)
+  end
+  for _, c in ipairs(d.ChildObjects or {}) do urls(c, out) end
+  for _, s in pairs(d.States or {}) do urls(s, out) end
+  return out
+end
+local out = {}
+for _, p in ipairs(Player.getPlayers()) do
+  for _, o in ipairs(p.getSelectedObjects() or {}) do
+    table.insert(out, {guid = o.getGUID(), name = o.getName(), player = p.color, urls = urls(o.getData(), {})})
+  end
+end
+return out
+"""
+
+
+@shared.get("/api/catalog/selected")
+def selected_models():
+    """The models players have selected in TTS, each with the catalogue entries it is (matched
+    by the meshes and bundles it uses, so it needn't have been spawned by tts-bridge)."""
+    with tts.lock:
+        got = tts_bridge.run_lua(SELECTED_LUA, timeout=10)
+    if got is None:
+        raise ValueError("TTS didn't answer. Is a game loaded?")
+    objects = list(got.values()) if isinstance(got, dict) else got or []
+    if not objects:
+        raise ValueError("Nothing is selected in TTS. Click a model there (or drag a box round some), then try again.")
+    return [{"guid": o.get("guid"), "name": o.get("name") or "", "player": o.get("player"),
+             "matches": lists.find_by_urls(list((o.get("urls") or {}).values()) if isinstance(o.get("urls"), dict)
+                                           else o.get("urls") or [])} for o in objects]
+
+
 @shared.get("/api/catalog/entry")
 def model_entry(pick: str):
     cat = lists.catalog()

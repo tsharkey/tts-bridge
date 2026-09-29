@@ -139,7 +139,8 @@ Both remember your choices in `mappings.json`, so the list comes out the same ne
 Every Force Org model, by army (or all of them), searchable by name, with a 3D view. Asset bundle ("animated")
 models are converted for the view the first time you look at one, which takes a few seconds for a big model (it's
 kept in `cache/previews/`); they're shown in their standing pose, and a bundle whose paint TTS keeps in another
-download shows plain grey. ☆ makes a model a **favourite**: when a list is read, a favourite is picked first for a
+download shows plain grey. **Find selected in TTS** finds the models you've selected in TTS (click one, or drag a box
+round several) by the meshes they use, whether or not tts-bridge spawned them. ☆ makes a model a **favourite**: when a list is read, a favourite is picked first for a
 unit of its own army whose models it matches as well as any, and your favourites are listed first when you choose a
 model.
 
