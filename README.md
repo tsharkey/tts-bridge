@@ -104,7 +104,7 @@ model on the unit to fix it (**View** shows it in 3D, **Tooltip** shows what hov
 model's dropdown lists your favourites that fit it and the suggested models; **Browse all models…** opens every
 model of the army, and ☆ makes the current one a favourite.
 
-With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
+With datasheets cached, every model it saves carries its datasheet: hover over it in TTS for its stats,
 base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
 rules, enhancements and keywords. For the whole datasheet, with every rule and weapon keyword explained,
 right-click a model and choose **Datasheet**: a scrollable window opens (drag it by its edges; only you see
@@ -127,12 +127,10 @@ that it works without the web app, and it's saved with the game. Nothing redraws
 choose **Refresh line of sight**. **Clear overlays** turns off every model's threat rings and the line of sight.
 Everyone at the table sees the lines.
 
-- **Save as Saved Object** writes the army to TTS's Saved Objects folder, with TTS closed. In any game, load it
-  from **Objects → Saved Objects**.
-- **Spawn on the table** places it in the running game, top-left corner at x, z (table inches), rows up to the
-  width given, facing the way given.
-
-Both remember your choices in `mappings.json`, so the list comes out the same next time.
+**Save** keeps the list (in `lists/`, with the choices you made for it, like which unit each leader leads) and writes
+the army to TTS's Saved Objects folder under the same name, with TTS closed: in any game, load it from **Objects →
+Saved Objects** and put it where you want it. Its models face the way given by **Facing**. It remembers your model
+choices in `mappings.json`, so the list comes out the same next time.
 
 ### Models
 

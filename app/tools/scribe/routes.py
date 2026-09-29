@@ -1,12 +1,13 @@
 """Scribe's API: read a list into what TTS will get, review it (datasheets,
 models, which unit each leader leads), then save it (the list in lists/ and a
-Saved Object of the same name, no TTS needed) and optionally spawn it (TTS needed).
+Saved Object of the same name, no TTS needed), to load in any game from TTS's Objects
+→ Saved Objects.
 
 Leader choices belong to the list: they're saved beside it (app.core.lists)
 and sent back with every call, not pinned in mappings.json.
 
-Reading doesn't write mappings.json; saving and spawning do, like
-`army.py build`, so the list comes out the same next time.
+Reading doesn't write mappings.json; saving does, like `army.py build`, so the list
+comes out the same next time.
 """
 
 import json
@@ -16,11 +17,9 @@ import bases
 import data
 import datasheets
 import tooltips
-import tts_bridge as tts
 from app.core.api import router as api_router
 from app.core import lists
 from app.core.lists import entry_info
-from app.core.tts import lock as tts_lock
 
 router = api_router()
 
@@ -151,16 +150,6 @@ def pin_datasheet(body: dict):
     return {"pinned": body["key"], "datasheet": sheet["name"]}
 
 
-def ready(body):
-    """Parse for output, pinning every choice as `army.py build` does."""
-    mappings = army.load_mappings()
-    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"))
-    if not catalog:
-        raise ValueError("The Force Org model catalogue isn't built yet. Build it on the Data cache page.")
-    save_mappings(mappings)
-    return parsed, catalog
-
-
 @router.post("/api/scribe/save")
 def save(body: dict):
     """Save the list (with its leader choices) and, once the model catalogue is
@@ -175,19 +164,3 @@ def save(body: dict):
     path = army.build_saved_object(parsed, catalog, facing=float(body.get("facing", 180)))
     return {"saved": name, "path": str(path),
             "models": sum(1 for u in parsed["units"] for m in u["models"] if m.get("pick"))}
-
-
-def locked_lua(code, **kw):
-    # one call at a time, so the header's status check can run in between
-    with tts_lock:
-        return tts.run_lua(code, **kw)
-
-
-@router.post("/api/scribe/spawn")
-def spawn(body: dict):
-    parsed, catalog = ready(body)
-    notes = []
-    guids = army.spawn(parsed, catalog, float(body.get("x", -55)), float(body.get("z", 55)),
-                       float(body.get("width", 110)), float(body.get("facing", 180)),
-                       run_lua=locked_lua, log=notes.append)
-    return {"spawned": len(guids), "notes": notes}

@@ -154,31 +154,6 @@ def test_pick_another_datasheet(client):
     assert client.post("/api/scribe/datasheet", json={"key": "x", "id": "nope"}).status_code == 400
 
 
-def test_spawn(client, monkeypatch):
-    calls = []
-
-    def fake_lua(code, **kw):
-        calls.append(code)
-        if "spawnObjectJSON" in code:
-            return json.dumps([f"g{i:05d}" for i in range(code.count("spawnObjectJSON"))])
-        if "loading_custom" in code:
-            return json.dumps({f"g{i:05d}": [1.5, 1.5] for i in range(100)})
-        return "ok"
-    monkeypatch.setattr(tts_bridge, "run_lua", fake_lua)
-    r = client.post("/api/scribe/spawn", json={"text": TOURNAMENT, "x": -30, "z": 21, "width": 60, "facing": 180})
-    assert r.status_code == 200, r.text
-    assert r.json()["spawned"] == calls[0].count("spawnObjectJSON") > 0
-    assert "setPosition" in calls[-1]
-
-
-def test_spawn_without_tts(client, monkeypatch):
-    def no_tts(*a, **kw):
-        raise SystemExit("TTS isn't accepting commands on port 39999.")
-    monkeypatch.setattr(tts_bridge, "run_lua", no_tts)
-    r = client.post("/api/scribe/spawn", json={"text": TOURNAMENT})
-    assert r.status_code == 503 and "39999" in r.json()["error"]
-
-
 def test_saved_objects_folder(monkeypatch, tmp_path):
     monkeypatch.setenv("TTS_SAVED_OBJECTS", str(tmp_path / "x"))
     assert army.saved_objects_dir() == tmp_path / "x"
