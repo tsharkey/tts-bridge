@@ -16,6 +16,7 @@ every model, so their units are marked "complete": false.
 Matching decisions live in mappings.json. `plan` and `build` pin every choice
 they make there, so a list always comes out the same way; edit an entry to change it.
     "models":  "<faction>|<unit>|<model>|<wargear>" -> ["<tile>:<index>", ...]
+               (or "<tile>:<index>:<state>": one of the entry's other states, split_pick)
     "units":   "<faction>|<unit>" -> [["<model name>", count], ...]
                (model composition for datasheets the parser can't work out)
     "datasheets": "<sub-faction or faction>|<unit>" -> {"id", "name", "catalogue"}
@@ -105,6 +106,50 @@ SPAWNABLE = {"Custom_Model", "Custom_Assetbundle", "Figurine_Custom"}
 # Custom_Model is a plain OBJ mesh (always static); asset bundles are how TTS
 # models get animations and effects.
 STATIC = {"Custom_Model", "Figurine_Custom"}
+
+
+def split_pick(pick):
+    """A catalogue pick, "<tile>:<index>" or "<tile>:<index>:<state>" (one of the entry's
+    states, as TTS numbers them), as (tile, index, state or None)."""
+    parts = pick.split(":")
+    return parts[0], int(parts[1]), int(parts[2]) if len(parts) > 2 else None
+
+
+def looks(o):
+    """What an object looks like, to tell states apart: its meshes, textures, bundles and tint,
+    and its attached parts' (not its other states')."""
+    m, b, c = o.get("CustomMesh") or {}, o.get("CustomAssetbundle") or {}, o.get("ColorDiffuse") or {}
+    return ((m.get("MeshURL"), m.get("DiffuseURL"), b.get("AssetbundleURL"),
+             tuple(round(c.get(k, 1), 2) for k in "rgb")) + tuple(looks(k) for k in o.get("ChildObjects") or []))
+
+
+def states_of(o):
+    """An entry's states as TTS numbers them, the one it shows included: [(number, object)] in
+    order, leaving out any that looks exactly like an earlier one. The one it shows is the
+    number its "States" doesn't list (1, usually)."""
+    others = {int(k): s for k, s in (o.get("States") or {}).items() if str(k).isdigit()}
+    if not others:
+        return [(1, o)]
+    shown = next(n for n in range(1, len(others) + 2) if n not in others)
+    out, seen = [], set()
+    for n, s in sorted({**others, shown: o}.items()):
+        if looks(s) not in seen:
+            seen.add(looks(s))
+            out.append((n, s))
+    return out
+
+
+def pick_object(catalog, pick):
+    """The catalogue object a pick names: the entry as it shows, or one of its other states
+    (with the entry's own transform where the state has none)."""
+    g, i, state = split_pick(pick)
+    o = catalog[g][i]
+    if state is None:
+        return o
+    s = (o.get("States") or {}).get(str(state))
+    if s is None:
+        return o   # the state the entry shows (or one that's gone): the entry
+    return {**s, "Transform": s.get("Transform") or o.get("Transform")}
 
 
 def is_static(o):
@@ -706,14 +751,21 @@ class Matcher:
         # names the catalogue doesn't use, from mappings.json ("Dominion" -> "Battle Sister")
         self.aliases = aliases or {}
         self.free = tokens_of(" ".join(filter(None, [army["sub"], army["faction"]])))
+        # (tile, index, name, tokens, static): each entry, and each of its states named
+        # differently from it (a loadout: "... with Heavy Bolter"), as "<index>:<state>"
         self.entries = []
         for g, objs in catalog.items():
             for i, o in enumerate(objs):
                 nick = (o.get("Nickname") or "").strip()
-                if o.get("Name") in SPAWNABLE and nick:
-                    self.entries.append((g, i, nick, tokens_of(nick)))
+                if o.get("Name") not in SPAWNABLE or not nick:
+                    continue
+                self.entries.append((g, i, nick, tokens_of(nick), is_static(o)))
+                for n, s in states_of(o):
+                    name = (s.get("Nickname") or "").strip()
+                    if s is not o and name and name != nick and s.get("Name") in SPAWNABLE:
+                        self.entries.append((g, f"{i}:{n}", name, tokens_of(name), is_static(s)))
         df = {}
-        for *_, toks in self.entries:
+        for *_, toks, _ in self.entries:
             for t in toks:
                 df[t] = df.get(t, 0) + 1
         n = len(self.entries)
@@ -727,33 +779,49 @@ class Matcher:
         if model["name"] in self.aliases:
             model = {**model, "name": self.aliases[model["name"]]}
         scored = []
-        for g, i, nick, toks in self.entries:
+        for g, i, nick, toks, static in self.entries:
             if not allied and self.scope and g not in self.scope:
                 continue
             coverage, fit = score(toks, model, unit, self.free, self.weight)
             if coverage < 0.5:
                 continue
             rank = scope.index(g) if g in scope else len(scope)
-            static = int(is_static(self.catalog[g][i]))
+            static = int(static)
             key = ((round(coverage, 2), static, -rank, round(fit, 2)) if prefer_static
                    else (round(coverage, 2), -rank, round(fit, 2)))
             scored.append((key, g, i, nick))
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored
 
-    def favourites(self, unit, model, picks):
-        """The favourites among `picks`, best fit for this model first, like
-        ranked() but from any army and however little the names agree."""
-        if model["name"] in self.aliases:
-            model = {**model, "name": self.aliases[model["name"]]}
-        scored = []
-        for g, i, nick, toks in self.entries:
-            if f"{g}:{i}" in picks:
-                coverage, fit = score(toks, model, unit, self.free, self.weight)
-                scored.append(((round(coverage, 2), 0, round(fit, 2)), g, i, nick))
-        return sorted(scored, key=lambda x: x[0], reverse=True)
+    def favourite_forms(self, g, i, favourites):
+        """The ways entry (or state) `i` of tile `g` is a favourite, as the index part of a
+        pick: itself, when its pick is starred ("<tile>:<index>:<shown>" counts as the entry),
+        else the entry's starred states that are named like it."""
+        entry = int(str(i).split(":")[0])
+        shown = next(n for n, s in states_of(self.catalog[g][entry]) if s is self.catalog[g][entry])
+        mine = str(i) if ":" in str(i) else f"{i}:{shown}"
+        own = {f"{g}:{i}", f"{g}:{mine}"}
+        if own & set(favourites):
+            return [i]
+        if ":" in str(i):
+            return []   # a differently named state stands for itself only
+        return [f"{entry}:{s}" for s in sorted(int(p.split(":")[2]) for p in favourites
+                                               if p.startswith(f"{g}:{entry}:") and p.count(":") == 2
+                                               and int(p.split(":")[2]) != shown and not self.named_apart(g, p))]
 
-    def candidates(self, unit, model, allied, prefer_static=False):
+    def named_apart(self, g, pick):
+        """Whether a state has a name of its own (it's matched as itself, not through its entry)."""
+        _, i, n = split_pick(pick)
+        entry = self.catalog[g][i]
+        state = (entry.get("States") or {}).get(str(n)) or {}
+        name = (state.get("Nickname") or "").strip()
+        return bool(name) and name != (entry.get("Nickname") or "").strip()
+
+    def candidates(self, unit, model, allied, prefer_static=False, favourites=()):
+        """The best entries for a model: -> ([(key, tile, index, nickname)], best key). Of
+        those whose names match it as well as any, the favourites (picks) come first; only
+        the army's own plausible matches get that far, so a favourite from another army is
+        never picked."""
         scored = self.ranked(unit, model, allied, prefer_static)
         if not scored and model["name"] != unit["name"]:
             # a champion the catalogue doesn't name ("Disharmonist") still
@@ -762,8 +830,25 @@ class Matcher:
         if not scored:
             return [], None
         best = scored[0][0]
+        liked = []
+        for key, g, i, nick in (x for x in scored if x[0][0] == best[0]):
+            # this entry (or state), or a favourite state of the entry that's named like it
+            # (a recolour or pose isn't matched by name, so it's found through its entry)
+            wanted = self.favourite_forms(g, i, favourites)
+            liked += [(key, g, form, nick) for form in wanted]
+        if liked:
+            return liked[:4], liked[0][0]
         # equally good variants (e.g. two Intercessor sculpts) are all kept
         return [x for x in scored if x[0] == best][:4], best
+
+
+def favourite_picks(mappings):
+    """The models starred as favourites (mappings.json "favorites"), as a set of picks. Older
+    mappings kept them per unit ({"<army>|<unit>": [picks]}); those count too."""
+    favs = mappings.get("favorites") or []
+    if isinstance(favs, dict):
+        return {p for picks in favs.values() for p in picks}
+    return set(favs)
 
 
 def model_key(faction, unit, model):
@@ -772,10 +857,10 @@ def model_key(faction, unit, model):
 
 def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_cache=None):
     """Attach catalogue picks to every model. Returns rows for reporting.
-    repick ignores (and overwrites) this list's existing pins. A unit's
-    favourite figures (mappings.json "favorites") come first, from any army,
-    whatever they're called: of several, the one that fits the model best
-    (name, then wargear) is used. A model the catalogue has no figure
+    repick ignores (and overwrites) this list's existing pins. Favourite
+    models (mappings.json "favorites", favourite_picks) come first among the
+    army's models whose names match as well as any (Matcher.candidates). A
+    model the catalogue has no figure
     for, on a matched datasheet, tries a look-alike's (datasheets.stand_in:
     "Dominion" -> "Battle Sister")."""
     matcher = Matcher(catalog, army, mappings.get("aliases", {}).get(army["faction"]))
@@ -788,27 +873,19 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_ca
         sheet = looks["sheets"].get(u["datasheet"]["id"])
         return datasheets.stand_in(looks["sheets"], sheet, m["sheet_model"]) if sheet else None
     pinned = mappings.setdefault("models", {})
-    favourites = mappings.get("favorites", {})
-    scope = army["sub"] or army["faction"]
+    liked = favourite_picks(mappings)
     rows = []
     redone = set()
     for u in army["units"]:
         variant = {}
-        liked = set(favourites.get(f"{scope}|{u['name']}", []))
         for m in u["models"]:
             key = model_key(army["faction"], u, m)
             if key in pinned and not (repick and key not in redone):
                 picks, how = pinned[key], "pinned"
             else:
                 redone.add(key)
-                cands, best, via = [], None, ""
-                if liked:
-                    fits = matcher.favourites(u, m, liked)
-                    if fits:
-                        best = fits[0][0]
-                        cands, via = [x for x in fits if x[0] == best][:4], " favourite"
-                if not cands:
-                    cands, best = matcher.candidates(u, m, u["allied"], prefer_static)
+                cands, best = matcher.candidates(u, m, u["allied"], prefer_static, liked)
+                via = " favourite" if cands and f"{cands[0][1]}:{cands[0][2]}" in liked else ""
                 if not cands and u.get("datasheet") and m.get("sheet_model"):
                     alt = look_alike(u, m)
                     # the look-alike's own name, and without its loadout ("Battle Sister w/ Special
@@ -830,8 +907,7 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_ca
 
 
 def nickname(catalog, pick):
-    g, i = pick.split(":")
-    return catalog[g][int(i)].get("Nickname", "").strip()
+    return (pick_object(catalog, pick).get("Nickname") or "").strip()
 
 
 def sheet_label(unit):
@@ -933,14 +1009,15 @@ def tag(obj, tags):
 
 def mark(obj, unit_name, model, tags, gm_notes, card=None):
     """Make a catalogue object one of ours: named and described for its model
-    (tooltips.describe), its unit tags, the army tag in GM Notes, and the
-    datasheet viewer (sheetviewer.py). A model with states (recolours, poses)
+    (tooltips.describe), its unit tags, the army tag in GM Notes, the datasheet
+    viewer (sheetviewer.py), and TTS's Measure Movement on. A model with states (recolours, poses)
     keeps only the one showing: TTS puts a state counter in the tooltip that
     reads like the wound count, and can't hide it (pick another look in Scribe)."""
     import sheetviewer
     import tooltips
 
     obj.pop("States", None)
+    obj["MeasureMovement"] = True   # TTS shows how far it's moved while it's dragged
     tooltips.describe(obj, unit_name, model)
     tag(obj, tags)
     obj["GMNotes"] = gm_notes
@@ -965,8 +1042,7 @@ def model_objects(army, catalog):
         for m in u["models"]:
             if not m["pick"]:
                 continue
-            g, i = m["pick"].split(":")
-            o = copy.deepcopy(catalog[g][int(i)])
+            o = copy.deepcopy(pick_object(catalog, m["pick"]))
             o.pop("GUID", None)
             mark(o, u["name"], m, unit_tags(index, u), f"army.py:{army['title']}", u.get("card"))
             members.append(len(objs))

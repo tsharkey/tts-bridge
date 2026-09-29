@@ -1,10 +1,34 @@
-// A 3D view of a static (OBJ) Force Org model, loaded straight from Steam's CDN.
+// A 3D view of a Force Org model: a static one's OBJ files straight from Steam's CDN, an asset
+// bundle as the hub converts it (/api/catalog/bundle, previews.py: binary meshes and PNGs).
 // Pages that use it need the three.js import map (see tools/scribe/static/index.html).
 //   import {viewer} from "/viewer3d.js";
 //   const v = viewer(canvas);  v.show(entryInfo, status);  // status(text) reports progress; status(null) when shown
 import * as THREE from "three";
 import {OBJLoader} from "three/addons/loaders/OBJLoader.js";
 import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+
+// A converted asset bundle mesh (previews.py): "TTSB", uint32 vertices, uint32 triangles, then
+// float32 x y z and u v per vertex, and uint32 indices per triangle, little-endian.
+async function loadBinary(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.statusText);
+  const buf = await r.arrayBuffer(), dv = new DataView(buf);
+  const n = dv.getUint32(4, true), t = dv.getUint32(8, true);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(buf, 12, n * 3), 3));
+  geometry.setAttribute("uv", new THREE.BufferAttribute(new Float32Array(buf, 12 + n * 12, n * 2), 2));
+  geometry.setIndex(new THREE.BufferAttribute(new Uint32Array(buf, 12 + n * 20, t * 3), 1));
+  geometry.computeVertexNormals();
+  return new THREE.Mesh(geometry);
+}
+
+// An OBJ file without its line elements ("l"), which TTS ignores: three.js draws an object that
+// has any of them entirely as lines, so a base with a few stray edges showed as a wireframe.
+async function loadObj(loader, url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.statusText);
+  return loader.parse((await r.text()).replace(/^l\s.*$/gm, ""));
+}
 
 export function viewer(canvas) {
   let renderer, scene, camera, controls, current = null, token = 0;
@@ -36,7 +60,17 @@ export function viewer(canvas) {
     const mine = ++token;
     if (current) { scene.remove(current); current = null; }
     if (!info) return;
-    if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); return; }
+    if (!info.preview && info.bundle) {
+      status("Reading the asset bundle… the first time can take a few seconds for a big model.");
+      try {
+        const r = await fetch(`/api/catalog/bundle?pick=${encodeURIComponent(info.pick)}`);
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error || r.statusText);
+        info = {...info, preview: body.preview};
+      } catch (e) { if (mine === token) status("Couldn't read this model's asset bundle: " + e.message); return; }
+      if (mine !== token) return;
+    }
+    if (!info.preview) { status(`${info.name} has nothing to preview.`); return; }
     status("Loading model…");
     try {
       const loader = new OBJLoader(), textures = new THREE.TextureLoader();
@@ -48,7 +82,7 @@ export function viewer(canvas) {
         group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
         group.scale.set(...part.scale);
         if (part.mesh) {
-          const mesh = await loader.loadAsync(part.mesh);
+          const mesh = part.mesh.endsWith(".bin") ? await loadBinary(part.mesh) : await loadObj(loader, part.mesh);
           let map = null;
           if (part.diffuse) {
             map = await textures.loadAsync(part.diffuse).catch(() => null);

@@ -98,7 +98,8 @@ def test_leaders_chosen_for_a_list(client, paths):
     # saved with the list (not in mappings.json), and read back with it
     r = client.post("/api/scribe/save", json={"text": text, "name": "Farsight's (test)", "leaders": leaders}).json()
     assert r["saved"] == "Farsight's (test)"
-    assert client.get("/api/list", params={"name": r["saved"]}).json() == {"text": text, "leaders": leaders}
+    assert client.get("/api/list", params={"name": r["saved"]}).json() == {
+        "text": text, "leaders": leaders, "edits": {"cards": {}, "tooltips": {}}}
     assert "leaders" not in json.loads(army.MAPPINGS.read_text())
     # a page that doesn't make the choices (Board replay) keeps them when it saves the list
     client.post("/api/lists", json={"name": r["saved"], "text": text + "\n"})
@@ -152,31 +153,6 @@ def test_pick_another_datasheet(client):
     assert unit(v, "Breacher Team")["datasheet"] == {"id": "t-stealth", "name": "Stealth Battlesuits",
                                                      "catalogue": "Xenos - T'au Empire", "how": "pinned"}
     assert client.post("/api/scribe/datasheet", json={"key": "x", "id": "nope"}).status_code == 400
-
-
-def test_spawn(client, monkeypatch):
-    calls = []
-
-    def fake_lua(code, **kw):
-        calls.append(code)
-        if "spawnObjectJSON" in code:
-            return json.dumps([f"g{i:05d}" for i in range(code.count("spawnObjectJSON"))])
-        if "loading_custom" in code:
-            return json.dumps({f"g{i:05d}": [1.5, 1.5] for i in range(100)})
-        return "ok"
-    monkeypatch.setattr(tts_bridge, "run_lua", fake_lua)
-    r = client.post("/api/scribe/spawn", json={"text": TOURNAMENT, "x": -30, "z": 21, "width": 60, "facing": 180})
-    assert r.status_code == 200, r.text
-    assert r.json()["spawned"] == calls[0].count("spawnObjectJSON") > 0
-    assert "setPosition" in calls[-1]
-
-
-def test_spawn_without_tts(client, monkeypatch):
-    def no_tts(*a, **kw):
-        raise SystemExit("TTS isn't accepting commands on port 39999.")
-    monkeypatch.setattr(tts_bridge, "run_lua", no_tts)
-    r = client.post("/api/scribe/spawn", json={"text": TOURNAMENT})
-    assert r.status_code == 503 and "39999" in r.json()["error"]
 
 
 def test_saved_objects_folder(monkeypatch, tmp_path):
@@ -249,3 +225,38 @@ def test_saved_name_is_the_army_name(client, paths):
     assert json.loads(path.read_text())["ObjectStates"][0]["GMNotes"] == "army.py:Friday Tau"
     v = client.post("/api/scribe/read", json={"text": TOURNAMENT, "name": "Friday Tau"}).json()
     assert v["army"]["title"] == "Friday Tau" and v["saved_object"].endswith("Friday Tau.json")
+
+
+def test_saving_over_a_list_asks_first(client, paths):
+    first = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Friday"}).json()
+    assert first["saved"] == "Friday"
+    other = (FIXTURES / "plus_format_tau.txt").read_text()
+    again = client.post("/api/scribe/save", json={"text": other, "name": "Friday"}).json()
+    assert again == {"exists": ["list", "Saved Object"], "name": "Friday"}
+    assert (paths / "lists" / "Friday.txt").read_text() == TOURNAMENT          # nothing was replaced
+    done = client.post("/api/scribe/save", json={"text": other, "name": "Friday", "overwrite": True}).json()
+    assert done["saved"] == "Friday" and (paths / "lists" / "Friday.txt").read_text() == other
+
+
+def test_edits_to_datasheet_and_tooltip_text(client, paths):
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT}).json()
+    farsight = unit(v, "Commander Farsight")
+    group = farsight["groups"][0]
+    assert not farsight["card_edited"] and not group["tooltip_edited"]
+    edits = {"cards": {farsight["key"]: "[b]My Farsight[/b]"}, "tooltips": {group["tip_key"]: "Hits hard"}}
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT, "edits": edits}).json()
+    farsight = unit(v, "Commander Farsight")
+    assert (farsight["card"], farsight["card_edited"]) == ("[b]My Farsight[/b]", True)
+    assert (farsight["groups"][0]["tooltip"]["text"], farsight["groups"][0]["tooltip_edited"]) == ("Hits hard", True)
+    # saved with the list, and into the Saved Object
+    r = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Edited", "edits": edits}).json()
+    assert client.get("/api/list", params={"name": "Edited"}).json()["edits"] == edits
+    states = json.loads(Path(r["path"]).read_text())["ObjectStates"]
+    model = next(o for o in states if o["Nickname"].endswith("Commander Farsight"))
+    assert model["Description"] == "[Commander Farsight]\nHits hard" and "My Farsight" in model["LuaScript"]
+    # a list saved again from another page keeps its edits; with none, they're gone
+    client.post("/api/lists", json={"name": "Edited", "text": TOURNAMENT})
+    assert client.get("/api/list", params={"name": "Edited"}).json()["edits"] == edits
+    client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Edited", "overwrite": True})
+    assert not (paths / "lists" / "Edited.json").exists()
+

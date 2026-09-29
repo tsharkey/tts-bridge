@@ -11,8 +11,6 @@
   a { color: var(--accent); }
   #listText { min-height: 260px; }
   .row.tight { gap: 6px; margin-top: 8px; }
-  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .grid4 label { margin-top: 4px; }
   .step { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 8px; }
   .army-head h2 { font-size: 18px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 0 0 4px; }
   .facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
@@ -22,6 +20,9 @@
   .problems.ok { border-color: var(--ok); }
   .problems ul { margin: 4px 0 0; padding-left: 18px; }
   .unit { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel); }
+  .attached { border-left: 3px solid var(--accent); padding: 4px 0 2px 10px; margin-bottom: 14px; }
+  .attached-head { font-size: 12px; color: var(--accent); margin-bottom: 6px; }
+  .attached .unit { margin-bottom: 6px; }
   .unit-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
   .unit-head h3 { margin: 0; font-size: 15px; }
   .leads { font-size: 12px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
@@ -61,6 +62,10 @@
   #sheetModal .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
   #sheetModal .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
   #sheetBody { overflow-y: auto; font-size: 13px; line-height: 1.55; }
+  #sheetEditor { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  #sheetEditor[hidden] { display: none; }
+  #sheetText { flex: 1; min-height: 360px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .tipEditor textarea { min-height: 220px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
   #browseModal { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
                  align-items: center; justify-content: center; padding: 16px; }
   #browseModal.on { display: flex; }
@@ -72,7 +77,7 @@
   #pvCanvas { width: 100%; aspect-ratio: 1; background: #0d0e10; border-radius: 6px; display: block; }
   .empty { color: var(--muted); padding: 40px; text-align: center; }
   @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
-  @media (max-width: 640px) { .grid4 { grid-template-columns: 1fr 1fr; } td:nth-child(2) { display: none; } }
+  @media (max-width: 640px) { td:nth-child(2) { display: none; } }
 </style>
 </head>
 <body>
@@ -89,7 +94,8 @@
       <select id="savedLists"><option value="">Open a saved list…</option></select>
       <label for="listText">Or paste a list from the GW app, New Recruit (any export) or a "+++" tournament list</label>
       <textarea id="listText" spellcheck="false"></textarea>
-      <div class="row tight"><button class="primary fit" id="readBtn">Read list</button></div>
+      <div class="row tight"><button class="primary fit" id="readBtn">Read list</button>
+        <button class="fit" id="newBtn" title="Clear the page to start another list">New list</button></div>
       <div class="msg" id="listMsg"></div>
     </section>
 
@@ -103,19 +109,6 @@
       <p class="hint" id="savePath">Saves the list, with the leaders you chose, and a Saved Object of the same name
         (works with TTS closed: load it in any game from Objects → Saved Objects).</p>
       <div class="msg" id="saveMsg"></div>
-    </section>
-
-    <section>
-      <h2>Load onto the table (optional)</h2>
-      <div class="grid4">
-        <div><label for="spX">x</label><input id="spX" type="number" value="-55" step="1"></div>
-        <div><label for="spZ">z</label><input id="spZ" type="number" value="55" step="1"></div>
-        <div><label for="spW">Max width</label><input id="spW" type="number" value="110" step="1"></div>
-      </div>
-      <p class="hint">Top-left corner in table inches (0,0 is the centre; the table runs −30…30 by −22…22). The army is
-        laid out as a compact block no wider than this. The defaults put it off the table's top-left. TTS must be running.</p>
-      <button id="spawnBtn" disabled>Load onto the table</button>
-      <div class="msg" id="spawnMsg"></div>
     </section>
 
   </div>
@@ -135,8 +128,16 @@
 <div id="sheetModal">
   <section class="box">
     <div class="section-head"><h2 id="sheetTitle">Datasheet</h2><button class="fit" id="sheetClose">Close</button></div>
-    <p class="hint" style="margin:0 0 8px">What right-click → Datasheet on this unit's models shows in TTS.</p>
+    <p class="hint" style="margin:0 0 8px">What right-click → Datasheet on this unit's models shows in TTS.
+      <a href="#" id="sheetEditBtn">Edit</a></p>
     <div id="sheetBody" class="tt"></div>
+    <div id="sheetEditor" hidden>
+      <p class="hint" style="margin:0 0 6px">TTS text: [b]bold[/b], [i]italic[/i], [u]underline[/u], [ffcc00]colour[-]. Only this
+        list's copy changes.</p>
+      <textarea id="sheetText" spellcheck="false"></textarea>
+      <div class="row tight"><button class="primary fit" id="sheetSave">Save</button>
+        <button class="fit" id="sheetReset">Back to the datasheet</button><button class="fit" id="sheetCancel">Cancel</button></div>
+    </div>
   </section>
 </div>
 
@@ -172,6 +173,14 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "
 let current = null;       // the last read: {army, units, problems, ...}
 let sheetChoices = null;  // datasheets for the picker, per army
 let leaders = {};         // this list's leader choices: {"<leader>#<n>": "<bodyguard>#<n>" or null}
+let savedAs = "";         // the name this list was opened or last saved as: saving over it needs no asking
+// this list's edits to datasheet and tooltip text: {cards: {"<unit>#<n>": text}, tooltips: {tip key: text}}
+let edits = {cards: {}, tooltips: {}};
+try { edits = {cards: {}, tooltips: {}, ...JSON.parse(store.get("scribe.edits") || "{}")}; } catch {}
+// the list's choices (leaders, edits) as one string with its keys in order, to tell whether
+// they've changed since it was opened or saved ("scribe.savedChoices")
+const choices = () => JSON.stringify({leaders, edits}, (k, v) =>
+  v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort()) : v);
 try { leaders = JSON.parse(store.get("scribe.leaders") || "{}"); } catch {}
 
 // ---------------------------------------------------------------- reading
@@ -179,10 +188,11 @@ async function read(opts = {}) {
   const text = $("#listText").value;
   setMsg($("#listMsg"), "Reading…");
   try {
-    current = await api("/api/scribe/read", {text, name: $("#saveName").value, leaders, ...opts});
+    current = await api("/api/scribe/read", {text, name: $("#saveName").value, leaders, edits, ...opts});
     store.set("scribe.text", text);
     store.set("scribe.name", $("#saveName").value);
     store.set("scribe.leaders", JSON.stringify(leaders));
+    store.set("scribe.edits", JSON.stringify(edits));
     $("#saveName").placeholder = current.army.title;
     setMsg($("#listMsg"), "");
     render();
@@ -191,9 +201,7 @@ async function read(opts = {}) {
     setMsg($("#listMsg"), e.message, "error");
     $("#result").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
   }
-  const can = !!(current && current.cached.catalog && current.totals.picked);
   $("#saveBtn").disabled = !current;
-  $("#spawnBtn").disabled = !can;
   $("#savePath").textContent = current ? (current.cached.catalog
     ? `Saves the list, with the leaders you chose, and a Saved Object to ${current.saved_object}. Works with TTS `
       + "closed: load it in any game from Objects → Saved Objects."
@@ -204,7 +212,7 @@ async function read(opts = {}) {
 function problemsHtml(c) {
   const p = c.problems, items = [];
   if (!c.cached.datasheets) items.push(`No datasheets cached, so units aren't checked against them. <a href="/tools/data/">Fetch them</a>.`);
-  if (!c.cached.catalog) items.push(`No Force Org models cached, so nothing can be spawned yet. <a href="/tools/data/">Build the catalogue</a>.`);
+  if (!c.cached.catalog) items.push(`No Force Org models cached, so the Saved Object can't be made yet. <a href="/tools/data/">Build the catalogue</a>.`);
   if (p.datasheets.length) items.push(`No datasheet for: ${p.datasheets.map(esc).join("; ")}. Pick one on the unit below.`);
   if (p.figures.length) items.push(`No TTS model for: ${p.figures.map(esc).join("; ")}. Pick one below, or they're left out.`);
   if (p.guessed.length) items.push(`The list doesn't say which models are in ${p.guessed.map(esc).join(", ")}; they were filled in from the datasheet. Check them.`);
@@ -245,7 +253,7 @@ function groupRow(u, g, gi) {
   const favs = favourites.length ? `<optgroup label="Favorites">${favourites.map(option).join("")}</optgroup>` : "";
   const suggested = g.options.filter(o => !liked.has(o.pick));
   const star = cur ? `<button class="starBtn ${liked.has(cur.pick) ? "on" : ""}" data-u="${u.i}" data-g="${gi}"
-      title="${liked.has(cur.pick) ? "Remove from" : "Add to"} ${esc(u.name)}'s favourites">${liked.has(cur.pick) ? "★" : "☆"}</button>` : "";
+      title="${liked.has(cur.pick) ? "Remove from favourites" : "Add to favourites: Scribe picks it first wherever it matches"}">${liked.has(cur.pick) ? "★" : "☆"}</button>` : "";
   const pick = !current.cached.catalog ? `<span class="muted">No catalogue</span>`
     : `<div class="pickcell">${star}<select class="pickSel" data-u="${u.i}" data-g="${gi}">
          ${cur ? "" : `<option value="">No match: pick one…</option>`}${favs}
@@ -253,12 +261,13 @@ function groupRow(u, g, gi) {
          <option value="@browse">Browse all models…</option></select>
          ${cur ? `<span class="badge ${cur.static ? "good" : ""}">${cur.static ? "Static" : "Animated"}</span>`
                : `<span class="badge bad">No match</span>`}
-         <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && cur.preview ? "" : "disabled"}
-           title="${cur && cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">View</button></div>`;
+         <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && (cur.preview || cur.bundle) ? "" : "disabled"}
+           title="Preview in 3D">View</button></div>`;
   return `<tr>
     <td>${esc(g.model)} ×${g.count}${g.sheet_model && g.sheet_model.replace(/’/g, "'") !== g.model
       ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}
-      ${g.tooltip ? `<div><a href="#" class="tipBtn" data-u="${u.i}" data-g="${gi}">Tooltip</a></div>` : ""}</td>
+      ${g.tooltip ? `<div><a href="#" class="tipBtn" data-u="${u.i}" data-g="${gi}">Tooltip</a>${g.tooltip_edited
+        ? ' <span class="badge warn">edited</span>' : ""}</div>` : ""}</td>
     <td class="gear">${g.gear.map(esc).join(", ") || "—"}</td>
     <td>${g.base ? esc(g.base) : `<span class="muted">${current.cached.bases ? "unknown" : "—"}</span>`}</td>
     <td>${pick}</td></tr>`;
@@ -277,9 +286,10 @@ function leadsHtml(u) {
 
 function unitHtml(u) {
   const d = u.datasheet;
+  // a matched datasheet's text can be edited (in its window); only a unit with none gets to pick one
   const sheet = !current.cached.datasheets ? ""
-    : `<div class="sheet" data-u="${u.i}">Datasheet: ${d ? `<b>${esc(d.name)}</b> <span class="muted">(${esc(d.how)})</span>`
-        : `<span class="badge bad">None</span>`} · <a href="#" class="changeSheet">${d ? "change" : "pick one"}</a>
+    : d ? `<div class="sheet">Datasheet: <b>${esc(d.name)}</b>${u.card_edited ? ' <span class="badge warn">edited</span>' : ""}</div>`
+    : `<div class="sheet" data-u="${u.i}">Datasheet: <span class="badge bad">None</span> · <a href="#" class="changeSheet">pick one</a>
       <div class="fix"><input class="sheetInput" list="sheetList" placeholder="Type a datasheet name">
         <button class="fit pinSheet">Use it</button><button class="fit cancelSheet">Cancel</button></div></div>`;
   return `<div class="unit">
@@ -303,7 +313,22 @@ function render() {
         title="Re-pick every model, favouring static meshes (they preview here and load faster)">Prefer static models</button></div>
     </section>
     <datalist id="sheetList"></datalist>
-    ${c.units.map(unitHtml).join("")}`;
+    ${unitsHtml(c.units)}`;
+}
+
+// Units in list order, each leader framed with the unit it leads (leaders first, as the GW app
+// lists an attached unit), where the bodyguard's own place in the list is.
+function unitsHtml(units) {
+  const led = i => units.filter(u => u.attached_to === i);
+  const out = [];
+  for (const u of units) {
+    if (u.attached_to != null && units[u.attached_to]) continue;   // drawn with its bodyguard
+    const leaders = led(u.i);
+    if (!leaders.length) { out.push(unitHtml(u)); continue; }
+    out.push(`<div class="attached"><div class="attached-head">${leaders.map(l => esc(l.name)).join(" and ")}
+      leading ${esc(u.name)}${u.n > 1 ? ` #${u.n}` : ""}</div>${[...leaders, u].map(unitHtml).join("")}</div>`);
+  }
+  return out.join("");
 }
 
 // ---------------------------------------------------------------- fixing
@@ -334,21 +359,34 @@ $("#result").addEventListener("click", async e => {
     read();
   } else if (e.target.matches(".sheetBtn")) {
     e.preventDefault();
-    const u = current.units[e.target.dataset.u];
-    $("#sheetTitle").textContent = `${u.name}${u.n > 1 ? " #" + u.n : ""}`;
-    $("#sheetBody").innerHTML = bbcode(u.card);
-    $("#sheetModal").classList.add("on");
+    showSheet(current.units[e.target.dataset.u]);
   } else if (e.target.matches(".tipBtn")) {
     e.preventDefault();
     const row = e.target.closest("tr"), next = row.nextElementSibling;
     if (next && next.classList.contains("tip")) return next.remove();
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
-    row.insertAdjacentHTML("afterend", `<tr class="tip"><td colspan="4"><div class="muted">${esc(g.tooltip.name)}</div>
+    row.insertAdjacentHTML("afterend", `<tr class="tip" data-u="${e.target.dataset.u}" data-g="${e.target.dataset.g}"><td colspan="4">
+      <div class="muted">${esc(g.tooltip.name)} · <a href="#" class="tipEdit">Edit</a></div>
       <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]
-${bbcode(g.tooltip.text)}</div></td></tr>`);
+${bbcode(g.tooltip.text)}</div>
+      <div class="tipEditor" hidden><textarea spellcheck="false"></textarea>
+        <div class="row tight"><button class="primary fit tipSave">Save</button>
+          <button class="fit tipReset">Back to the datasheet</button><button class="fit tipCancel">Cancel</button></div></div>
+    </td></tr>`);
+  } else if (e.target.closest(".tip") && e.target.matches(".tipEdit, .tipSave, .tipReset, .tipCancel")) {
+    e.preventDefault();
+    const tip = e.target.closest(".tip"), g = current.units[tip.dataset.u].groups[tip.dataset.g];
+    const editor = $(".tipEditor", tip), box = $("textarea", editor);
+    if (e.target.matches(".tipEdit")) { box.value = g.tooltip.text; editor.hidden = false; box.focus(); }
+    else if (e.target.matches(".tipCancel")) editor.hidden = true;
+    else {
+      if (e.target.matches(".tipSave")) edits.tooltips[g.tip_key] = box.value;
+      else delete edits.tooltips[g.tip_key];
+      read();
+    }
   } else if (e.target.matches(".starBtn")) {
     const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
-    await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
+    await api("/api/favorites", {pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
     read();
   } else if (e.target.matches(".pvBtn")) {
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
@@ -372,7 +410,7 @@ $("#result").addEventListener("change", async e => {
     $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
     favouritesChanged = false;
     window.browseModels({faction: current.army.faction, sub: current.army.sub || "", suggested: g.options,
-      favoriteKey: u.pin_key, onFavorite: () => { favouritesChanged = true; },
+      onFavorite: () => { favouritesChanged = true; },
       onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); closeBrowse(); read(); }});
     return;
   }
@@ -386,7 +424,7 @@ function showPreview(info) {
   $("#preview").classList.add("on");
   $("#pvTitle").textContent = info.name;
   const status = t => $("#pvInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
-  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel?.(null, () => {}); return; }
+  if (!info.preview && !info.bundle) { status(`${info.name} has nothing to preview.`); window.previewModel?.(null, () => {}); return; }
   window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
 }
 
@@ -399,6 +437,34 @@ function closeBrowse() {
 }
 $("#browseClose").addEventListener("click", closeBrowse);
 $("#sheetClose").addEventListener("click", () => $("#sheetModal").classList.remove("on"));
+
+// The datasheet window: the unit's whole datasheet as TTS shows it, and its text to edit for this list
+let sheetUnit = null;
+function showSheet(u) {
+  sheetUnit = u;
+  $("#sheetTitle").textContent = `${u.name}${u.n > 1 ? " #" + u.n : ""}${u.card_edited ? " (edited)" : ""}`;
+  $("#sheetBody").innerHTML = bbcode(u.card);
+  $("#sheetBody").hidden = false;
+  $("#sheetEditor").hidden = true;
+  $("#sheetModal").classList.add("on");
+}
+$("#sheetEditBtn").addEventListener("click", e => {
+  e.preventDefault();
+  $("#sheetText").value = sheetUnit.card;
+  $("#sheetBody").hidden = true;
+  $("#sheetEditor").hidden = false;
+  $("#sheetText").focus();
+});
+$("#sheetCancel").addEventListener("click", () => showSheet(sheetUnit));
+async function saveSheet(text) {
+  if (text === null) delete edits.cards[sheetUnit.key]; else edits.cards[sheetUnit.key] = text;
+  const key = sheetUnit.key;
+  await read();
+  const u = current && current.units.find(x => x.key === key);
+  if (u) showSheet(u); else $("#sheetModal").classList.remove("on");
+}
+$("#sheetSave").addEventListener("click", () => saveSheet($("#sheetText").value));
+$("#sheetReset").addEventListener("click", () => saveSheet(null));
 $("#sheetModal").addEventListener("click", e => { if (e.target.id === "sheetModal") $("#sheetModal").classList.remove("on"); });
 $("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") closeBrowse(); });
 $("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
@@ -410,8 +476,20 @@ document.addEventListener("keydown", e => {
 $("#saveBtn").addEventListener("click", async () => {
   setMsg($("#saveMsg"), "Saving…");
   try {
-    const r = await api("/api/scribe/save", {text: $("#listText").value, name: $("#saveName").value, leaders,
-                                             facing: +$("#spF").value});
+    const body = {text: $("#listText").value, name: $("#saveName").value, leaders, edits, facing: +$("#spF").value,
+                  overwrite: !!savedAs && $("#saveName").value.trim() === savedAs};
+    let r = await api("/api/scribe/save", body);
+    if (r.exists) {
+      if (!confirm(`There's already a ${r.exists.join(" and a ")} called "${r.name}". Replace ${r.exists.length > 1 ? "them" : "it"}?`)) {
+        setMsg($("#saveMsg"), "Not saved. Change the name to keep both.");
+        return;
+      }
+      r = await api("/api/scribe/save", {...body, overwrite: true});
+    }
+    savedAs = r.saved;
+    store.set("scribe.savedAs", savedAs);
+    store.set("scribe.savedText", body.text);
+    store.set("scribe.savedChoices", choices());
     $("#saveName").value = r.saved;
     store.set("scribe.name", r.saved);
     loadSaved();
@@ -419,17 +497,6 @@ $("#saveBtn").addEventListener("click", async () => {
                                  : `Saved the list "${r.saved}".`, "ok");
     if (current) current.army.title = r.saved;
   } catch (e) { setMsg($("#saveMsg"), e.message, "error"); }
-});
-
-$("#spawnBtn").addEventListener("click", async () => {
-  setMsg($("#spawnMsg"), "Spawning… models can take a while to load in TTS.");
-  $("#spawnBtn").disabled = true;
-  try {
-    const r = await api("/api/scribe/spawn", {text: $("#listText").value, name: $("#saveName").value, leaders, x: +$("#spX").value, z: +$("#spZ").value,
-                                              width: +$("#spW").value, facing: +$("#spF").value});
-    setMsg($("#spawnMsg"), [`Spawned ${r.spawned} models.`, ...r.notes].join(" "), "ok");
-  } catch (e) { setMsg($("#spawnMsg"), e.message, "error"); }
-  $("#spawnBtn").disabled = false;
 });
 
 // ---------------------------------------------------------------- saved lists
@@ -445,15 +512,36 @@ $("#savedLists").addEventListener("change", async e => {
   const saved = await api(`/api/list?name=${encodeURIComponent(e.target.value)}`);
   $("#listText").value = saved.text;
   leaders = saved.leaders || {};
+  edits = {cards: {}, tooltips: {}, ...(saved.edits || {})};
   $("#saveName").value = e.target.value;
+  savedAs = e.target.value;
+  store.set("scribe.savedAs", savedAs);
+  store.set("scribe.savedText", saved.text);
+  store.set("scribe.savedChoices", choices());
   read();
 });
 $("#readBtn").addEventListener("click", () => read());
+$("#newBtn").addEventListener("click", () => {
+  const text = $("#listText").value.trim();
+  // unsaved: the text, name, leaders or edits aren't as the list was opened or last saved
+  const unsaved = text && !(savedAs && $("#saveName").value.trim() === savedAs
+    && text === (store.get("scribe.savedText") || "").trim() && choices() === store.get("scribe.savedChoices"));
+  if (unsaved && !confirm("Clear this list and start a new one? It hasn't been saved as it is.")) return;
+  current = null; leaders = {}; savedAs = ""; edits = {cards: {}, tooltips: {}};
+  $("#listText").value = ""; $("#saveName").value = ""; $("#saveName").placeholder = ""; $("#savedLists").value = "";
+  for (const k of ["scribe.text", "scribe.name", "scribe.leaders", "scribe.edits", "scribe.savedAs", "scribe.savedText",
+                   "scribe.savedChoices"]) store.set(k, "");
+  $("#result").innerHTML = `<div class="empty">Paste a list and press <b>Read list</b> to review what TTS will get.</div>`;
+  $("#saveBtn").disabled = true;
+  setMsg($("#listMsg"), ""); setMsg($("#saveMsg"), "");
+  $("#listText").focus();
+});
 
 $("#saveName").addEventListener("change", () => { if (current) read(); });
 
 $("#listText").value = store.get("scribe.text");
 $("#saveName").value = store.get("scribe.name") || "";
+savedAs = store.get("scribe.savedAs") || "";
 loadSaved();
 if ($("#listText").value.trim()) read();
 </script>

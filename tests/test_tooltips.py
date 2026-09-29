@@ -144,7 +144,7 @@ def test_one_state_only():
            "LuaScript": "function onLoad() end",
            "States": {"2": {"Nickname": "Sergeant", "Description": "Recolor by someone else"}}}
     army.mark(obj, "Test Squad", unit["models"][0], ["tts-bridge:unit:1"], "army.py:Test", "[b]card[/b]")
-    assert "States" not in obj
+    assert "States" not in obj and obj["MeasureMovement"] is True
     assert obj["Nickname"] == "[2/2] Squad Leader"
     assert obj["Description"].startswith("[Test Squad]\n") and "Recolo" not in obj["Description"]
     assert obj["Tags"] == ["theirs", "tts-bridge:unit:1"] and obj["GMNotes"] == "army.py:Test"

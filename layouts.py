@@ -18,7 +18,7 @@ features over a 60" x 44" grid.
 Everything comes from files TTS already has, so it runs offline with TTS
 closed: each layout's objects from cache/lct/, and each object's mesh from
 TTS's download cache (Mods/Models for OBJ files, Mods/Assetbundles for Unity
-asset bundles, which need UnityPy: `pip install -r requirements-dev.txt`).
+asset bundles, which need UnityPy: `pip install -r requirements.txt`).
 A mesh TTS hasn't downloaded yet is reported; build with --download (or load
 that layout in TTS once) to fill the gap. The output is committed; LCT's own data isn't.
 
@@ -245,7 +245,7 @@ def read_bundle(path):
     try:
         import UnityPy
     except ImportError:
-        sys.exit("Reading LCT's asset bundles needs UnityPy: .venv/bin/pip install -r requirements-dev.txt")
+        sys.exit("Reading LCT's asset bundles needs UnityPy: .venv/bin/pip install -r requirements.txt")
     verts = []
     for obj in UnityPy.load(str(path)).objects:
         if obj.type.name != "MeshFilter":

@@ -3,9 +3,14 @@
 // Used by the Models page and Scribe's "Browse all models…".
 //   import {modelBrowser} from "/model-browser.js";
 //   const b = modelBrowser(el, {faction, sub, suggested: [entryInfo], onPick: info => ..., pickLabel: "Use this",
-//                               favoriteKey: "<chapter or faction>|<unit>", onFavorite: () => ...});
+//                               onFavorite: (info, on) => ...});
 //   b.open({...same options}) to show another model's choices in the same browser.
-// With favoriteKey, each model gets a star that adds it to (or removes it from) that unit's favourites.
+// Each model has a star that makes it a favourite (or not): Scribe picks a favourite first for
+// any of its own army's units it matches. The favourites that fit the filters are listed first.
+// A model with states (loadouts, poses, colours) has a button per state; the one chosen is what
+// "Use this" pins ("<tile>:<index>:<state>", army.split_pick) and the star stars.
+// "Find selected in TTS" lists the catalogue entries of the models selected in TTS
+// (/api/catalog/selected), matched by the meshes they use, and shows the first.
 import {viewer} from "/viewer3d.js";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -15,7 +20,8 @@ export function modelBrowser(root, options = {}) {
     <div class="mb">
       <div class="mb-side">
         <div class="mb-filters">
-          <input class="mb-q" type="search" placeholder="Search models by name">
+          <div class="row"><input class="mb-q" type="search" placeholder="Search models by name">
+            <button class="fit mb-find" title="Select models in TTS, then press this to find them here">Find selected in TTS</button></div>
           <div class="row">
             <select class="mb-tiles"></select>
             <label class="mb-check"><input type="checkbox" class="mb-static"> Static only</label>
@@ -27,6 +33,7 @@ export function modelBrowser(root, options = {}) {
       <div class="mb-view">
         <canvas class="mb-canvas"></canvas>
         <div class="mb-name"></div>
+        <div class="mb-states"></div>
         <div class="summary mb-info">Pick a model to see it. Drag to turn it, scroll to zoom.</div>
         <div class="row mb-actions"><button class="primary mb-use" hidden></button>
           <button class="fit mb-fav" hidden></button></div>
@@ -36,31 +43,41 @@ export function modelBrowser(root, options = {}) {
   const $ = s => root.querySelector(s);
   const view = viewer($(".mb-canvas"));
   let opts = {}, tiles = [], selected = null, timer = null, found = [], favourites = [];
+  let inTTS = null;   // the last "Find selected in TTS": [{name, matches}], or null
+  let counted = "";   // the list's count line, put back after a message from "Find selected in TTS"
+  let asked = 0;      // the latest model or state asked for: an older answer arriving later is dropped
   const liked = m => favourites.some(f => f.pick === m.pick);
 
   const row = (m, i, section) => `<div class="mb-row ${selected && selected.pick === m.pick ? "on" : ""}"
       data-section="${section}" data-i="${i}" role="button" tabindex="0"><span>${esc(m.name)}</span>
       <small>${esc(m.tile)}${m.credit ? " · " + esc(m.credit) : ""}</small>
-      <span class="mb-tags">${opts.favoriteKey ? `<button class="mb-star ${liked(m) ? "on" : ""}"
-        title="${liked(m) ? "Remove from" : "Add to"} this unit's favourites">${liked(m) ? "★" : "☆"}</button>` : ""}
+      <span class="mb-tags"><button class="mb-star ${liked(m) ? "on" : ""}"
+        title="${liked(m) ? "Remove from favourites" : "Add to favourites: Scribe picks it first wherever it matches"}">${liked(m) ? "★" : "☆"}</button>
       <span class="badge ${m.static ? "static" : "animated"}">${m.static ? "Static" : "Animated"}</span></span></div>`;
 
   // each section's models, so a row's data-section/data-i finds its model
   let sections = {};
   function render() {
     const keep = m => !$(".mb-static").checked || m.static;
-    const favs = favourites.filter(keep);
+    // the favourites that fit the filters: the army or tile, the search, static only
+    const q = $(".mb-q").value.trim().toLowerCase(), inTiles = shownTiles();
+    const favs = favourites.filter(m => keep(m) && (!q || m.name.toLowerCase().includes(q))
+                                        && (!inTiles || inTiles.has(m.pick.split(":")[0])));
     const shown = new Set(favs.map(m => m.pick));
     const suggested = (opts.suggested || []).filter(m => keep(m) && !shown.has(m.pick));
     suggested.forEach(m => shown.add(m.pick));
     const rest = found.filter(m => !shown.has(m.pick));
-    sections = {v: favs, s: suggested, f: rest};
+    const picked = (inTTS || []).flatMap(o => o.matches);
+    sections = {t: picked, v: favs, s: suggested, f: rest};
     const tileText = $(".mb-tiles").selectedOptions[0]?.textContent || "";
     const block = (title, key, empty) => sections[key].length
       ? `<h4>${esc(title)}</h4>${sections[key].map((m, i) => row(m, i, key)).join("")}`
       : empty === undefined ? "" : `<h4>${esc(title)}</h4><p class="summary">${empty}</p>`;
+    const missing = (inTTS || []).filter(o => !o.matches.length).map(o => o.name || "A model");
     $(".mb-list").innerHTML =
-      (opts.favoriteKey ? block("Favorites", "v", "None yet. Star a model to add it.") : "")
+      (inTTS ? block("Selected in TTS", "t", "None of them is in the Force Org catalogue.")
+        + (missing.length && picked.length ? `<p class="summary">Not in the catalogue: ${missing.map(esc).join(", ")}</p>` : "") : "")
+      + block("Favourites", "v", "None here yet. Star a model to make it a favourite.")
       + block("Suggested", "s")
       + block(tileText, "f", "No models match.");
     showStar();
@@ -68,43 +85,67 @@ export function modelBrowser(root, options = {}) {
 
   function showStar() {
     const b = $(".mb-fav");
-    b.hidden = !(opts.favoriteKey && selected);
+    b.hidden = !selected;
     if (!b.hidden) b.textContent = liked(selected) ? "★ Favourite" : "☆ Add to favourites";
   }
 
   async function loadFavourites() {
-    favourites = opts.favoriteKey ? (await api(`/api/favorites?key=${encodeURIComponent(opts.favoriteKey)}`)).models : [];
+    favourites = (await api("/api/favorites")).models;
   }
 
   async function toggleFavourite(m) {
     const on = !liked(m);
-    await api("/api/favorites", {key: opts.favoriteKey, pick: m.pick, on});
+    await api("/api/favorites", {pick: m.pick, on});
     await loadFavourites();
     render();
     opts.onFavorite?.(m, on);
   }
 
+  // the tiles the list shows (a set of tile ids), or null for every army
+  function shownTiles() {
+    const v = $(".mb-tiles").value;
+    return v === "@army" ? new Set(tiles.filter(t => t.army).map(t => t.tile)) : v === "@all" || !v ? null : new Set([v]);
+  }
+
   async function search() {
-    const tileValue = $(".mb-tiles").value;
+    const inTiles = shownTiles();
     const params = new URLSearchParams({q: $(".mb-q").value, static: $(".mb-static").checked,
-      tiles: tileValue === "@army" ? tiles.filter(t => t.army).map(t => t.tile).join(",") : tileValue === "@all" ? "" : tileValue});
+      tiles: inTiles ? [...inTiles].join(",") : ""});
     try {
       const r = await api(`/api/catalog?${params}`);
       found = r.models;
-      $(".mb-count").textContent = r.total > r.models.length ? `Showing ${r.models.length} of ${r.total}; search to narrow it.`
+      counted = r.total > r.models.length ? `Showing ${r.models.length} of ${r.total}; search to narrow it.`
         : `${r.total} model${r.total === 1 ? "" : "s"}`;
+      $(".mb-count").textContent = counted;
       render();
     } catch (e) { $(".mb-list").innerHTML = `<p class="msg error">${esc(e.message)}</p>`; }
   }
 
+  // A model with states (other loadouts, poses, colours): a button per state, each previewed,
+  // and the one chosen is what "Use this" pins and the star stars.
+  function showStates(info) {
+    const states = info.states || [];
+    const named = new Set(states.map(s => s.name)).size > 1;
+    $(".mb-states").innerHTML = states.map(s => `<button class="fit mb-state ${s.pick === info.pick ? "on" : ""}"
+        data-pick="${esc(s.pick)}" title="${esc(s.name)}">${named ? esc(s.name) : `State ${s.n}`}</button>`).join("");
+  }
+
   async function select(m) {
+    const mine = ++asked;
     selected = m;
     root.querySelectorAll(".mb-row.on").forEach(r => r.classList.remove("on"));
     showStar();
     $(".mb-name").textContent = m.name;
     $(".mb-msg").textContent = "";
-    const info = m.preview !== undefined ? m : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
-    if (selected !== m) return;
+    $(".mb-states").innerHTML = "";
+    let info;
+    try {
+      info = m.preview !== undefined && m.states !== undefined ? m
+        : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
+    } catch (err) { if (mine === asked) $(".mb-msg").textContent = err.message; return; }
+    if (mine !== asked) return;
+    if (info.states) { selected = info; showStar(); }   // the state shown is the one chosen
+    showStates(info);
     const status = t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`;
     view.show(info, status);
     const use = $(".mb-use");
@@ -121,6 +162,21 @@ export function modelBrowser(root, options = {}) {
     r.classList.add("on");
     select(m);
   });
+  $(".mb-states").addEventListener("click", async e => {
+    const b = e.target.closest(".mb-state");
+    if (!b || b.classList.contains("on")) return;
+    const mine = ++asked;
+    $(".mb-msg").textContent = "";
+    let info;
+    try { info = await api(`/api/catalog/entry?pick=${encodeURIComponent(b.dataset.pick)}`); }
+    catch (err) { if (mine === asked) $(".mb-msg").textContent = err.message; return; }
+    if (mine !== asked) return;
+    selected = info;
+    $(".mb-name").textContent = info.name;
+    showStar();
+    showStates(info);
+    view.show(info, t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`);
+  });
   $(".mb-fav").addEventListener("click", () => selected && toggleFavourite(selected).catch(err => alert(err.message)));
   $(".mb-use").addEventListener("click", async () => {
     if (!selected || !opts.onPick) return;
@@ -129,6 +185,18 @@ export function modelBrowser(root, options = {}) {
     catch (e) { $(".mb-msg").textContent = e.message; $(".mb-msg").className = "msg error mb-msg"; $(".mb-use").disabled = false; }
   });
   $(".mb-q").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(search, 200); });
+  $(".mb-find").addEventListener("click", async () => {
+    const b = $(".mb-find");
+    b.disabled = true;
+    try {
+      inTTS = await api("/api/catalog/selected");
+      $(".mb-count").textContent = counted;
+      render();
+      const first = inTTS.flatMap(o => o.matches)[0];
+      if (first) { root.querySelector('.mb-row[data-section="t"]')?.classList.add("on"); select(first); }
+    } catch (e) { $(".mb-count").textContent = e.message; }   // beside the button: nothing selected, TTS not running
+    b.disabled = false;
+  });
   $(".mb-tiles").addEventListener("change", search);
   $(".mb-static").addEventListener("change", search);
 
