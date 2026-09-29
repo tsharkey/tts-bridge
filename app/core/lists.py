@@ -96,8 +96,7 @@ def bundle_preview(catalog, pick):
     """A catalogue entry made of asset bundles as the viewer's tree (like mesh_parts'), its
     bundles converted by previews.py the first time; any static meshes it has too."""
     import previews
-    g, i = pick.split(":")
-    o = catalog[g][int(i)]
+    o = army.pick_object(catalog, pick)
     kids = []
     for url in bundle_urls(o):
         got = previews.bundle_preview(url)
@@ -113,17 +112,27 @@ def bundle_preview(catalog, pick):
 
 
 def entry_info(catalog, pick):
-    """What the page needs to show (and preview) one catalogue entry."""
-    g, i = pick.split(":")
-    o = catalog[g][int(i)]
+    """What the page needs to show (and preview) one catalogue entry, or one of its states
+    (army.split_pick). "states": the entry's states to choose between ({"pick", "n", "name"}),
+    when it has more than one that look different; "state": which this is."""
+    g, i, state = army.split_pick(pick)
+    entry = catalog[g][i]
+    o = army.pick_object(catalog, pick)
+    states = army.states_of(entry)
+    shown = next(n for n, s in states if s is entry)
     tree, animated = mesh_parts(o)
-    info = {"pick": pick, "name": (o.get("Nickname") or "").strip(), "tile": army.tile_label(g),
+    name = (o.get("Nickname") or "").strip() or (entry.get("Nickname") or "").strip()
+    info = {"pick": pick, "name": name, "tile": army.tile_label(g),
             "static": o.get("Name") in army.STATIC and not animated, "bundle": bool(bundle_urls(o)),
             "credit": (o.get("Description") or "").strip().split("\n")[0][:80]}
     if info["static"] and tree:
         tree["pos"] = [0, 0, 0]   # the root's own world position doesn't matter for a preview
         tree["rot"] = [0, 0, 0]
         info["preview"] = tree
+    if len(states) > 1:
+        info["state"] = state or shown
+        info["states"] = [{"pick": f"{g}:{i}" if n == shown else f"{g}:{i}:{n}", "n": n,
+                           "name": (s.get("Nickname") or "").strip() or name} for n, s in states]
     return info
 
 
@@ -244,8 +253,8 @@ def favourites():
     """The models starred as favourites (army.favourite_picks), as entries."""
     cat = catalog()
     picks = sorted(army.favourite_picks(army.load_mappings()))
-    return [entry_info(cat, p) for p in picks if cat and p.split(":")[0] in cat
-            and int(p.split(":")[1]) < len(cat[p.split(":")[0]])]
+    return [entry_info(cat, p) for p in picks if cat and army.split_pick(p)[0] in cat
+            and army.split_pick(p)[1] < len(cat[army.split_pick(p)[0]])]
 
 
 def set_favourite(pick, on=True):

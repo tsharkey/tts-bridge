@@ -7,6 +7,8 @@
 //   b.open({...same options}) to show another model's choices in the same browser.
 // Each model has a star that makes it a favourite (or not): Scribe picks a favourite first for
 // any of its own army's units it matches. The favourites that fit the filters are listed first.
+// A model with states (loadouts, poses, colours) has a button per state; the one chosen is what
+// "Use this" pins ("<tile>:<index>:<state>", army.split_pick) and the star stars.
 // "Find selected in TTS" lists the catalogue entries of the models selected in TTS
 // (/api/catalog/selected), matched by the meshes they use, and shows the first.
 import {viewer} from "/viewer3d.js";
@@ -31,6 +33,7 @@ export function modelBrowser(root, options = {}) {
       <div class="mb-view">
         <canvas class="mb-canvas"></canvas>
         <div class="mb-name"></div>
+        <div class="mb-states"></div>
         <div class="summary mb-info">Pick a model to see it. Drag to turn it, scroll to zoom.</div>
         <div class="row mb-actions"><button class="primary mb-use" hidden></button>
           <button class="fit mb-fav" hidden></button></div>
@@ -117,14 +120,27 @@ export function modelBrowser(root, options = {}) {
     } catch (e) { $(".mb-list").innerHTML = `<p class="msg error">${esc(e.message)}</p>`; }
   }
 
+  // A model with states (other loadouts, poses, colours): a button per state, each previewed,
+  // and the one chosen is what "Use this" pins and the star stars.
+  function showStates(info) {
+    const states = info.states || [];
+    const named = new Set(states.map(s => s.name)).size > 1;
+    $(".mb-states").innerHTML = states.map(s => `<button class="fit mb-state ${s.pick === info.pick ? "on" : ""}"
+        data-pick="${esc(s.pick)}" title="${esc(s.name)}">${named ? esc(s.name) : `State ${s.n}`}</button>`).join("");
+  }
+
   async function select(m) {
     selected = m;
     root.querySelectorAll(".mb-row.on").forEach(r => r.classList.remove("on"));
     showStar();
     $(".mb-name").textContent = m.name;
     $(".mb-msg").textContent = "";
-    const info = m.preview !== undefined ? m : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
+    $(".mb-states").innerHTML = "";
+    const info = m.preview !== undefined && m.states !== undefined ? m
+      : await api(`/api/catalog/entry?pick=${encodeURIComponent(m.pick)}`);
     if (selected !== m) return;
+    if (info.states) { selected = info; showStar(); }   // the state shown is the one chosen
+    showStates(info);
     const status = t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`;
     view.show(info, status);
     const use = $(".mb-use");
@@ -140,6 +156,16 @@ export function modelBrowser(root, options = {}) {
     if (e.target.closest(".mb-star")) return toggleFavourite(m).catch(err => alert(err.message));
     r.classList.add("on");
     select(m);
+  });
+  $(".mb-states").addEventListener("click", async e => {
+    const b = e.target.closest(".mb-state");
+    if (!b || b.classList.contains("on")) return;
+    const info = await api(`/api/catalog/entry?pick=${encodeURIComponent(b.dataset.pick)}`);
+    selected = info;
+    $(".mb-name").textContent = info.name;
+    showStar();
+    showStates(info);
+    view.show(info, t => $(".mb-info").textContent = t ?? `${info.tile}${info.credit ? " · " + info.credit : ""} · ${info.static ? "static" : "animated"}`);
   });
   $(".mb-fav").addEventListener("click", () => selected && toggleFavourite(selected).catch(err => alert(err.message)));
   $(".mb-use").addEventListener("click", async () => {

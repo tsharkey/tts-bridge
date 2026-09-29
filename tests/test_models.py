@@ -154,3 +154,62 @@ def test_find_selected_in_tts(monkeypatch, tmp_path):
     monkeypatch.setattr(tts_bridge, "run_lua", lambda script, timeout=None: [])
     r = client.get("/api/catalog/selected")
     assert r.status_code == 400 and "Nothing is selected in TTS" in r.json()["error"]
+
+
+# States: an entry's other loadouts, poses and colours, pickable as "<tile>:<index>:<state>".
+
+def sternguard():
+    def look(name, mesh, tint=0.5, transform=True):
+        o = {"Name": "Custom_Model", "Nickname": name, "CustomMesh": {"MeshURL": mesh},
+             "ColorDiffuse": {"r": tint, "g": tint, "b": tint}}
+        return {**o, "Transform": {"posX": 1, "scaleX": 1}} if transform else o
+    entry = look("Sternguard Veteran w/ Auto-Plasma", "plasma.obj")
+    entry["States"] = {"2": look("Sternguard Veteran w/ Heavy Bolter", "heavy.obj", transform=False),
+                       "3": look("Sternguard Veteran w/ Auto-Plasma", "plasma.obj"),          # the same again
+                       "4": look("Sternguard Veteran w/ Auto-Plasma", "plasma.obj", 0.9)}     # a recolour
+    return entry
+
+
+def test_states_and_picks():
+    assert army.split_pick("e598e0:12") == ("e598e0", 12, None)
+    assert army.split_pick("e598e0:12:3") == ("e598e0", 12, 3)
+    entry = sternguard()
+    assert [n for n, _ in army.states_of(entry)] == [1, 2, 4]           # state 3 looks just like 1
+    assert army.states_of({"Nickname": "Plain"}) == [(1, {"Nickname": "Plain"})]
+    shown_third = {**entry, "States": {"1": entry["States"]["2"], "2": entry["States"]["4"]}}
+    assert [n for n, _ in army.states_of(shown_third)] == [1, 2, 3]     # it shows the number States leaves out
+    cat = {"e598e0": [entry]}
+    assert army.pick_object(cat, "e598e0:0") is entry
+    heavy = army.pick_object(cat, "e598e0:0:2")
+    assert heavy["Nickname"].endswith("Heavy Bolter") and heavy["Transform"] == entry["Transform"]   # the entry's
+    assert army.pick_object(cat, "e598e0:0:1") is entry                 # the state it shows: the entry
+    assert army.nickname(cat, "e598e0:0:2") == "Sternguard Veteran w/ Heavy Bolter"
+
+
+def test_a_state_is_matched_and_spawned(monkeypatch):
+    cat = {"5e90c0": [sternguard()]}
+    monkeypatch.setitem(army.FACTIONS, "Space Marines", ["5e90c0"])
+    parsed = {"faction": "Space Marines", "sub": None, "title": "Test", "units": [
+        {"name": "Sternguard Veteran Squad", "allied": False, "models": [
+            {"name": "Sternguard Veteran", "wargear": ["Heavy bolter"]},
+            {"name": "Sternguard Veteran", "wargear": ["Auto-plasma"]}]}]}
+    rows = army.resolve(parsed, cat, {})
+    assert [m["pick"] for m in parsed["units"][0]["models"]] == ["5e90c0:0:2", "5e90c0:0"]   # by loadout
+    assert rows[0][2].startswith("auto")
+    import tooltips
+    monkeypatch.setattr(tooltips, "attach", lambda army_: 0)
+    objs, _, _ = army.model_objects(parsed, cat)
+    assert [o["CustomMesh"]["MeshURL"] for o in objs] == ["heavy.obj", "plasma.obj"]
+    assert not any("States" in o for o in objs) and objs[0]["Transform"]["posX"] == 1   # one state, placed
+
+
+def test_entry_info_lists_states(client):
+    from app.core import lists
+    cat = {"5e90c0": [sternguard()]}
+    info = lists.entry_info(cat, "5e90c0:0")
+    assert info["state"] == 1 and [(s["pick"], s["n"], s["name"]) for s in info["states"]] == [
+        ("5e90c0:0", 1, "Sternguard Veteran w/ Auto-Plasma"), ("5e90c0:0:2", 2, "Sternguard Veteran w/ Heavy Bolter"),
+        ("5e90c0:0:4", 4, "Sternguard Veteran w/ Auto-Plasma")]
+    heavy = lists.entry_info(cat, "5e90c0:0:2")
+    assert (heavy["name"], heavy["state"], heavy["preview"]["mesh"]) == ("Sternguard Veteran w/ Heavy Bolter", 2, "heavy.obj")
+    assert "states" not in lists.entry_info({"5e90c0": [{"Name": "Custom_Model", "Nickname": "X"}]}, "5e90c0:0")

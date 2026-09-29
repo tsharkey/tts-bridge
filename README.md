@@ -140,7 +140,10 @@ Every Force Org model, by army (or all of them), searchable by name, with a 3D v
 models are converted for the view the first time you look at one, which takes a few seconds for a big model (it's
 kept in `cache/previews/`); they're shown in their standing pose, and a bundle whose paint TTS keeps in another
 download shows plain grey. **Find selected in TTS** finds the models you've selected in TTS (click one, or drag a box
-round several) by the meshes they use, whether or not tts-bridge spawned them. ☆ makes a model a **favourite**: when a list is read, a favourite is picked first for a
+round several) by the meshes they use, whether or not tts-bridge spawned them. A model with states (other loadouts,
+poses or colours in the one TTS object) has a button per state: the one you choose is what's used and starred, and
+a state with its own name ("Sternguard Veteran w/ Heavy Bolter") is matched to a list's models like any model. ☆
+makes a model a **favourite**: when a list is read, a favourite is picked first for a
 unit of its own army whose models it matches as well as any, and your favourites are listed first when you choose a
 model.
 
@@ -322,7 +325,8 @@ None are needed.
 Every choice the matcher makes is saved in `mappings.json`, so a list always comes out the same way. The file is
 yours: it's created on first use and isn't committed.
 
-- **`models`** maps `"<faction>|<unit>|<model>|<wargear>"` to catalogue entries (`"<tile>:<index>"`). Edit an
+- **`models`** maps `"<faction>|<unit>|<model>|<wargear>"` to catalogue entries (`"<tile>:<index>"`, or
+  `"<tile>:<index>:<state>"` for one of an entry's other states). Edit an
   entry to pick a different model, or delete it to have it matched again.
 - **`units`** gives the model composition for datasheets the parser can't work out from a list, for example
   `"T'au Empire|The Twin Lance": [["Ri'Lantar", 1], ["Ri'Locai", 1]]`. With datasheets cached this is rarely

@@ -16,6 +16,7 @@ every model, so their units are marked "complete": false.
 Matching decisions live in mappings.json. `plan` and `build` pin every choice
 they make there, so a list always comes out the same way; edit an entry to change it.
     "models":  "<faction>|<unit>|<model>|<wargear>" -> ["<tile>:<index>", ...]
+               (or "<tile>:<index>:<state>": one of the entry's other states, split_pick)
     "units":   "<faction>|<unit>" -> [["<model name>", count], ...]
                (model composition for datasheets the parser can't work out)
     "datasheets": "<sub-faction or faction>|<unit>" -> {"id", "name", "catalogue"}
@@ -105,6 +106,50 @@ SPAWNABLE = {"Custom_Model", "Custom_Assetbundle", "Figurine_Custom"}
 # Custom_Model is a plain OBJ mesh (always static); asset bundles are how TTS
 # models get animations and effects.
 STATIC = {"Custom_Model", "Figurine_Custom"}
+
+
+def split_pick(pick):
+    """A catalogue pick, "<tile>:<index>" or "<tile>:<index>:<state>" (one of the entry's
+    states, as TTS numbers them), as (tile, index, state or None)."""
+    parts = pick.split(":")
+    return parts[0], int(parts[1]), int(parts[2]) if len(parts) > 2 else None
+
+
+def looks(o):
+    """What an object looks like, to tell states apart: its meshes, textures, bundles and tint,
+    and its attached parts' (not its other states')."""
+    m, b, c = o.get("CustomMesh") or {}, o.get("CustomAssetbundle") or {}, o.get("ColorDiffuse") or {}
+    return ((m.get("MeshURL"), m.get("DiffuseURL"), b.get("AssetbundleURL"),
+             tuple(round(c.get(k, 1), 2) for k in "rgb")) + tuple(looks(k) for k in o.get("ChildObjects") or []))
+
+
+def states_of(o):
+    """An entry's states as TTS numbers them, the one it shows included: [(number, object)] in
+    order, leaving out any that looks exactly like an earlier one. The one it shows is the
+    number its "States" doesn't list (1, usually)."""
+    others = {int(k): s for k, s in (o.get("States") or {}).items() if str(k).isdigit()}
+    if not others:
+        return [(1, o)]
+    shown = next(n for n in range(1, len(others) + 2) if n not in others)
+    out, seen = [], set()
+    for n, s in sorted({**others, shown: o}.items()):
+        if looks(s) not in seen:
+            seen.add(looks(s))
+            out.append((n, s))
+    return out
+
+
+def pick_object(catalog, pick):
+    """The catalogue object a pick names: the entry as it shows, or one of its other states
+    (with the entry's own transform where the state has none)."""
+    g, i, state = split_pick(pick)
+    o = catalog[g][i]
+    if state is None:
+        return o
+    s = (o.get("States") or {}).get(str(state))
+    if s is None:
+        return o   # the state the entry shows (or one that's gone): the entry
+    return {**s, "Transform": s.get("Transform") or o.get("Transform")}
 
 
 def is_static(o):
@@ -706,14 +751,21 @@ class Matcher:
         # names the catalogue doesn't use, from mappings.json ("Dominion" -> "Battle Sister")
         self.aliases = aliases or {}
         self.free = tokens_of(" ".join(filter(None, [army["sub"], army["faction"]])))
+        # (tile, index, name, tokens, static): each entry, and each of its states named
+        # differently from it (a loadout: "... with Heavy Bolter"), as "<index>:<state>"
         self.entries = []
         for g, objs in catalog.items():
             for i, o in enumerate(objs):
                 nick = (o.get("Nickname") or "").strip()
-                if o.get("Name") in SPAWNABLE and nick:
-                    self.entries.append((g, i, nick, tokens_of(nick)))
+                if o.get("Name") not in SPAWNABLE or not nick:
+                    continue
+                self.entries.append((g, i, nick, tokens_of(nick), is_static(o)))
+                for n, s in states_of(o):
+                    name = (s.get("Nickname") or "").strip()
+                    if s is not o and name and name != nick and s.get("Name") in SPAWNABLE:
+                        self.entries.append((g, f"{i}:{n}", name, tokens_of(name), is_static(s)))
         df = {}
-        for *_, toks in self.entries:
+        for *_, toks, _ in self.entries:
             for t in toks:
                 df[t] = df.get(t, 0) + 1
         n = len(self.entries)
@@ -727,14 +779,14 @@ class Matcher:
         if model["name"] in self.aliases:
             model = {**model, "name": self.aliases[model["name"]]}
         scored = []
-        for g, i, nick, toks in self.entries:
+        for g, i, nick, toks, static in self.entries:
             if not allied and self.scope and g not in self.scope:
                 continue
             coverage, fit = score(toks, model, unit, self.free, self.weight)
             if coverage < 0.5:
                 continue
             rank = scope.index(g) if g in scope else len(scope)
-            static = int(is_static(self.catalog[g][i]))
+            static = int(static)
             key = ((round(coverage, 2), static, -rank, round(fit, 2)) if prefer_static
                    else (round(coverage, 2), -rank, round(fit, 2)))
             scored.append((key, g, i, nick))
@@ -826,8 +878,7 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_ca
 
 
 def nickname(catalog, pick):
-    g, i = pick.split(":")
-    return catalog[g][int(i)].get("Nickname", "").strip()
+    return (pick_object(catalog, pick).get("Nickname") or "").strip()
 
 
 def sheet_label(unit):
@@ -961,8 +1012,7 @@ def model_objects(army, catalog):
         for m in u["models"]:
             if not m["pick"]:
                 continue
-            g, i = m["pick"].split(":")
-            o = copy.deepcopy(catalog[g][int(i)])
+            o = copy.deepcopy(pick_object(catalog, m["pick"]))
             o.pop("GUID", None)
             mark(o, u["name"], m, unit_tags(index, u), f"army.py:{army['title']}", u.get("card"))
             members.append(len(objs))

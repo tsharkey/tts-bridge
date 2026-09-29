@@ -88,8 +88,7 @@ def shelf(rect, sizes, groups):
 
 
 def model_object(catalog, m, unit_name, tag, facing, tags=(), sheet=None):
-    g, i = m["pick"].split(":")
-    o = json.loads(json.dumps(catalog[g][int(i)]))
+    o = json.loads(json.dumps(army.pick_object(catalog, m["pick"])))
     o.pop("GUID", None)
     army.mark(o, unit_name, m, list(tags), tag, sheet)   # every state, and the datasheet viewer when there's a sheet
     o["Locked"] = True
