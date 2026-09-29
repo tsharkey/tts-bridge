@@ -22,6 +22,14 @@ async function loadBinary(url) {
   return new THREE.Mesh(geometry);
 }
 
+// An OBJ file without its line elements ("l"), which TTS ignores: three.js draws an object that
+// has any of them entirely as lines, so a base with a few stray edges showed as a wireframe.
+async function loadObj(loader, url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.statusText);
+  return loader.parse((await r.text()).replace(/^l\s.*$/gm, ""));
+}
+
 export function viewer(canvas) {
   let renderer, scene, camera, controls, current = null, token = 0;
   function init() {
@@ -74,7 +82,7 @@ export function viewer(canvas) {
         group.rotation.set(...part.rot.map(d => THREE.MathUtils.degToRad(d)), "YXZ");
         group.scale.set(...part.scale);
         if (part.mesh) {
-          const mesh = part.mesh.endsWith(".bin") ? await loadBinary(part.mesh) : await loader.loadAsync(part.mesh);
+          const mesh = part.mesh.endsWith(".bin") ? await loadBinary(part.mesh) : await loadObj(loader, part.mesh);
           let map = null;
           if (part.diffuse) {
             map = await textures.loadAsync(part.diffuse).catch(() => null);
