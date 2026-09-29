@@ -98,7 +98,8 @@ def test_leaders_chosen_for_a_list(client, paths):
     # saved with the list (not in mappings.json), and read back with it
     r = client.post("/api/scribe/save", json={"text": text, "name": "Farsight's (test)", "leaders": leaders}).json()
     assert r["saved"] == "Farsight's (test)"
-    assert client.get("/api/list", params={"name": r["saved"]}).json() == {"text": text, "leaders": leaders}
+    assert client.get("/api/list", params={"name": r["saved"]}).json() == {
+        "text": text, "leaders": leaders, "edits": {"cards": {}, "tooltips": {}}}
     assert "leaders" not in json.loads(army.MAPPINGS.read_text())
     # a page that doesn't make the choices (Board replay) keeps them when it saves the list
     client.post("/api/lists", json={"name": r["saved"], "text": text + "\n"})
@@ -235,3 +236,27 @@ def test_saving_over_a_list_asks_first(client, paths):
     assert (paths / "lists" / "Friday.txt").read_text() == TOURNAMENT          # nothing was replaced
     done = client.post("/api/scribe/save", json={"text": other, "name": "Friday", "overwrite": True}).json()
     assert done["saved"] == "Friday" and (paths / "lists" / "Friday.txt").read_text() == other
+
+
+def test_edits_to_datasheet_and_tooltip_text(client, paths):
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT}).json()
+    farsight = unit(v, "Commander Farsight")
+    group = farsight["groups"][0]
+    assert not farsight["card_edited"] and not group["tooltip_edited"]
+    edits = {"cards": {farsight["key"]: "[b]My Farsight[/b]"}, "tooltips": {group["tip_key"]: "Hits hard"}}
+    v = client.post("/api/scribe/read", json={"text": TOURNAMENT, "edits": edits}).json()
+    farsight = unit(v, "Commander Farsight")
+    assert (farsight["card"], farsight["card_edited"]) == ("[b]My Farsight[/b]", True)
+    assert (farsight["groups"][0]["tooltip"]["text"], farsight["groups"][0]["tooltip_edited"]) == ("Hits hard", True)
+    # saved with the list, and into the Saved Object
+    r = client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Edited", "edits": edits}).json()
+    assert client.get("/api/list", params={"name": "Edited"}).json()["edits"] == edits
+    states = json.loads(Path(r["path"]).read_text())["ObjectStates"]
+    model = next(o for o in states if o["Nickname"].endswith("Commander Farsight"))
+    assert model["Description"] == "[Commander Farsight]\nHits hard" and "My Farsight" in model["LuaScript"]
+    # a list saved again from another page keeps its edits; with none, they're gone
+    client.post("/api/lists", json={"name": "Edited", "text": TOURNAMENT})
+    assert client.get("/api/list", params={"name": "Edited"}).json()["edits"] == edits
+    client.post("/api/scribe/save", json={"text": TOURNAMENT, "name": "Edited", "overwrite": True})
+    assert not (paths / "lists" / "Edited.json").exists()
+

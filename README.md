@@ -99,8 +99,11 @@ are straight lines that ignore terrain in the way.
 Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (full, simple or short export) or a
 "+++" tournament list, or pick a saved one, and press **Read list**. It shows what the list became: each unit's
 datasheet, leaders and what they're attached to, the warlord, enhancements, and every model with its gear, base
-size and the TTS model it will use. Anything that didn't match is listed at the top; pick a datasheet or a TTS
-model on the unit to fix it (**View** shows it in 3D, **Tooltip** shows what hovering it in TTS will show). A
+size and the TTS model it will use. A leader is shown with the unit it leads. Anything that didn't match is listed at
+the top; pick a datasheet (for a unit with none) or a TTS model on the unit to fix it (**View** shows it in 3D,
+**Tooltip** shows what hovering it in TTS will show). **Edit**, in a unit's **Datasheet** window or on a model's
+**Tooltip**, changes that text for this list only (**Back to the datasheet** undoes it); it's saved with the list
+and goes into the Saved Object. **New list** clears the page to start another. A
 model's dropdown lists your favourites that fit it and the suggested models; **Browse all models…** opens every
 model of the army, and ☆ makes the current one a favourite.
 

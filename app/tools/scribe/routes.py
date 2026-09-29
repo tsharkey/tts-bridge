@@ -24,10 +24,11 @@ from app.core.lists import entry_info
 router = api_router()
 
 
-def parse(text, mappings, prefer_static=False, repick=False, name=None, leaders=None):
+def parse(text, mappings, prefer_static=False, repick=False, name=None, leaders=None, edits=None):
     """-> (parsed list, catalogue or None). `name`, the list's saved name, is its
     title in TTS (the Saved Object and army tag) instead of the export's own;
-    `leaders` are the list's leader choices (army.attach_leaders).
+    `leaders` are the list's leader choices (army.attach_leaders); `edits` its edits to
+    datasheet and tooltip text (lists.apply_edits).
     The list's parse errors come back as ValueError, so the page shows them as
     the list's problem, not TTS's."""
     if not (text or "").strip():
@@ -41,6 +42,7 @@ def parse(text, mappings, prefer_static=False, repick=False, name=None, leaders=
     army.attach_leaders(parsed["units"], leaders)
     bases.attach(parsed, mappings)
     tooltips.attach(parsed)
+    lists.apply_edits(parsed, edits)
     catalog = army.load_catalog() if army.CATALOG.exists() and any(army.CATALOG.glob("*.json")) else None
     if catalog:
         army.resolve(parsed, catalog, mappings, prefer_static=prefer_static, repick=repick)
@@ -68,7 +70,9 @@ def view(parsed, catalog, mappings, prefer_static=False):
                                         "gear": [f"{x['count']}x {x['name']}" if x["count"] > 1 else x["name"]
                                                  for x in m.get("gear", [])],
                                         "sheet_model": m.get("sheet_model"), "base": base_text(m),
-                                        "pick": m.get("pick"), "tooltip": m.get("tooltip"), "_m": m})
+                                        "pick": m.get("pick"), "tooltip": m.get("tooltip"),
+                                        "tip_key": lists.tooltip_key(keys[i], m),
+                                        "tooltip_edited": bool(m.get("tooltip_edited")), "_m": m})
             g["count"] += 1
         for g in groups.values():
             m = g.pop("_m")
@@ -88,7 +92,8 @@ def view(parsed, catalog, mappings, prefer_static=False):
                       "complete": u.get("complete", True), "composition": u.get("composition"),
                       "datasheet": u.get("datasheet"), "pin_key": f"{scope}|{u['name']}",
                       "favorites": [entry_info(catalog, p) for p in favs],
-                      "allied": u["allied"], "card": u.get("card"), "groups": list(groups.values())})
+                      "allied": u["allied"], "card": u.get("card"),
+                      "card_edited": bool(u.get("card_edited")), "groups": list(groups.values())})
     models = [m for u in parsed["units"] for m in u["models"]]
     missing = datasheets.unmatched(parsed)
     return {
@@ -118,7 +123,8 @@ def save_mappings(mappings):
 def read(body: dict):
     mappings = army.load_mappings()
     prefer_static, repick = bool(body.get("prefer_static")), bool(body.get("repick"))
-    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick, body.get("name"), body.get("leaders"))
+    parsed, catalog = parse(body.get("text"), mappings, prefer_static, repick, body.get("name"), body.get("leaders"),
+                            body.get("edits"))
     if repick:
         save_mappings(mappings)
     return view(parsed, catalog, mappings, prefer_static)
@@ -156,14 +162,15 @@ def save(body: dict):
     built, a Saved Object of the same name. When that name's list or Saved Object
     is already there, nothing is saved unless "overwrite" is true: -> {"exists"}."""
     mappings = army.load_mappings()
-    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"))
+    parsed, catalog = parse(body.get("text"), mappings, name=body.get("name"), leaders=body.get("leaders"),
+                            edits=body.get("edits"))
     name = lists.list_name(body.get("name") or parsed["title"])
     parsed["title"] = name
     there = [what for what, path in (("list", lists.LISTS / f"{name}.txt"), ("Saved Object", army.saved_object_path(parsed)))
              if path.exists()]
     if there and not body.get("overwrite"):
         return {"exists": there, "name": name}
-    lists.save(name, body["text"], body.get("leaders") or {})
+    lists.save(name, body["text"], body.get("leaders") or {}, body.get("edits") or {})
     if not catalog:
         return {"saved": name, "path": None, "models": 0}
     save_mappings(mappings)

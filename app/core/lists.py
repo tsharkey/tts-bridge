@@ -27,27 +27,59 @@ def list_name(name):
     return name
 
 
-def save(name, text, leaders=None):
-    """Save a list as lists/<name>.txt, with the choices made for it (which unit
-    each leader leads; army.attach_leaders) beside it in <name>.json. Leaders
-    None keeps the choices already saved (a page that doesn't make them). -> its name."""
+NO_EDITS = {"cards": {}, "tooltips": {}}
+
+
+def save(name, text, leaders=None, edits=None):
+    """Save a list as lists/<name>.txt, with the choices made for it beside it in
+    <name>.json: which unit each leader leads (army.attach_leaders), and its edits to
+    datasheet and tooltip text (apply_edits). None keeps what's already saved (a page that
+    doesn't make those choices). -> its name."""
     LISTS.mkdir(exist_ok=True)
     name = list_name(name)
     (LISTS / f"{name}.txt").write_text(text)
-    choices = LISTS / f"{name}.json"
-    if leaders:
-        choices.write_text(json.dumps({"leaders": leaders}, indent=1, ensure_ascii=False))
-    elif leaders is not None:
-        choices.unlink(missing_ok=True)
+    path = LISTS / f"{name}.json"
+    choices = json.loads(path.read_text()) if path.exists() else {}
+    if leaders is not None:
+        choices["leaders"] = leaders
+    if edits is not None:
+        choices["edits"] = {k: dict(edits.get(k) or {}) for k in NO_EDITS}
+    choices = {k: v for k, v in choices.items() if v and v != NO_EDITS}
+    if choices:
+        path.write_text(json.dumps(choices, indent=1, ensure_ascii=False))
+    else:
+        path.unlink(missing_ok=True)
     return name
 
 
 def load(name):
-    """{"text", "leaders"} for a saved list."""
+    """{"text", "leaders", "edits"} for a saved list."""
     name = list_name(name)
-    choices = LISTS / f"{name}.json"
-    return {"text": (LISTS / f"{name}.txt").read_text(),
-            "leaders": json.loads(choices.read_text()).get("leaders", {}) if choices.exists() else {}}
+    path = LISTS / f"{name}.json"
+    choices = json.loads(path.read_text()) if path.exists() else {}
+    return {"text": (LISTS / f"{name}.txt").read_text(), "leaders": choices.get("leaders", {}),
+            "edits": {**NO_EDITS, **choices.get("edits", {})}}
+
+
+def tooltip_key(unit_key, model):
+    """What a model's tooltip edit is saved under: its unit (army.unit_keys), its name and its
+    wargear, so the models of a unit with the same loadout share it."""
+    return f"{unit_key}|{model['name']}|{', '.join(model['wargear'])}"
+
+
+def apply_edits(parsed, edits):
+    """A list's edits to its datasheet text ("cards": unit key -> text) and tooltips
+    ("tooltips": tooltip_key -> text), over what tooltips.attach made. Marks what it changed
+    ("card_edited", "tooltip_edited"). Keys that no longer match a unit are ignored."""
+    edits = edits or {}
+    for key, u in zip(army.unit_keys(parsed["units"]), parsed["units"]):
+        card = (edits.get("cards") or {}).get(key)
+        if card is not None and u.get("card") is not None:
+            u["card"], u["card_edited"] = card, True
+        for m in u["models"]:
+            text = (edits.get("tooltips") or {}).get(tooltip_key(key, m))
+            if text is not None and m.get("tooltip"):
+                m["tooltip"], m["tooltip_edited"] = {**m["tooltip"], "text": text}, True
 
 
 def parse(text):

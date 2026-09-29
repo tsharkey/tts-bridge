@@ -62,6 +62,10 @@
   #sheetModal .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
   #sheetModal .section-head h2 { margin: 0; font-size: 15px; text-transform: none; letter-spacing: 0; color: var(--text); }
   #sheetBody { overflow-y: auto; font-size: 13px; line-height: 1.55; }
+  #sheetEditor { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  #sheetEditor[hidden] { display: none; }
+  #sheetText { flex: 1; min-height: 360px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  .tipEditor textarea { min-height: 220px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
   #browseModal { display: none; position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.7);
                  align-items: center; justify-content: center; padding: 16px; }
   #browseModal.on { display: flex; }
@@ -124,8 +128,16 @@
 <div id="sheetModal">
   <section class="box">
     <div class="section-head"><h2 id="sheetTitle">Datasheet</h2><button class="fit" id="sheetClose">Close</button></div>
-    <p class="hint" style="margin:0 0 8px">What right-click → Datasheet on this unit's models shows in TTS.</p>
+    <p class="hint" style="margin:0 0 8px">What right-click → Datasheet on this unit's models shows in TTS.
+      <a href="#" id="sheetEditBtn">Edit</a></p>
     <div id="sheetBody" class="tt"></div>
+    <div id="sheetEditor" hidden>
+      <p class="hint" style="margin:0 0 6px">TTS text: [b]bold[/b], [i]italic[/i], [u]underline[/u], [ffcc00]colour[-]. Only this
+        list's copy changes.</p>
+      <textarea id="sheetText" spellcheck="false"></textarea>
+      <div class="row tight"><button class="primary fit" id="sheetSave">Save</button>
+        <button class="fit" id="sheetReset">Back to the datasheet</button><button class="fit" id="sheetCancel">Cancel</button></div>
+    </div>
   </section>
 </div>
 
@@ -162,6 +174,9 @@ let current = null;       // the last read: {army, units, problems, ...}
 let sheetChoices = null;  // datasheets for the picker, per army
 let leaders = {};         // this list's leader choices: {"<leader>#<n>": "<bodyguard>#<n>" or null}
 let savedAs = "";         // the name this list was opened or last saved as: saving over it needs no asking
+// this list's edits to datasheet and tooltip text: {cards: {"<unit>#<n>": text}, tooltips: {tip key: text}}
+let edits = {cards: {}, tooltips: {}};
+try { edits = {cards: {}, tooltips: {}, ...JSON.parse(store.get("scribe.edits") || "{}")}; } catch {}
 try { leaders = JSON.parse(store.get("scribe.leaders") || "{}"); } catch {}
 
 // ---------------------------------------------------------------- reading
@@ -169,10 +184,11 @@ async function read(opts = {}) {
   const text = $("#listText").value;
   setMsg($("#listMsg"), "Reading…");
   try {
-    current = await api("/api/scribe/read", {text, name: $("#saveName").value, leaders, ...opts});
+    current = await api("/api/scribe/read", {text, name: $("#saveName").value, leaders, edits, ...opts});
     store.set("scribe.text", text);
     store.set("scribe.name", $("#saveName").value);
     store.set("scribe.leaders", JSON.stringify(leaders));
+    store.set("scribe.edits", JSON.stringify(edits));
     $("#saveName").placeholder = current.army.title;
     setMsg($("#listMsg"), "");
     render();
@@ -246,7 +262,8 @@ function groupRow(u, g, gi) {
   return `<tr>
     <td>${esc(g.model)} ×${g.count}${g.sheet_model && g.sheet_model.replace(/’/g, "'") !== g.model
       ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}
-      ${g.tooltip ? `<div><a href="#" class="tipBtn" data-u="${u.i}" data-g="${gi}">Tooltip</a></div>` : ""}</td>
+      ${g.tooltip ? `<div><a href="#" class="tipBtn" data-u="${u.i}" data-g="${gi}">Tooltip</a>${g.tooltip_edited
+        ? ' <span class="badge warn">edited</span>' : ""}</div>` : ""}</td>
     <td class="gear">${g.gear.map(esc).join(", ") || "—"}</td>
     <td>${g.base ? esc(g.base) : `<span class="muted">${current.cached.bases ? "unknown" : "—"}</span>`}</td>
     <td>${pick}</td></tr>`;
@@ -265,9 +282,10 @@ function leadsHtml(u) {
 
 function unitHtml(u) {
   const d = u.datasheet;
+  // a matched datasheet's text can be edited (in its window); only a unit with none gets to pick one
   const sheet = !current.cached.datasheets ? ""
-    : `<div class="sheet" data-u="${u.i}">Datasheet: ${d ? `<b>${esc(d.name)}</b> <span class="muted">(${esc(d.how)})</span>`
-        : `<span class="badge bad">None</span>`} · <a href="#" class="changeSheet">${d ? "change" : "pick one"}</a>
+    : d ? `<div class="sheet">Datasheet: <b>${esc(d.name)}</b>${u.card_edited ? ' <span class="badge warn">edited</span>' : ""}</div>`
+    : `<div class="sheet" data-u="${u.i}">Datasheet: <span class="badge bad">None</span> · <a href="#" class="changeSheet">pick one</a>
       <div class="fix"><input class="sheetInput" list="sheetList" placeholder="Type a datasheet name">
         <button class="fit pinSheet">Use it</button><button class="fit cancelSheet">Cancel</button></div></div>`;
   return `<div class="unit">
@@ -337,18 +355,31 @@ $("#result").addEventListener("click", async e => {
     read();
   } else if (e.target.matches(".sheetBtn")) {
     e.preventDefault();
-    const u = current.units[e.target.dataset.u];
-    $("#sheetTitle").textContent = `${u.name}${u.n > 1 ? " #" + u.n : ""}`;
-    $("#sheetBody").innerHTML = bbcode(u.card);
-    $("#sheetModal").classList.add("on");
+    showSheet(current.units[e.target.dataset.u]);
   } else if (e.target.matches(".tipBtn")) {
     e.preventDefault();
     const row = e.target.closest("tr"), next = row.nextElementSibling;
     if (next && next.classList.contains("tip")) return next.remove();
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
-    row.insertAdjacentHTML("afterend", `<tr class="tip"><td colspan="4"><div class="muted">${esc(g.tooltip.name)}</div>
+    row.insertAdjacentHTML("afterend", `<tr class="tip" data-u="${e.target.dataset.u}" data-g="${e.target.dataset.g}"><td colspan="4">
+      <div class="muted">${esc(g.tooltip.name)} · <a href="#" class="tipEdit">Edit</a></div>
       <div class="tt">[${esc(current.units[e.target.dataset.u].name)}]
-${bbcode(g.tooltip.text)}</div></td></tr>`);
+${bbcode(g.tooltip.text)}</div>
+      <div class="tipEditor" hidden><textarea spellcheck="false"></textarea>
+        <div class="row tight"><button class="primary fit tipSave">Save</button>
+          <button class="fit tipReset">Back to the datasheet</button><button class="fit tipCancel">Cancel</button></div></div>
+    </td></tr>`);
+  } else if (e.target.closest(".tip") && e.target.matches(".tipEdit, .tipSave, .tipReset, .tipCancel")) {
+    e.preventDefault();
+    const tip = e.target.closest(".tip"), g = current.units[tip.dataset.u].groups[tip.dataset.g];
+    const editor = $(".tipEditor", tip), box = $("textarea", editor);
+    if (e.target.matches(".tipEdit")) { box.value = g.tooltip.text; editor.hidden = false; box.focus(); }
+    else if (e.target.matches(".tipCancel")) editor.hidden = true;
+    else {
+      if (e.target.matches(".tipSave")) edits.tooltips[g.tip_key] = box.value;
+      else delete edits.tooltips[g.tip_key];
+      read();
+    }
   } else if (e.target.matches(".starBtn")) {
     const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
     await api("/api/favorites", {pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
@@ -402,6 +433,34 @@ function closeBrowse() {
 }
 $("#browseClose").addEventListener("click", closeBrowse);
 $("#sheetClose").addEventListener("click", () => $("#sheetModal").classList.remove("on"));
+
+// The datasheet window: the unit's whole datasheet as TTS shows it, and its text to edit for this list
+let sheetUnit = null;
+function showSheet(u) {
+  sheetUnit = u;
+  $("#sheetTitle").textContent = `${u.name}${u.n > 1 ? " #" + u.n : ""}${u.card_edited ? " (edited)" : ""}`;
+  $("#sheetBody").innerHTML = bbcode(u.card);
+  $("#sheetBody").hidden = false;
+  $("#sheetEditor").hidden = true;
+  $("#sheetModal").classList.add("on");
+}
+$("#sheetEditBtn").addEventListener("click", e => {
+  e.preventDefault();
+  $("#sheetText").value = sheetUnit.card;
+  $("#sheetBody").hidden = true;
+  $("#sheetEditor").hidden = false;
+  $("#sheetText").focus();
+});
+$("#sheetCancel").addEventListener("click", () => showSheet(sheetUnit));
+async function saveSheet(text) {
+  if (text === null) delete edits.cards[sheetUnit.key]; else edits.cards[sheetUnit.key] = text;
+  const key = sheetUnit.key;
+  await read();
+  const u = current && current.units.find(x => x.key === key);
+  if (u) showSheet(u); else $("#sheetModal").classList.remove("on");
+}
+$("#sheetSave").addEventListener("click", () => saveSheet($("#sheetText").value));
+$("#sheetReset").addEventListener("click", () => saveSheet(null));
 $("#sheetModal").addEventListener("click", e => { if (e.target.id === "sheetModal") $("#sheetModal").classList.remove("on"); });
 $("#browseModal").addEventListener("click", e => { if (e.target.id === "browseModal") closeBrowse(); });
 $("#preview").addEventListener("click", e => { if (e.target.id === "preview") $("#preview").classList.remove("on"); });
@@ -413,7 +472,7 @@ document.addEventListener("keydown", e => {
 $("#saveBtn").addEventListener("click", async () => {
   setMsg($("#saveMsg"), "Saving…");
   try {
-    const body = {text: $("#listText").value, name: $("#saveName").value, leaders, facing: +$("#spF").value,
+    const body = {text: $("#listText").value, name: $("#saveName").value, leaders, edits, facing: +$("#spF").value,
                   overwrite: !!savedAs && $("#saveName").value.trim() === savedAs};
     let r = await api("/api/scribe/save", body);
     if (r.exists) {
@@ -448,6 +507,7 @@ $("#savedLists").addEventListener("change", async e => {
   const saved = await api(`/api/list?name=${encodeURIComponent(e.target.value)}`);
   $("#listText").value = saved.text;
   leaders = saved.leaders || {};
+  edits = {cards: {}, tooltips: {}, ...(saved.edits || {})};
   $("#saveName").value = e.target.value;
   savedAs = e.target.value;
   store.set("scribe.savedAs", savedAs);
@@ -459,9 +519,9 @@ $("#newBtn").addEventListener("click", () => {
   const text = $("#listText").value.trim();
   const unsaved = text && !(savedAs && $("#saveName").value.trim() === savedAs && text === (store.get("scribe.savedText") || "").trim());
   if (unsaved && !confirm("Clear this list and start a new one? It hasn't been saved as it is.")) return;
-  current = null; leaders = {}; savedAs = "";
+  current = null; leaders = {}; savedAs = ""; edits = {cards: {}, tooltips: {}};
   $("#listText").value = ""; $("#saveName").value = ""; $("#saveName").placeholder = ""; $("#savedLists").value = "";
-  for (const k of ["scribe.text", "scribe.name", "scribe.leaders", "scribe.savedAs", "scribe.savedText"]) store.set(k, "");
+  for (const k of ["scribe.text", "scribe.name", "scribe.leaders", "scribe.edits", "scribe.savedAs", "scribe.savedText"]) store.set(k, "");
   $("#result").innerHTML = `<div class="empty">Paste a list and press <b>Read list</b> to review what TTS will get.</div>`;
   $("#saveBtn").disabled = true;
   setMsg($("#listMsg"), ""); setMsg($("#saveMsg"), "");

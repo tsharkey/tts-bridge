@@ -98,7 +98,7 @@ def saved_list(name: str):
 
 @shared.post("/api/lists")
 def save_list(body: dict):
-    return {"saved": lists.save(body["name"], body["text"], body.get("leaders"))}
+    return {"saved": lists.save(body["name"], body["text"], body.get("leaders"), body.get("edits"))}
 
 
 @shared.post("/api/parse")
