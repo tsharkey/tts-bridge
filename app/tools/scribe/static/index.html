@@ -245,7 +245,7 @@ function groupRow(u, g, gi) {
   const favs = favourites.length ? `<optgroup label="Favorites">${favourites.map(option).join("")}</optgroup>` : "";
   const suggested = g.options.filter(o => !liked.has(o.pick));
   const star = cur ? `<button class="starBtn ${liked.has(cur.pick) ? "on" : ""}" data-u="${u.i}" data-g="${gi}"
-      title="${liked.has(cur.pick) ? "Remove from" : "Add to"} ${esc(u.name)}'s favourites">${liked.has(cur.pick) ? "★" : "☆"}</button>` : "";
+      title="${liked.has(cur.pick) ? "Remove from favourites" : "Add to favourites: Scribe picks it first wherever it matches"}">${liked.has(cur.pick) ? "★" : "☆"}</button>` : "";
   const pick = !current.cached.catalog ? `<span class="muted">No catalogue</span>`
     : `<div class="pickcell">${star}<select class="pickSel" data-u="${u.i}" data-g="${gi}">
          ${cur ? "" : `<option value="">No match: pick one…</option>`}${favs}
@@ -348,7 +348,7 @@ $("#result").addEventListener("click", async e => {
 ${bbcode(g.tooltip.text)}</div></td></tr>`);
   } else if (e.target.matches(".starBtn")) {
     const u = current.units[e.target.dataset.u], g = u.groups[e.target.dataset.g];
-    await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
+    await api("/api/favorites", {pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
     read();
   } else if (e.target.matches(".pvBtn")) {
     const g = current.units[e.target.dataset.u].groups[e.target.dataset.g];
@@ -372,7 +372,7 @@ $("#result").addEventListener("change", async e => {
     $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
     favouritesChanged = false;
     window.browseModels({faction: current.army.faction, sub: current.army.sub || "", suggested: g.options,
-      favoriteKey: u.pin_key, onFavorite: () => { favouritesChanged = true; },
+      onFavorite: () => { favouritesChanged = true; },
       onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); closeBrowse(); read(); }});
     return;
   }

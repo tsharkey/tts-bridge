@@ -408,7 +408,7 @@ function renderModels_() {
         return `<div class="mm-group" data-u="${ui}" data-g="${gi}">
           <div>${esc(g.model)} ×${g.count}${g.wargear.length ? `<small>${esc(g.wargear.join(", "))}</small>` : ""}</div>
           <div class="mm-pick">${cur.pick ? `<button class="mmStar ${liked.has(cur.pick) ? "on" : ""}"
-              title="${liked.has(cur.pick) ? "Remove from" : "Add to"} ${esc(u.name)}'s favourites">${liked.has(cur.pick) ? "★" : "☆"}</button>` : ""}
+              title="${liked.has(cur.pick) ? "Remove from favourites" : "Add to favourites: picked first wherever it matches"}">${liked.has(cur.pick) ? "★" : "☆"}</button>` : ""}
             <select class="mmSel">${cur.pick ? "" : '<option value="">No match: pick one…</option>'}${favs}
               ${suggested.length ? `<optgroup label="Suggested">${suggested.map(option).join("")}</optgroup>` : ""}
               <option value="@browse">Browse all models…</option></select></div>
@@ -433,7 +433,7 @@ $("#mmList").addEventListener("change", async e => {
     $("#browseTitle").textContent = `Choose the TTS model for ${g.model}${g.model === u.name ? "" : ` (${u.name})`}`;
     favouritesChanged = false;
     window.browseModels({faction: mm.data.army.faction, sub: mm.data.army.sub || "", suggested: g.options,
-      favoriteKey: u.pin_key, onFavorite: () => { favouritesChanged = true; },
+      onFavorite: () => { favouritesChanged = true; },
       onPick: async m => { await api("/api/pin", {key: g.key, pick: m.pick}); closeBrowse(true); }});
     return;
   }
@@ -450,7 +450,7 @@ $("#mmList").addEventListener("click", async e => {
   const u = mm.data.units[row.dataset.u], g = u.groups[row.dataset.g];
   if (e.target.classList.contains("mmPrev")) preview(g.picks[0], row);
   if (e.target.classList.contains("mmStar")) {
-    await api("/api/favorites", {key: u.pin_key, pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
+    await api("/api/favorites", {pick: g.picks[0].pick, on: !e.target.classList.contains("on")});
     openModels(mm.side);
   }
 });

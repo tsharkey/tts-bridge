@@ -3,9 +3,10 @@
 // Used by the Models page and Scribe's "Browse all models…".
 //   import {modelBrowser} from "/model-browser.js";
 //   const b = modelBrowser(el, {faction, sub, suggested: [entryInfo], onPick: info => ..., pickLabel: "Use this",
-//                               favoriteKey: "<chapter or faction>|<unit>", onFavorite: () => ...});
+//                               onFavorite: (info, on) => ...});
 //   b.open({...same options}) to show another model's choices in the same browser.
-// With favoriteKey, each model gets a star that adds it to (or removes it from) that unit's favourites.
+// Each model has a star that makes it a favourite (or not): Scribe picks a favourite first for
+// any of its own army's units it matches. The favourites that fit the filters are listed first.
 import {viewer} from "/viewer3d.js";
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
@@ -41,15 +42,18 @@ export function modelBrowser(root, options = {}) {
   const row = (m, i, section) => `<div class="mb-row ${selected && selected.pick === m.pick ? "on" : ""}"
       data-section="${section}" data-i="${i}" role="button" tabindex="0"><span>${esc(m.name)}</span>
       <small>${esc(m.tile)}${m.credit ? " · " + esc(m.credit) : ""}</small>
-      <span class="mb-tags">${opts.favoriteKey ? `<button class="mb-star ${liked(m) ? "on" : ""}"
-        title="${liked(m) ? "Remove from" : "Add to"} this unit's favourites">${liked(m) ? "★" : "☆"}</button>` : ""}
+      <span class="mb-tags"><button class="mb-star ${liked(m) ? "on" : ""}"
+        title="${liked(m) ? "Remove from favourites" : "Add to favourites: Scribe picks it first wherever it matches"}">${liked(m) ? "★" : "☆"}</button>
       <span class="badge ${m.static ? "static" : "animated"}">${m.static ? "Static" : "Animated"}</span></span></div>`;
 
   // each section's models, so a row's data-section/data-i finds its model
   let sections = {};
   function render() {
     const keep = m => !$(".mb-static").checked || m.static;
-    const favs = favourites.filter(keep);
+    // the favourites that fit the filters: the army or tile, the search, static only
+    const q = $(".mb-q").value.trim().toLowerCase(), inTiles = shownTiles();
+    const favs = favourites.filter(m => keep(m) && (!q || m.name.toLowerCase().includes(q))
+                                        && (!inTiles || inTiles.has(m.pick.split(":")[0])));
     const shown = new Set(favs.map(m => m.pick));
     const suggested = (opts.suggested || []).filter(m => keep(m) && !shown.has(m.pick));
     suggested.forEach(m => shown.add(m.pick));
@@ -60,7 +64,7 @@ export function modelBrowser(root, options = {}) {
       ? `<h4>${esc(title)}</h4>${sections[key].map((m, i) => row(m, i, key)).join("")}`
       : empty === undefined ? "" : `<h4>${esc(title)}</h4><p class="summary">${empty}</p>`;
     $(".mb-list").innerHTML =
-      (opts.favoriteKey ? block("Favorites", "v", "None yet. Star a model to add it.") : "")
+      block("Favourites", "v", "None here yet. Star a model to make it a favourite.")
       + block("Suggested", "s")
       + block(tileText, "f", "No models match.");
     showStar();
@@ -68,26 +72,32 @@ export function modelBrowser(root, options = {}) {
 
   function showStar() {
     const b = $(".mb-fav");
-    b.hidden = !(opts.favoriteKey && selected);
+    b.hidden = !selected;
     if (!b.hidden) b.textContent = liked(selected) ? "★ Favourite" : "☆ Add to favourites";
   }
 
   async function loadFavourites() {
-    favourites = opts.favoriteKey ? (await api(`/api/favorites?key=${encodeURIComponent(opts.favoriteKey)}`)).models : [];
+    favourites = (await api("/api/favorites")).models;
   }
 
   async function toggleFavourite(m) {
     const on = !liked(m);
-    await api("/api/favorites", {key: opts.favoriteKey, pick: m.pick, on});
+    await api("/api/favorites", {pick: m.pick, on});
     await loadFavourites();
     render();
     opts.onFavorite?.(m, on);
   }
 
+  // the tiles the list shows (a set of tile ids), or null for every army
+  function shownTiles() {
+    const v = $(".mb-tiles").value;
+    return v === "@army" ? new Set(tiles.filter(t => t.army).map(t => t.tile)) : v === "@all" || !v ? null : new Set([v]);
+  }
+
   async function search() {
-    const tileValue = $(".mb-tiles").value;
+    const inTiles = shownTiles();
     const params = new URLSearchParams({q: $(".mb-q").value, static: $(".mb-static").checked,
-      tiles: tileValue === "@army" ? tiles.filter(t => t.army).map(t => t.tile).join(",") : tileValue === "@all" ? "" : tileValue});
+      tiles: inTiles ? [...inTiles].join(",") : ""});
     try {
       const r = await api(`/api/catalog?${params}`);
       found = r.models;

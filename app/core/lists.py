@@ -172,23 +172,23 @@ def unit_summary(parsed):
             "guessed": [u["name"] for u in out if u["guessed"]]}
 
 
-def favourites(key):
-    """A unit's favourite figures ("<chapter or faction>|<unit>" -> picks), as entries."""
+def favourites():
+    """The models starred as favourites (army.favourite_picks), as entries."""
     cat = catalog()
-    picks = army.load_mappings().get("favorites", {}).get(key, [])
+    picks = sorted(army.favourite_picks(army.load_mappings()))
     return [entry_info(cat, p) for p in picks if cat and p.split(":")[0] in cat
             and int(p.split(":")[1]) < len(cat[p.split(":")[0]])]
 
 
-def set_favourite(key, pick, on=True):
-    """Add (or remove) a figure from a unit's favourites. -> the unit's favourites."""
+def set_favourite(pick, on=True):
+    """Star (or unstar) a model. A favourite is the model's, in its own army: Scribe prefers it
+    for any of that army's units it matches (army.Matcher.candidates). -> every favourite."""
     mappings = army.load_mappings()
-    favs = mappings.setdefault("favorites", {})
-    picks = [p for p in favs.get(key, []) if p != pick] + ([pick] if on else [])
+    picks = sorted((army.favourite_picks(mappings) - {pick}) | ({pick} if on else set()))
     if picks:
-        favs[key] = picks
+        mappings["favorites"] = picks
     else:
-        favs.pop(key, None)
+        mappings.pop("favorites", None)
     army.MAPPINGS.write_text(json.dumps(mappings, indent=1, ensure_ascii=False))
     return picks
 

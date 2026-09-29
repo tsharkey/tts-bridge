@@ -741,19 +741,11 @@ class Matcher:
         scored.sort(key=lambda x: x[0], reverse=True)
         return scored
 
-    def favourites(self, unit, model, picks):
-        """The favourites among `picks`, best fit for this model first, like
-        ranked() but from any army and however little the names agree."""
-        if model["name"] in self.aliases:
-            model = {**model, "name": self.aliases[model["name"]]}
-        scored = []
-        for g, i, nick, toks in self.entries:
-            if f"{g}:{i}" in picks:
-                coverage, fit = score(toks, model, unit, self.free, self.weight)
-                scored.append(((round(coverage, 2), 0, round(fit, 2)), g, i, nick))
-        return sorted(scored, key=lambda x: x[0], reverse=True)
-
-    def candidates(self, unit, model, allied, prefer_static=False):
+    def candidates(self, unit, model, allied, prefer_static=False, favourites=()):
+        """The best entries for a model: -> ([(key, tile, index, nickname)], best key). Of
+        those whose names match it as well as any, the favourites (picks) come first; only
+        the army's own plausible matches get that far, so a favourite from another army is
+        never picked."""
         scored = self.ranked(unit, model, allied, prefer_static)
         if not scored and model["name"] != unit["name"]:
             # a champion the catalogue doesn't name ("Disharmonist") still
@@ -762,8 +754,20 @@ class Matcher:
         if not scored:
             return [], None
         best = scored[0][0]
+        liked = [x for x in scored if x[0][0] == best[0] and f"{x[1]}:{x[2]}" in favourites]
+        if liked:
+            return liked[:4], liked[0][0]
         # equally good variants (e.g. two Intercessor sculpts) are all kept
         return [x for x in scored if x[0] == best][:4], best
+
+
+def favourite_picks(mappings):
+    """The models starred as favourites (mappings.json "favorites"), as a set of picks. Older
+    mappings kept them per unit ({"<army>|<unit>": [picks]}); those count too."""
+    favs = mappings.get("favorites") or []
+    if isinstance(favs, dict):
+        return {p for picks in favs.values() for p in picks}
+    return set(favs)
 
 
 def model_key(faction, unit, model):
@@ -772,10 +776,10 @@ def model_key(faction, unit, model):
 
 def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_cache=None):
     """Attach catalogue picks to every model. Returns rows for reporting.
-    repick ignores (and overwrites) this list's existing pins. A unit's
-    favourite figures (mappings.json "favorites") come first, from any army,
-    whatever they're called: of several, the one that fits the model best
-    (name, then wargear) is used. A model the catalogue has no figure
+    repick ignores (and overwrites) this list's existing pins. Favourite
+    models (mappings.json "favorites", favourite_picks) come first among the
+    army's models whose names match as well as any (Matcher.candidates). A
+    model the catalogue has no figure
     for, on a matched datasheet, tries a look-alike's (datasheets.stand_in:
     "Dominion" -> "Battle Sister")."""
     matcher = Matcher(catalog, army, mappings.get("aliases", {}).get(army["faction"]))
@@ -788,27 +792,19 @@ def resolve(army, catalog, mappings, prefer_static=False, repick=False, sheet_ca
         sheet = looks["sheets"].get(u["datasheet"]["id"])
         return datasheets.stand_in(looks["sheets"], sheet, m["sheet_model"]) if sheet else None
     pinned = mappings.setdefault("models", {})
-    favourites = mappings.get("favorites", {})
-    scope = army["sub"] or army["faction"]
+    liked = favourite_picks(mappings)
     rows = []
     redone = set()
     for u in army["units"]:
         variant = {}
-        liked = set(favourites.get(f"{scope}|{u['name']}", []))
         for m in u["models"]:
             key = model_key(army["faction"], u, m)
             if key in pinned and not (repick and key not in redone):
                 picks, how = pinned[key], "pinned"
             else:
                 redone.add(key)
-                cands, best, via = [], None, ""
-                if liked:
-                    fits = matcher.favourites(u, m, liked)
-                    if fits:
-                        best = fits[0][0]
-                        cands, via = [x for x in fits if x[0] == best][:4], " favourite"
-                if not cands:
-                    cands, best = matcher.candidates(u, m, u["allied"], prefer_static)
+                cands, best = matcher.candidates(u, m, u["allied"], prefer_static, liked)
+                via = " favourite" if cands and f"{cands[0][1]}:{cands[0][2]}" in liked else ""
                 if not cands and u.get("datasheet") and m.get("sheet_model"):
                     alt = look_alike(u, m)
                     # the look-alike's own name, and without its loadout ("Battle Sister w/ Special

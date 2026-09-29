@@ -56,13 +56,13 @@ def base_text(m):
 def view(parsed, catalog, mappings, prefer_static=False):
     """Everything the page shows about a parsed list."""
     scope = parsed["sub"] or parsed["faction"]
-    liked = mappings.get("favorites", {})
+    liked = army.favourite_picks(mappings)
     matcher = army.Matcher(catalog, parsed, mappings.get("aliases", {}).get(parsed["faction"])) if catalog else None
     seen, units = {}, []
     keys = army.unit_keys(parsed["units"])
     for i, u in enumerate(parsed["units"]):
         seen[u["name"]] = seen.get(u["name"], 0) + 1
-        groups = {}
+        groups, favs = {}, []   # favs: the favourites that match any of the unit's models
         for m in u["models"]:
             key = army.model_key(parsed["faction"], u, m)
             g = groups.setdefault(key, {"key": key, "model": m["name"], "count": 0, "wargear": m["wargear"],
@@ -77,6 +77,7 @@ def view(parsed, catalog, mappings, prefer_static=False):
             g["options"] = []
             if matcher:
                 ranked = matcher.ranked(u, m, u["allied"], prefer_static)
+                favs += [p for p in (f"{t}:{k}" for _, t, k, _ in ranked) if p in liked and p not in favs]
                 opts = [f"{t}:{k}" for _, t, k, _ in ranked[:15]]
                 if g["pick"] and g["pick"] not in opts:
                     opts.insert(0, g["pick"])
@@ -87,8 +88,7 @@ def view(parsed, catalog, mappings, prefer_static=False):
                       "warlord": u.get("warlord", False), "enhancements": u.get("enhancements", []),
                       "complete": u.get("complete", True), "composition": u.get("composition"),
                       "datasheet": u.get("datasheet"), "pin_key": f"{scope}|{u['name']}",
-                      "favorites": [entry_info(catalog, p) for p in liked.get(f"{scope}|{u['name']}", [])
-                                    if catalog and p.split(":")[0] in catalog] if catalog else [],
+                      "favorites": [entry_info(catalog, p) for p in favs],
                       "allied": u["allied"], "card": u.get("card"), "groups": list(groups.values())})
     models = [m for u in parsed["units"] for m in u["models"]]
     missing = datasheets.unmatched(parsed)

@@ -18,7 +18,6 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 
-import army
 import tts_bridge
 from app.core import lct, lists, tts
 
@@ -113,21 +112,15 @@ def pin(body: dict):
 
 
 @shared.get("/api/favorites")
-def favourites(key: str):
-    """A unit's favourite figures; key is "<chapter or faction>|<unit>"."""
-    return {"key": key, "models": lists.favourites(key)}
+def favourites():
+    """The models starred as favourites."""
+    return {"models": lists.favourites()}
 
 
 @shared.post("/api/favorites")
 def set_favourite(body: dict):
-    picks = lists.set_favourite(body["key"], body["pick"], bool(body.get("on", True)))
-    return {"key": body["key"], "picks": picks}
-
-
-@shared.get("/api/catalog/armies")
-def model_armies():
-    """Army names for choosing whose favourites to set: every faction and chapter."""
-    return sorted(army.FACTIONS)
+    """Star ({"pick", "on": true}) or unstar a model."""
+    return {"picks": lists.set_favourite(body["pick"], bool(body.get("on", True)))}
 
 
 @shared.get("/api/catalog/tiles")
