@@ -90,7 +90,8 @@
       <select id="savedLists"><option value="">Open a saved list…</option></select>
       <label for="listText">Or paste a list from the GW app, New Recruit (any export) or a "+++" tournament list</label>
       <textarea id="listText" spellcheck="false"></textarea>
-      <div class="row tight"><button class="primary fit" id="readBtn">Read list</button></div>
+      <div class="row tight"><button class="primary fit" id="readBtn">Read list</button>
+        <button class="fit" id="newBtn" title="Clear the page to start another list">New list</button></div>
       <div class="msg" id="listMsg"></div>
     </section>
 
@@ -424,6 +425,7 @@ $("#saveBtn").addEventListener("click", async () => {
     }
     savedAs = r.saved;
     store.set("scribe.savedAs", savedAs);
+    store.set("scribe.savedText", body.text);
     $("#saveName").value = r.saved;
     store.set("scribe.name", r.saved);
     loadSaved();
@@ -449,9 +451,22 @@ $("#savedLists").addEventListener("change", async e => {
   $("#saveName").value = e.target.value;
   savedAs = e.target.value;
   store.set("scribe.savedAs", savedAs);
+  store.set("scribe.savedText", saved.text);
   read();
 });
 $("#readBtn").addEventListener("click", () => read());
+$("#newBtn").addEventListener("click", () => {
+  const text = $("#listText").value.trim();
+  const unsaved = text && !(savedAs && $("#saveName").value.trim() === savedAs && text === (store.get("scribe.savedText") || "").trim());
+  if (unsaved && !confirm("Clear this list and start a new one? It hasn't been saved as it is.")) return;
+  current = null; leaders = {}; savedAs = "";
+  $("#listText").value = ""; $("#saveName").value = ""; $("#saveName").placeholder = ""; $("#savedLists").value = "";
+  for (const k of ["scribe.text", "scribe.name", "scribe.leaders", "scribe.savedAs", "scribe.savedText"]) store.set(k, "");
+  $("#result").innerHTML = `<div class="empty">Paste a list and press <b>Read list</b> to review what TTS will get.</div>`;
+  $("#saveBtn").disabled = true;
+  setMsg($("#listMsg"), ""); setMsg($("#saveMsg"), "");
+  $("#listText").focus();
+});
 
 $("#saveName").addEventListener("change", () => { if (current) read(); });
 
