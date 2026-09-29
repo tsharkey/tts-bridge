@@ -78,8 +78,11 @@ answers requests addressed to `localhost` or `127.0.0.1`, so only programs on yo
 
 ### Board view
 
-The table from above: the LCT layout's terrain, objectives and deployment zones, and every model's base. It
-keeps up with the game, redrawing within a couple of seconds when something moves in TTS.
+The table from above: the LCT layout's terrain, objectives and deployment zones, and every model's base. It reads
+the table when you open it and when you press **Refresh**. Tick **Follow the table** to have it redraw within a
+couple of seconds whenever something moves in TTS; it's off by default, because each read runs in TTS and makes
+models stutter while you move them. **Send terrain to TTS** puts the layout's terrain on the table, for the models'
+Line of sight.
 
 - **Click a unit** to see what it can see (its line of sight, from the layout's terrain) and which enemy units
   it can see, and to switch on its move, advance, charge and weapon ranges, measured from its bases' edges.

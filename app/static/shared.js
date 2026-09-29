@@ -14,12 +14,18 @@ async function api(path, body) {
 }
 function setMsg(el, text, kind = "") { el.textContent = text; el.className = "msg " + kind; }
 
-// TTS status in the header (#ttsDot, #ttsText), on every page that has them.
+// TTS status in the header (#ttsDot, #ttsText), on every page that has them; not while the
+// page is hidden, since each check runs in TTS.
 async function pollStatus() {
+  if (document.hidden) return;
   try {
     const s = await api("/api/status");
     $("#ttsDot").classList.toggle("on", s.connected);
     $("#ttsText").textContent = s.connected ? (s.lct ? "TTS connected · LCT" : "TTS connected") : "TTS not responding";
   } catch { $("#ttsDot").classList.remove("on"); $("#ttsText").textContent = "App server not responding"; }
 }
-if ($("#ttsDot")) { pollStatus(); setInterval(pollStatus, 8000); }
+if ($("#ttsDot")) {
+  pollStatus();
+  setInterval(pollStatus, 8000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) pollStatus(); });
+}

@@ -2,9 +2,10 @@
 working without TTS), and for the units the page selects: line of sight (los.py), threat bands
 (threat.py), and the distance and sight between two units.
 
-The page reads the state, then polls GET /api/board/fingerprint (a cheap sum of where the
-armies' models stand) and reads the state again when it changes: TTS sends no event when a
-model moves. Units are picked by their place in the last state read ("i"), with its version
+The page reads the state when it opens and on Refresh. With "Follow the table" ticked (off by
+default: each read runs in TTS, and moving models while it reads makes them stutter) it also
+polls GET /api/board/fingerprint (a cheap sum of where the armies' models stand) and reads the
+state again when it changes: TTS sends no event when a model moves. Units are picked by their place in the last state read ("i"), with its version
 ("v"), so a query can't land on a different unit after a refresh.
 """
 
