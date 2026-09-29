@@ -100,9 +100,9 @@ Turns an army list into a TTS army. Paste a list from the GW app, New Recruit (f
 "+++" tournament list, or pick a saved one, and press **Read list**. It shows what the list became: each unit's
 datasheet, leaders and what they're attached to, the warlord, enhancements, and every model with its gear, base
 size and the TTS model it will use. Anything that didn't match is listed at the top; pick a datasheet or a TTS
-model on the unit to fix it (**View** previews static models in 3D, **Tooltip** shows what hovering it in TTS
-will show). A model's dropdown lists the unit's favourites and the suggested models; **Browse all models…** opens
-every model of the army, and ☆ makes the current one a favourite for that unit.
+model on the unit to fix it (**View** shows it in 3D, **Tooltip** shows what hovering it in TTS will show). A
+model's dropdown lists your favourites that fit it and the suggested models; **Browse all models…** opens every
+model of the army, and ☆ makes the current one a favourite.
 
 With datasheets cached, every model it saves or spawns carries its datasheet: hover over it in TTS for its stats,
 base and the weapons it carries. One model per unit (the leader or sergeant) also shows the unit's abilities,
@@ -136,10 +136,12 @@ Both remember your choices in `mappings.json`, so the list comes out the same ne
 
 ### Models
 
-Every Force Org model, by army (or all of them), searchable by name, with a 3D view of static models. To set a
-unit's **favourites**, pick an army and a unit under **Favorites for** and star the models you like for it. When a
-list is read, a unit's favourites are used first (whatever they're called, and from any army), and they're listed
-first when you choose a model in Scribe.
+Every Force Org model, by army (or all of them), searchable by name, with a 3D view. Asset bundle ("animated")
+models are converted for the view the first time you look at one, which takes a few seconds for a big model (it's
+kept in `cache/previews/`); they're shown in their standing pose, and a bundle whose paint TTS keeps in another
+download shows plain grey. ☆ makes a model a **favourite**: when a list is read, a favourite is picked first for a
+unit of its own army whose models it matches as well as any, and your favourites are listed first when you choose a
+model.
 
 ### Board from image
 
@@ -224,7 +226,7 @@ Units are recognised by the `[<unit name>]` line `army.py` and `recreate.py` put
 **Layout terrain:** `layouts/` has the exact terrain of every LCT layout: each terrain area and feature as a
 rotated footprint, whether it's dense or light, its height and floors, the objectives and the deployment zones
 ([format](docs/formats/layout-terrain.md)). It's committed, so you don't need to build it. To rebuild it after LCT
-updates (with TTS closed; needs `requirements-dev.txt` for LCT's asset bundles):
+updates (with TTS closed):
 
 ```bash
 python3 data.py mods lct                   # read LCT's layouts from its mod file
@@ -329,8 +331,8 @@ yours: it's created on first use and isn't committed.
   anything that didn't match. Change the `id` to pick another datasheet, or delete the entry to match it again.
 - **`bases`** fixes a model's base size when Wahapedia's is missing or wrong:
   `"<chapter or faction>|<unit>|<model>": "32mm"` (any size Wahapedia would write, like `"60 x 35mm"`).
-- **`favorites`** lists the figures you like for a unit, `"<chapter or faction>|<unit>": ["<tile>:<index>", ...]`.
-  They're tried first for that unit's models. Set them with the stars in **Models** or **Scribe**.
+- **`favorites`** lists your favourite models, `["<tile>:<index>", ...]`: of the army's models that match a list's
+  model as well as any, a favourite is picked first. Set them with the stars in **Models** or **Scribe**.
 - **`aliases`** renames a model the catalogue calls something else, per faction, for example
   `"Adepta Sororitas": {"Dominion": "Battle Sister"}`. With datasheets cached, a model the catalogue has no
   figure for is matched to a look-alike's (same stats, most wargear in common) without one.

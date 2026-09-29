@@ -4,3 +4,4 @@ uvicorn
 mcp          # the MCP server for Claude (app/mcp_server/)
 numpy
 opencv-python-headless
+UnityPy      # previews.py: asset bundle models for the 3D preview (and layouts.py's LCT meshes)

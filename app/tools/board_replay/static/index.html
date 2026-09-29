@@ -413,7 +413,7 @@ function renderModels_() {
               ${suggested.length ? `<optgroup label="Suggested">${suggested.map(option).join("")}</optgroup>` : ""}
               <option value="@browse">Browse all models…</option></select></div>
           ${cur.name ? typeBadge(cur) : '<span class="badge animated">No match</span>'}
-          <button class="mmPrev" ${cur.preview ? "" : "disabled"} title="${cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">Preview</button>
+          <button class="mmPrev" ${cur.preview || cur.bundle ? "" : "disabled"} title="Preview in 3D">Preview</button>
         </div>`;
       }).join("")}
     </div>`).join("");
@@ -422,7 +422,7 @@ function preview(info, row) {
   $$(".mm-group.active").forEach(r => r.classList.remove("active"));
   if (row) row.classList.add("active");
   const status = t => $("#mmPreviewInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
-  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel && window.previewModel(null, () => {}); return; }
+  if (!info.preview && !info.bundle) { status(`${info.name} has nothing to preview.`); window.previewModel && window.previewModel(null, () => {}); return; }
   window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
 }
 $("#mmList").addEventListener("change", async e => {

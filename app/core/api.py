@@ -15,9 +15,10 @@ import math
 import traceback
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.routing import APIRoute
 
+import previews
 import tts_bridge
 from app.core import lct, lists, tts
 
@@ -131,6 +132,21 @@ def model_tiles(faction: str = "", sub: str = ""):
 @shared.get("/api/catalog")
 def models(tiles: str = "", q: str = "", static: bool = False):
     return lists.find_models([t for t in tiles.split(",") if t] or None, q, static)
+
+
+@shared.get("/api/catalog/bundle")
+def model_bundle(pick: str):
+    """An asset bundle model as the 3D viewer's parts, converted the first time (previews.py:
+    a few seconds for a big model, then it's kept)."""
+    cat = lists.catalog()
+    if cat is None:
+        raise ValueError("The Force Org model catalogue isn't built yet.")
+    return {"preview": lists.bundle_preview(cat, pick)}
+
+
+@shared.get("/api/catalog/preview/{key}/{name}")
+def model_preview_file(key: str, name: str):
+    return FileResponse(previews.preview_file(key, name))
 
 
 @shared.get("/api/catalog/entry")

@@ -86,13 +86,39 @@ def mesh_parts(o):
     return part, animated
 
 
+def bundle_urls(o):
+    """The asset bundles an object (and its attached children) is made of."""
+    url = (o.get("CustomAssetbundle") or {}).get("AssetbundleURL")
+    return ([url] if url else []) + [u for c in o.get("ChildObjects") or [] for u in bundle_urls(c)]
+
+
+def bundle_preview(catalog, pick):
+    """A catalogue entry made of asset bundles as the viewer's tree (like mesh_parts'), its
+    bundles converted by previews.py the first time; any static meshes it has too."""
+    import previews
+    g, i = pick.split(":")
+    o = catalog[g][int(i)]
+    kids = []
+    for url in bundle_urls(o):
+        got = previews.bundle_preview(url)
+        base = f"/api/catalog/preview/{got['id']}/"
+        kids += [{"mesh": base + p["mesh"], "diffuse": base + p["diffuse"] if p["diffuse"] else "",
+                  "color": p["color"], "pos": [0, 0, 0], "rot": [0, 0, 0], "scale": [1, 1, 1], "children": []}
+                 for p in got["parts"]]
+    if not kids:
+        raise ValueError("That model has no asset bundle to preview.")
+    tree, _ = mesh_parts(o)
+    return {"mesh": "", "diffuse": "", "color": [0.8, 0.8, 0.8], "pos": [0, 0, 0], "rot": [0, 0, 0],
+            "scale": [1, 1, 1], "children": kids + ([{**tree, "pos": [0, 0, 0], "rot": [0, 0, 0]}] if tree else [])}
+
+
 def entry_info(catalog, pick):
     """What the page needs to show (and preview) one catalogue entry."""
     g, i = pick.split(":")
     o = catalog[g][int(i)]
     tree, animated = mesh_parts(o)
     info = {"pick": pick, "name": (o.get("Nickname") or "").strip(), "tile": army.tile_label(g),
-            "static": o.get("Name") in army.STATIC and not animated,
+            "static": o.get("Name") in army.STATIC and not animated, "bundle": bool(bundle_urls(o)),
             "credit": (o.get("Description") or "").strip().split("\n")[0][:80]}
     if info["static"] and tree:
         tree["pos"] = [0, 0, 0]   # the root's own world position doesn't matter for a preview

@@ -253,8 +253,8 @@ function groupRow(u, g, gi) {
          <option value="@browse">Browse all models…</option></select>
          ${cur ? `<span class="badge ${cur.static ? "good" : ""}">${cur.static ? "Static" : "Animated"}</span>`
                : `<span class="badge bad">No match</span>`}
-         <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && cur.preview ? "" : "disabled"}
-           title="${cur && cur.preview ? "Preview in 3D" : "Asset bundles can only be previewed in TTS"}">View</button></div>`;
+         <button class="pvBtn" data-u="${u.i}" data-g="${gi}" ${cur && (cur.preview || cur.bundle) ? "" : "disabled"}
+           title="Preview in 3D">View</button></div>`;
   return `<tr>
     <td>${esc(g.model)} ×${g.count}${g.sheet_model && g.sheet_model.replace(/’/g, "'") !== g.model
       ? `<div class="muted">${esc(g.sheet_model)}</div>` : ""}
@@ -386,7 +386,7 @@ function showPreview(info) {
   $("#preview").classList.add("on");
   $("#pvTitle").textContent = info.name;
   const status = t => $("#pvInfo").textContent = t ?? `${info.name} · ${info.tile}${info.credit ? " · " + info.credit : ""}`;
-  if (!info.preview) { status(`${info.name} is an asset bundle, which can only be previewed in TTS.`); window.previewModel?.(null, () => {}); return; }
+  if (!info.preview && !info.bundle) { status(`${info.name} has nothing to preview.`); window.previewModel?.(null, () => {}); return; }
   window.previewModel ? window.previewModel(info, status) : status("3D preview is still loading, try again in a moment.");
 }
 
